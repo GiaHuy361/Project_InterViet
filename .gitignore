@@ -1,0 +1,44 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+bin/
+obj/
+
+# Logs
+logs/
+*.log
+
+# Local uploads/generated files
+wwwroot/uploads/
+uploads/
+src/Interviet.Api/wwwroot/uploads/
+
+# Secrets / local config
+.env
+.env.*
+secrets.json
+appsettings.Local.json
+src/Interviet.Api/appsettings.Development.json
+
+# Database files
+*.mdf
+*.ldf
+*.bak
+
+# Test results
+TestResults/
+coverage/
+*.trx
+
+# NuGet
+*.nupkg
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
