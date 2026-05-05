@@ -4,3 +4,6 @@ python-multipart
 google-genai
 pydantic
 python-dotenv
+python-docx
+tenacity 
+slowapi
