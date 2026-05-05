@@ -39,7 +39,7 @@ public sealed class ResumesController : ApiControllerBase
         _currentUser = currentUser;
     }
 
-    /// <summary>Upload a new CV (PDF, DOC, DOCX). Auto-sets as active.</summary>
+    /// <summary>Upload a new CV (PDF, DOC, DOCX, JPG, PNG). Auto-sets as active.</summary>
     [HttpPost]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status201Created)]

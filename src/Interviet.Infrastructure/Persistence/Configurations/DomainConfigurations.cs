@@ -153,9 +153,14 @@ public class MatchSessionConfiguration : IEntityTypeConfiguration<MatchSession>
         b.Property(x => x.OverallBestScore).HasColumnType("decimal(5,2)");
         b.Property(x => x.ExternalJobId).HasMaxLength(100);
         b.Property(x => x.CorrelationId).HasMaxLength(100);
+        b.Property(x => x.RequestId).HasMaxLength(100);
+        b.Property(x => x.ErrorCode).HasMaxLength(100);
+        b.Property(x => x.ErrorMessage).HasMaxLength(1000);
         b.HasMany(x => x.Targets).WithOne(t => t.MatchSession).HasForeignKey(t => t.MatchSessionId);
         b.HasIndex(x => new { x.UserId, x.RequestedAt });
         b.HasIndex(x => new { x.Status, x.RequestedAt });
+        b.HasIndex(x => new { x.ResumeId, x.RequestedAt });
+        b.HasIndex(x => new { x.JobDescriptionId, x.RequestedAt });
     }
 }
 
@@ -166,7 +171,8 @@ public class MatchTargetConfiguration : IEntityTypeConfiguration<MatchTarget>
         b.ToTable("MatchTargets");
         b.HasKey(x => x.Id);
         b.HasIndex(x => new { x.MatchSessionId, x.JobDescriptionId }).IsUnique();
-        b.HasOne(x => x.Result).WithMany().HasForeignKey("MatchTargetId").OnDelete(DeleteBehavior.NoAction);
+        // MatchResult has MatchTargetId FK; no navigation from MatchTarget.Result in this direction
+        // Navigation MatchTarget.Result is configured via MatchResultConfiguration
     }
 }
 
@@ -185,9 +191,22 @@ public class MatchResultConfiguration : IEntityTypeConfiguration<MatchResult>
         b.Property(x => x.MatchBand).HasMaxLength(20);
         b.Property(x => x.SchemaVersion).HasMaxLength(30);
         b.Property(x => x.ModelVersion).HasMaxLength(100);
+        // New JSON columns
+        b.Property(x => x.SummaryText).HasColumnType("nvarchar(max)");
+        b.Property(x => x.MatchedSkillsJson).HasColumnType("nvarchar(max)");
+        // Existing JSON columns
+        b.Property(x => x.StrengthsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.WeaknessesJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.MissingSkillsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.SuggestionsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.RawResponseJson).HasColumnType("nvarchar(max)");
         b.HasIndex(x => x.MatchTargetId).IsUnique();
         b.HasIndex(x => new { x.MatchSessionId, x.TotalScore });
         b.HasMany(x => x.Insights).WithOne().HasForeignKey(i => i.MatchResultId);
+        // FK from MatchResult → MatchTarget
+        b.HasOne<MatchTarget>().WithOne(t => t.Result)
+         .HasForeignKey<MatchResult>(r => r.MatchTargetId)
+         .OnDelete(DeleteBehavior.NoAction);
     }
 }
 

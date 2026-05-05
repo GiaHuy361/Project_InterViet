@@ -50,7 +50,8 @@ public sealed class AiServicesOptions
     public const string SectionName = "AiServices";
 
     public bool CvServiceEnabled { get; set; } = false;
-    public string CvBaseUrl { get; set; } = "http://localhost:8001";
+    public bool MatchingEnabled { get; set; } = false;
+    public string CvServiceBaseUrl { get; set; } = "http://localhost:8001";
     public string InterviewBaseUrl { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 60;

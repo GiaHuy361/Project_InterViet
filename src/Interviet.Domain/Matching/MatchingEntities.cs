@@ -27,7 +27,14 @@ public class JobBookmark : BaseEntity
 public class MatchSession : BaseEntity
 {
     public Guid UserId { get; set; }
+
+    /// <summary>Resume being matched (denormalised from active version).</summary>
+    public Guid ResumeId { get; set; }
+
     public Guid ResumeVersionId { get; set; }
+
+    /// <summary>Denormalised for single-match quick lookup. Null for multi-match sessions.</summary>
+    public Guid? JobDescriptionId { get; set; }
 
     /// <summary>single | multi</summary>
     public string SessionType { get; set; } = MatchSessionType.Single;
@@ -39,6 +46,7 @@ public class MatchSession : BaseEntity
     public decimal? OverallBestScore { get; set; }
     public string? ExternalJobId { get; set; }
     public string? CorrelationId { get; set; }
+    public string? RequestId { get; set; }
     public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
@@ -81,7 +89,7 @@ public class MatchResult : BaseEntity
     public Guid MatchSessionId { get; set; }
     public Guid MatchTargetId { get; set; }
     public decimal TotalScore { get; set; }
-    public decimal? TechnicalScore { get; set; }
+    public decimal? TechnicalScore { get; set; }     // skillScore from Python
     public decimal? ExperienceScore { get; set; }
     public decimal? EducationScore { get; set; }
     public decimal? SoftSkillScore { get; set; }
@@ -89,10 +97,15 @@ public class MatchResult : BaseEntity
 
     /// <summary>High | Medium | Low — for UI grouping</summary>
     public string? MatchBand { get; set; }
+
+    /// <summary>Python summary text.</summary>
+    public string? SummaryText { get; set; }
+
+    public string? MatchedSkillsJson { get; set; }
     public string? StrengthsJson { get; set; }
     public string? WeaknessesJson { get; set; }
     public string? MissingSkillsJson { get; set; }
-    public string? SuggestionsJson { get; set; }
+    public string? SuggestionsJson { get; set; }     // recommendations from Python
     public string? RawResponseJson { get; set; }
     public string? SchemaVersion { get; set; }
     public string? ModelVersion { get; set; }

@@ -53,9 +53,10 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
             form.Add(new StringContent(request.RequestId),                  "requestId");
             form.Add(new StringContent(request.OriginalFileName),           "originalFileName");
             form.Add(new StringContent(request.ContentType),                "contentType");
+            form.Add(new StringContent("resume-parse-v1"),                  "schemaVersion");
 
             // File content
-            var fileBytes  = await File.ReadAllBytesAsync(request.FilePath, ct);
+            var fileBytes   = await File.ReadAllBytesAsync(request.FilePath, ct);
             var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(request.ContentType);
             form.Add(fileContent, "file", request.OriginalFileName);
@@ -77,8 +78,8 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
             {
                 _logger.LogWarning("CV Service returned {Status}. ResumeId={ResumeId} Body={Body}",
                     response.StatusCode, request.ResumeId, body);
-                return AiParseResumeResult.Failure("CV_SERVICE_ERROR",
-                    $"Dịch vụ phân tích CV trả lỗi HTTP {(int)response.StatusCode}.");
+                // Parse Python error body to get structured error code/message
+                return ParsePythonResponse(body, request.ResumeId);
             }
 
             return ParsePythonResponse(body, request.ResumeId);
@@ -114,6 +115,11 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
                 var errorCode = root.TryGetProperty("error", out var err) && err.TryGetProperty("code", out var c)
                     ? c.GetString() : "PARSE_ERROR";
                 var errorMsg = err.TryGetProperty("message", out var m) ? m.GetString() : "Xử lý CV thất bại.";
+
+                // Map SERVICE_UNAVAILABLE to Unavailable() so job status is set correctly
+                if (string.Equals(errorCode, "SERVICE_UNAVAILABLE", StringComparison.OrdinalIgnoreCase))
+                    return AiParseResumeResult.Unavailable(errorMsg ?? "Dịch vụ phân tích CV hiện chưa sẵn sàng.");
+
                 return AiParseResumeResult.Failure(errorCode ?? "PARSE_ERROR", errorMsg ?? "Xử lý CV thất bại.");
             }
 

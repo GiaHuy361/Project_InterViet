@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Application.Common.Options;
 using Interviet.Contracts.Resumes;
@@ -13,14 +14,31 @@ namespace Interviet.Application.Resumes.Commands.UploadResume;
 // ── Allowed types ─────────────────────────────────────────────────────────────
 file static class AllowedResume
 {
-    public static readonly HashSet<string> Extensions   = [".pdf", ".doc", ".docx"];
+    public static readonly HashSet<string> Extensions =
+    [
+        // Documents
+        ".pdf",
+        ".docx",
+        // Images (forwarded to Python CV Service for processing)
+        ".jpg",
+        ".jpeg",
+        ".png"
+    ];
+
     public static readonly HashSet<string> ContentTypes =
     [
+        // Documents
         "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        // Images
+        "image/jpeg",
+        "image/png"
     ];
+
+    public const string UnsupportedMessage =
+        "Định dạng file không được hỗ trợ. Vui lòng tải lên file PDF, DOCX, JPG hoặc PNG.";
 }
+
 
 // ── Command ───────────────────────────────────────────────────────────────────
 /// <summary>
@@ -53,11 +71,11 @@ public sealed class UploadResumeCommandValidator : AbstractValidator<UploadResum
 
         RuleFor(x => x.OriginalFileName)
             .Must(n => AllowedResume.Extensions.Contains(Path.GetExtension(n).ToLowerInvariant()))
-            .WithMessage("Định dạng file không được hỗ trợ. Chỉ chấp nhận PDF, DOC, DOCX.");
+            .WithMessage(AllowedResume.UnsupportedMessage);
 
         RuleFor(x => x.ContentType)
             .Must(c => AllowedResume.ContentTypes.Contains(c.ToLowerInvariant()))
-            .WithMessage("Content-type của file không hợp lệ.");
+            .WithMessage(AllowedResume.UnsupportedMessage);
     }
 }
 
@@ -66,25 +84,25 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
 {
     private readonly IAppDbContext _db;
     private readonly IStorageService _storage;
-    private readonly IAiResumeParserClient _parser;
     private readonly StorageOptions _storageOpts;
     private readonly IDateTimeProvider _dt;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadResumeCommandHandler> _logger;
 
     public UploadResumeCommandHandler(
         IAppDbContext db,
         IStorageService storage,
-        IAiResumeParserClient parser,
         IOptions<StorageOptions> storageOpts,
         IDateTimeProvider dt,
+        IServiceScopeFactory scopeFactory,
         ILogger<UploadResumeCommandHandler> logger)
     {
-        _db          = db;
-        _storage     = storage;
-        _parser      = parser;
-        _storageOpts = storageOpts.Value;
-        _dt          = dt;
-        _logger      = logger;
+        _db           = db;
+        _storage      = storage;
+        _storageOpts  = storageOpts.Value;
+        _dt           = dt;
+        _scopeFactory = scopeFactory;
+        _logger       = logger;
     }
 
     public async Task<Result<ResumeResponse>> Handle(UploadResumeCommand request, CancellationToken ct)
@@ -205,48 +223,59 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             resumeId, userId, originalName);
 
         // ── Fire-and-forget: call Python CV Service ────────────────────────
-        var filePath = Path.Combine(_storageOpts.BasePath, storageKey);
-        _ = CallParserAsync(parseJob.Id, versionId, resumeId, userId,
-            correlationId, requestId, originalName, request.ContentType, filePath);
+        // Use absolute path if BasePath is absolute, else combine with CWD
+        var basePath = Path.IsPathRooted(_storageOpts.BasePath)
+            ? _storageOpts.BasePath
+            : Path.Combine(Directory.GetCurrentDirectory(), _storageOpts.BasePath);
+        var filePath = Path.Combine(basePath, storageKey);
+
+        // Capture values — do NOT capture scoped services (_db, _parser) across the async boundary
+        var capturedScopeFactory = _scopeFactory;
+        var capturedLogger       = _logger;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope  = capturedScopeFactory.CreateScope();
+                var sp           = scope.ServiceProvider;
+                var db           = sp.GetRequiredService<IAppDbContext>();
+                var parser       = sp.GetRequiredService<IAiResumeParserClient>();
+                var dt           = sp.GetRequiredService<IDateTimeProvider>();
+
+                var result = await parser.ParseResumeAsync(new AiParseResumeRequest
+                {
+                    ResumeId         = resumeId,
+                    ResumeVersionId  = versionId,
+                    UserId           = userId,
+                    CorrelationId    = correlationId,
+                    RequestId        = requestId,
+                    OriginalFileName = originalName,
+                    ContentType      = request.ContentType,
+                    FilePath         = filePath
+                });
+
+                await ApplyParseResultAsync(parseJob.Id, versionId, resumeId, userId, result, db, dt);
+            }
+            catch (Exception ex)
+            {
+                capturedLogger.LogError(ex, "Unhandled error in fire-and-forget parse for ResumeId={ResumeId}", resumeId);
+            }
+        });
 
         return Result<ResumeResponse>.Success(MapToResponse(resume, resumeVersion, uploadedFile));
     }
 
-    private async Task CallParserAsync(
-        Guid jobId, Guid versionId, Guid resumeId, Guid userId,
-        string correlationId, string requestId,
-        string originalFileName, string contentType, string filePath)
-    {
-        try
-        {
-            var result = await _parser.ParseResumeAsync(new AiParseResumeRequest
-            {
-                ResumeId         = resumeId,
-                ResumeVersionId  = versionId,
-                UserId           = userId,
-                CorrelationId    = correlationId,
-                RequestId        = requestId,
-                OriginalFileName = originalFileName,
-                ContentType      = contentType,
-                FilePath         = filePath
-            });
-            await ApplyParseResultAsync(jobId, versionId, resumeId, userId, result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled error in fire-and-forget parse for ResumeId={ResumeId}", resumeId);
-        }
-    }
-
     private async Task ApplyParseResultAsync(
         Guid jobId, Guid versionId, Guid resumeId, Guid userId,
-        AiParseResumeResult result)
+        AiParseResumeResult result,
+        IAppDbContext db,
+        IDateTimeProvider dt)
     {
-        var now = _dt.UtcNow;
+        var now = dt.UtcNow;
 
-        var job     = await _db.ResumeParseJobs.FindAsync(jobId);
-        var version = await _db.ResumeVersions.FindAsync(versionId);
-        var resume  = await _db.Resumes.FindAsync(resumeId);
+        var job     = await db.ResumeParseJobs.FindAsync(jobId);
+        var version = await db.ResumeVersions.FindAsync(versionId);
+        var resume  = await db.Resumes.FindAsync(resumeId);
         if (job is null || version is null || resume is null) return;
 
         job.CompletedAt = now;
@@ -263,7 +292,7 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             version.LastProcessedAt = now;
             resume.UpdatedAt        = now;
 
-            _db.ResumeParsedData.Add(new ResumeParsedData
+            db.ResumeParsedData.Add(new ResumeParsedData
             {
                 Id                 = Guid.NewGuid(),
                 ResumeId           = resumeId,
@@ -308,7 +337,7 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             _logger.LogWarning("CV parse failed. ResumeId={ResumeId} Code={Code}", resumeId, result.ErrorCode);
         }
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 
     private static ResumeResponse MapToResponse(Resume resume, ResumeVersion version, UploadedFile file) => new()

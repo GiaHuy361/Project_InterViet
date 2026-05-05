@@ -80,7 +80,15 @@ public static class DependencyInjection
         services.AddHttpClient<IAiResumeParserClient, HttpAiResumeParserClient>((sp, client) =>
         {
             var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiServicesOptions>>().Value;
-            client.BaseAddress = new Uri(opts.CvBaseUrl);
+            client.BaseAddress = new Uri(opts.CvServiceBaseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(opts.TimeoutSeconds);
+        });
+
+        // ── AI Matching Client ────────────────────────────────────────────
+        services.AddHttpClient<IAiMatchingClient, HttpAiMatchingClient>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiServicesOptions>>().Value;
+            client.BaseAddress = new Uri(opts.CvServiceBaseUrl);   // same Python host
             client.Timeout     = TimeSpan.FromSeconds(opts.TimeoutSeconds);
         });
 
