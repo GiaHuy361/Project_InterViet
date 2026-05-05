@@ -63,8 +63,10 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
 
             // Request
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/v1/cv/parse") { Content = form };
-            httpRequest.Headers.Add("X-Correlation-Id", request.CorrelationId);
-            httpRequest.Headers.Add("X-Request-Id",     request.RequestId);
+            httpRequest.Headers.TryAddWithoutValidation("X-User-ID", request.UserId.ToString());
+            httpRequest.Headers.TryAddWithoutValidation("X-Correlation-ID", request.CorrelationId);
+            httpRequest.Headers.TryAddWithoutValidation("X-Request-ID", request.RequestId);
+            
             if (!string.IsNullOrEmpty(_opts.ApiKey))
                 httpRequest.Headers.Add("X-Interviet-Api-Key", _opts.ApiKey);
 
@@ -120,7 +122,7 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
                 if (string.Equals(errorCode, "SERVICE_UNAVAILABLE", StringComparison.OrdinalIgnoreCase))
                     return AiParseResumeResult.Unavailable(errorMsg ?? "Dịch vụ phân tích CV hiện chưa sẵn sàng.");
 
-                return AiParseResumeResult.Failure(errorCode ?? "PARSE_ERROR", errorMsg ?? "Xử lý CV thất bại.");
+                return AiParseResumeResult.Failure(errorCode ?? "PARSE_ERROR", errorMsg ?? "Xử lý CV thất bại.", body);
             }
 
             var data = root.GetProperty("data");

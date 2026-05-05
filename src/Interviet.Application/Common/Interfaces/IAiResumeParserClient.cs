@@ -51,6 +51,7 @@ public sealed class AiParseResumeResult
     // Failure fields
     public string? ErrorCode { get; init; }
     public string? ErrorMessage { get; init; }
+    public string? RawResponseJson { get; init; }
 
     /// <summary>True when the service is unreachable (timeout, connection refused).</summary>
     public bool IsServiceUnavailable { get; init; }
@@ -81,8 +82,8 @@ public sealed class AiParseResumeResult
             ExternalJobId = externalJobId
         };
 
-    public static AiParseResumeResult Failure(string errorCode, string errorMessage)
-        => new() { IsSuccess = false, ErrorCode = errorCode, ErrorMessage = errorMessage };
+    public static AiParseResumeResult Failure(string errorCode, string errorMessage, string? rawResponseJson = null)
+        => new() { IsSuccess = false, ErrorCode = errorCode, ErrorMessage = errorMessage, RawResponseJson = rawResponseJson };
 
     public static AiParseResumeResult Unavailable(string message)
         => new() { IsSuccess = false, IsServiceUnavailable = true, ErrorCode = "SERVICE_UNAVAILABLE", ErrorMessage = message };
