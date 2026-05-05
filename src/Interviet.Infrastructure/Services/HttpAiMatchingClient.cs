@@ -74,8 +74,9 @@ public sealed class HttpAiMatchingClient : IAiMatchingClient
             {
                 Content = content
             };
-            httpRequest.Headers.Add("X-Correlation-Id", request.CorrelationId);
-            httpRequest.Headers.Add("X-Request-Id", request.RequestId);
+            httpRequest.Headers.TryAddWithoutValidation("X-User-ID",        request.UserId.ToString());
+            httpRequest.Headers.TryAddWithoutValidation("X-Correlation-ID", request.CorrelationId);
+            httpRequest.Headers.TryAddWithoutValidation("X-Request-ID",     request.RequestId);
             if (!string.IsNullOrEmpty(_opts.ApiKey))
                 httpRequest.Headers.Add("X-Interviet-Api-Key", _opts.ApiKey);
 
