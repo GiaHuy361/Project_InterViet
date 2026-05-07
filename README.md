@@ -1,102 +1,106 @@
-﻿# INTER-VIET CV Intelligence Service
+# INTER-VIET AI Intelligence Service
 
-Dịch vụ này xử lý CV để trích xuất dữ liệu bằng AI và chuẩn bị thông tin cho quá trình matching với Job Description. Ứng dụng sử dụng FastAPI và Google Gemini AI.
+Dịch vụ trí tuệ nhân tạo xử lý CV và Matching CV-JD cho người Việt. Ứng dụng sử dụng FastAPI và Google Gemini AI để phân tích CV và so sánh với Job Description.
 
 ## Tổng quan
 
-Dịch vụ hiện tại cung cấp:
-- Trích xuất văn bản thô từ CV
-- Nhận diện ngôn ngữ CV (Vietnamese / English)
-- Trích xuất các phần chính như summary, skills, experiences, educations, projects, certifications, languages
-- Hỗ trợ file PDF, DOCX, JPG, JPEG, PNG
-- Chỉ hỗ trợ `DOCX`, không hỗ trợ `.doc` cũ
-- Retry tự động khi gọi Gemini và chuyển sang model khác khi cần
-- Rate limit theo user
-- Pool nhiều Gemini API key
+Dịch vụ cung cấp:
+- **Phase 2 (CV Parsing)**: Trích xuất văn bản thô, nhận diện ngôn ngữ, tách các phần CV từ file PDF, DOCX, JPG, PNG
+- **Phase 3 (CV-JD Matching)**: So sánh CV với JD, tính điểm phù hợp, phân tích điểm mạnh/yếu, đề xuất cải thiện
 
-## Tính năng quan trọng
+Hỗ trợ:
+- Pool API keys riêng biệt cho từng phase
+- Retry tự động và chuyển model khi Gemini quá tải
+- Rate limit theo user (5 request/phút cho parse, 5 request/phút cho match)
+- Xử lý file DOCX bằng python-docx
+- Định dạng lỗi envelope thống nhất
 
-- Hỗ trợ nhiều API key Gemini: `GEMINI_API_KEY_1`...`GEMINI_API_KEY_3`
-- Fallback về `GEMINI_API_KEY` khi chỉ có một key
-- Retry và chuyển model khi Gemini quá tải
-- Rate limit `5 request / phút / user`
-- Xử lý file DOCX bằng `python-docx`
-- Trả về lỗi theo định dạng envelope thống nhất
+## Tính năng chính
+
+- **CV Parsing**: Sử dụng Gemini Flash để trích xuất nhanh
+- **CV-JD Matching**: Sử dụng Gemini Pro để phân tích sâu
+- **Multi-key Pool**: Hỗ trợ 3 keys cho parse (1-3), 3 keys cho match (4-6)
+- **Rate Limiting**: Giới hạn theo X-User-ID header
+- **Error Handling**: Cấu trúc lỗi chuẩn cho C# backend
+- **Validation**: Kiểm tra dữ liệu đầu vào chặt chẽ
 
 ## Yêu cầu hệ thống
 
 - Python 3.8+
-- `conda` hoặc môi trường ảo `venv`
+- Conda (khuyến nghị)
 
 ## Cài đặt
 
-1. Tạo môi trường ảo và kích hoạt:
+1. Tạo môi trường conda:
 ```bash
 conda create -n interviet_ai_service python=3.10
 conda activate interviet_ai_service
 ```
 
-2. Cài dependencies:
+2. Cài đặt dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Cấu hình môi trường
 
-Tạo file `.env` ở thư mục gốc và thêm:
+Sao chép file `.env.example` thành `.env` và điền API keys:
 
-```env
-GEMINI_API_KEY_1=your_gemini_api_key_1
-# ...
-GEMINI_API_KEY_9=your_gemini_api_key_3
+```bash
+cp .env.example .env
 ```
 
-Hoặc nếu chỉ có một key:
+Chỉnh sửa `.env` với các key Gemini của bạn:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key
+# Phase 2: CV Parsing (Keys 1-3)
+GEMINI_API_KEY_1=your_gemini_api_key_1_here
+GEMINI_API_KEY_2=your_gemini_api_key_2_here
+GEMINI_API_KEY_3=your_gemini_api_key_3_here
+
+# Phase 3: CV-JD Matching (Keys 4-6)
+GEMINI_API_KEY_4=your_gemini_api_key_4_here
+GEMINI_API_KEY_5=your_gemini_api_key_5_here
+GEMINI_API_KEY_6=your_gemini_api_key_6_here
 ```
 
 ## Chạy ứng dụng
 
 ```bash
-uvicorn main:app --reload --port 8001
+uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-Truy cập:
+Truy cập: http://localhost:8001
 
-http://localhost:8001
+## API Endpoints
 
-## Health check
+### GET /health
 
 Kiểm tra trạng thái service.
 
-**Endpoint:** `/health`
-
-**Response ví dụ:**
+**Response:**
 ```json
 {
-  "status": "Healthy",
-  "active_keys": 1
+  "status": "Healthy"
 }
 ```
 
-## Endpoints
-
 ### POST /v1/cv/parse
 
-Endpoint chính để phân tích CV.
+Parse CV từ file upload.
 
-**Yêu cầu multipart/form-data:**
-- `file`: file CV (PDF, DOCX, JPG, JPEG, PNG)
-- `resumeId`: ID của CV
-- `userId`: ID người dùng
+**Rate limit:** 5 request/phút/user
+
+**Request (multipart/form-data):**
+- `file`: File CV (PDF, DOCX, JPG, PNG)
+- `resumeId`: ID CV
+- `userId`: ID user
 - `originalFileName`: Tên file gốc
-- `contentType`: Kiểu nội dung file
+- `contentType`: Loại file
 - `correlationId`: ID tương quan
-- `requestId`: ID yêu cầu
+- `requestId`: ID request
 - `schemaVersion`: Phiên bản schema
-- `resumeVersionId`: ID phiên bản CV (tùy chọn)
+- `resumeVersionId`: ID phiên bản CV (optional)
 
 **Response thành công:**
 ```json
@@ -106,7 +110,7 @@ Endpoint chính để phân tích CV.
     "resumeId": "...",
     "rawText": "...",
     "detectedLanguage": "vi",
-    "sections": { "summary": "..." },
+    "sections": {"summary": "..."},
     "skills": "...",
     "experiences": "...",
     "educations": "...",
@@ -115,7 +119,7 @@ Endpoint chính để phân tích CV.
     "languages": "...",
     "warnings": [],
     "modelVersion": "cv-parser-v1-gemini-flash",
-    "schemaVersion": "resume-parse-v1"
+    "schemaVersion": "cv-jd-match-v1"
   },
   "error": null
 }
@@ -131,36 +135,101 @@ Endpoint chính để phân tích CV.
     "message": "Chỉ hỗ trợ PDF, DOCX, JPG, JPEG, PNG.",
     "correlationId": "...",
     "requestId": "...",
-    "schemaVersion": "resume-parse-v1"
+    "schemaVersion": "cv-jd-match-v1"
   }
 }
 ```
 
-## Ghi chú sử dụng
+### POST /v1/cv/match
 
-- Với file DOCX, hệ thống sẽ đọc văn bản bằng `python-docx`.
-- Với file PDF/JPG/PNG, nội dung file được gửi trực tiếp cho Gemini.
-- Nếu AI trả về JSON không hợp lệ, lỗi `FILE_PARSE_FAILED` sẽ được trả.
-- Nếu vượt quá hạn mức, lỗi `RATE_LIMIT_EXCEEDED` sẽ được trả.
+Matching CV với Job Description.
+
+**Rate limit:** 10 request/phút/user
+
+**Request (JSON):**
+```json
+{
+  "userId": "user123",
+  "correlationId": "corr123",
+  "requestId": "req123",
+  "resumeParsedData": {
+    "rawText": "...",
+    "detectedLanguage": "vi",
+    "sections": {"summary": "..."},
+    "skills": "...",
+    "experiences": "...",
+    "educations": "...",
+    "projects": "...",
+    "certifications": "...",
+    "languages": "..."
+  },
+  "jobDescription": {
+    "title": "Software Engineer",
+    "description": "...",
+    "requirements": "...",
+    "responsibilities": "..."
+  }
+}
+```
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "data": {
+    "matchScore": 85,
+    "matchLevel": "High",
+    "strengths": ["..."],
+    "weaknesses": ["..."],
+    "recommendations": ["..."],
+    "detailedAnalysis": "...",
+    "modelVersion": "cv-jd-matcher-v1-gemini-pro",
+    "schemaVersion": "cv-jd-match-v1"
+  },
+  "error": null
+}
+```
 
 ## Dependencies
 
-- `fastapi`
-- `uvicorn`
-- `python-multipart`
-- `google-genai`
-- `pydantic`
-- `python-dotenv`
-- `python-docx`
-- `tenacity`
-- `slowapi`
+- `fastapi`: Web framework
+- `uvicorn`: ASGI server
+- `python-multipart`: Xử lý multipart form
+- `google-genai`: Gemini AI client
+- `pydantic`: Data validation
+- `python-dotenv`: Quản lý env
+- `python-docx`: Đọc file DOCX
+- `tenacity`: Retry logic
+- `slowapi`: Rate limiting
 
 ## Cấu trúc dự án
 
 ```
 Project_InterViet/
-├── main.py          # API và logic parse CV
-├── requirements.txt # Dependencies
-├── README.md        # Tài liệu dự án
-└── .env             # Biến môi trường (tạo riêng)
+├── main.py              # Entry point FastAPI
+├── requirements.txt     # Dependencies
+├── .env.example         # Template env
+├── .env                 # Environment variables
+├── core/
+│   ├── ai_logic.py      # Gemini AI logic
+│   └── security.py      # API keys & rate limiting
+├── routes/
+│   ├── cv_parse.py      # CV parsing endpoint
+│   └── cv_match.py      # CV-JD matching endpoint
+├── schemas/
+│   ├── parse_schema.py  # Pydantic schemas for parse
+│   └── match_schema.py  # Pydantic schemas for match
+└── README.md            # This file
 ```
+
+## Đóng góp
+
+1. Fork repo
+2. Tạo branch feature (`git checkout -b feature/new-feature`)
+3. Commit changes
+4. Push to branch
+5. Tạo Pull Request
+
+## Liên hệ
+
+Đội phát triển INTER-VIET - liên hệ để nhận hỗ trợ kỹ thuật.
