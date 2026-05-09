@@ -38,6 +38,13 @@ public sealed record CreateMatchRequest
     public Guid JobDescriptionId { get; init; }
 }
 
+public sealed record CreateMultiMatchRequest
+{
+    public Guid ResumeId { get; init; }
+    public List<Guid> JobDescriptionIds { get; init; } = [];
+    public string? Title { get; init; }
+}
+
 // ── JobDescription Responses ──────────────────────────────────────────────────
 public sealed record JobDescriptionResponse
 {
@@ -64,6 +71,16 @@ public sealed record CreateMatchResponse
     public DateTime RequestedAt { get; init; }
 }
 
+public sealed record CreateMultiMatchResponse
+{
+    public Guid SessionId { get; init; }
+    public Guid ResumeId { get; init; }
+    public string SessionType { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public int TargetCount { get; init; }
+    public DateTime RequestedAt { get; init; }
+}
+
 public sealed record MatchSessionResponse
 {
     public Guid SessionId { get; init; }
@@ -76,7 +93,36 @@ public sealed record MatchSessionResponse
     public string? ErrorMessage { get; init; }
     public DateTime RequestedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
+    
+    // Single Match
     public MatchResultResponse? Result { get; init; }
+    
+    // Multi Match Aggregations
+    public int TargetCount { get; init; }
+    public int CompletedCount { get; init; }
+    public int FailedCount { get; init; }
+    public decimal? BestScore { get; init; }
+    public decimal? AverageScore { get; init; }
+    public List<MatchTargetResponse>? Targets { get; init; }
+}
+
+public sealed record MatchTargetResponse
+{
+    public Guid TargetId { get; init; }
+    public Guid JobDescriptionId { get; init; }
+    public string? JobTitle { get; init; }
+    public string? CompanyName { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public decimal? TotalScore { get; init; }
+    public decimal? TechnicalScore { get; init; }
+    public decimal? ExperienceScore { get; init; }
+    public decimal? EducationScore { get; init; }
+    public decimal? LanguageScore { get; init; }
+    public string? SummaryText { get; init; }
+    public string? MatchedSkillsJson { get; init; }
+    public string? MissingSkillsJson { get; init; }
+    public DateTime? CompletedAt { get; init; }
+    public string? ErrorCode { get; init; }
 }
 
 public sealed record MatchResultResponse

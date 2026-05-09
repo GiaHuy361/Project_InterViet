@@ -78,6 +78,11 @@ public class MatchTarget : BaseEntity
     public Guid MatchSessionId { get; set; }
     public Guid JobDescriptionId { get; set; }
     public int? RankOrder { get; set; }
+    
+    public string Status { get; set; } = MatchSessionStatus.Pending;
+    public string? ErrorCode { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public MatchSession MatchSession { get; set; } = null!;

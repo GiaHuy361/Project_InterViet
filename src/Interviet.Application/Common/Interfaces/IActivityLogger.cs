@@ -38,4 +38,8 @@ public static class ActivityActionKeys
     public const string MatchCreated          = "match_created";
     public const string MatchCompleted        = "match_completed";
     public const string MatchFailed           = "match_failed";
+    
+    public const string MultiMatchCreated     = "multi_match_created";
+    public const string MultiMatchCompleted   = "multi_match_completed";
+    public const string MultiMatchFailed      = "multi_match_failed";
 }

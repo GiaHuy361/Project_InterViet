@@ -74,6 +74,22 @@ public sealed class QuotaService : IQuotaService
         return Result.Success();
     }
 
+    public async Task<Result> CheckFeatureLimitAsync(Guid userId, string featureKey, int requestedAmount, CancellationToken ct = default)
+    {
+        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
+            return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
+
+        if (policy.IsUnlimited) return Result.Success();
+
+        if (requestedAmount > policy.MaxValue)
+        {
+            return Error.Forbidden("Quota.Exceeded", $"Số lượng yêu cầu ({requestedAmount}) vượt quá giới hạn cho phép ({policy.MaxValue}) của gói cước hiện tại.");
+        }
+
+        return Result.Success();
+    }
+
     public async Task<Result> ConsumeAsync(Guid userId, string featureKey, int amount = 1, string referenceType = "", Guid? referenceId = null, CancellationToken ct = default)
     {
         var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
