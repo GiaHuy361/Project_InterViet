@@ -32,18 +32,18 @@ public sealed class GetUsageSummaryQueryHandler
 
         var daily = rows.Select(u => new DailyUsageItem
         {
-            UsageDate            = u.UsageDate,
-            CvOptimizationCount  = u.CvOptimizationCount,
-            InterviewCount       = u.InterviewCount,
-            MultiMatchCount      = u.MultiMatchCount,
-            MentorBookingCount   = u.MentorBookingCount
+            UsageDate           = u.UsageDate,
+            ResumeActivityCount = u.CvOptimizationCount,   // resume.upload + resume.parse
+            InterviewCount      = u.InterviewCount,
+            MatchActivityCount  = u.MultiMatchCount,        // match.create + match.complete
+            MentorBookingCount  = u.MentorBookingCount
         }).ToArray();
 
         var totals = new UsageTotals
         {
-            CvOptimizationCount = rows.Sum(u => u.CvOptimizationCount),
+            ResumeActivityCount = rows.Sum(u => u.CvOptimizationCount),
             InterviewCount      = rows.Sum(u => u.InterviewCount),
-            MultiMatchCount     = rows.Sum(u => u.MultiMatchCount),
+            MatchActivityCount  = rows.Sum(u => u.MultiMatchCount),
             MentorBookingCount  = rows.Sum(u => u.MentorBookingCount)
         };
 

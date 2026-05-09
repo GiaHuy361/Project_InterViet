@@ -46,10 +46,12 @@ public sealed class ProfileCompleteness
 
 public sealed class UsageTodayStats
 {
-    public int CvOptimizationUsed  { get; init; }
-    public int InterviewUsed       { get; init; }
-    public int MultiMatchUsed      { get; init; }
-    public int MentorBookingUsed   { get; init; }
+    /// <summary>Maps to UserDailyUsage.CvOptimizationCount — counts resume.upload + resume.parse events today.</summary>
+    public int ResumeActivityCount  { get; init; }
+    public int InterviewUsed        { get; init; }
+    /// <summary>Maps to UserDailyUsage.MultiMatchCount — counts match.create + match.complete events today.</summary>
+    public int MatchActivityCount   { get; init; }
+    public int MentorBookingUsed    { get; init; }
 }
 
 public sealed class OnboardingStepInfo
@@ -90,17 +92,21 @@ public sealed class UsageSummaryResponse
 public sealed class DailyUsageItem
 {
     public DateOnly UsageDate              { get; init; }
-    public int      CvOptimizationCount   { get; init; }
+    /// <summary>Maps to UserDailyUsage.CvOptimizationCount — counts resume.upload + resume.parse events.</summary>
+    public int      ResumeActivityCount    { get; init; }
     public int      InterviewCount         { get; init; }
-    public int      MultiMatchCount        { get; init; }
+    /// <summary>Maps to UserDailyUsage.MultiMatchCount — counts match.create + match.complete events.</summary>
+    public int      MatchActivityCount     { get; init; }
     public int      MentorBookingCount     { get; init; }
 }
 
 public sealed class UsageTotals
 {
-    public int CvOptimizationCount  { get; init; }
+    /// <summary>Maps to UserDailyUsage.CvOptimizationCount — counts resume.upload + resume.parse events.</summary>
+    public int ResumeActivityCount  { get; init; }
     public int InterviewCount        { get; init; }
-    public int MultiMatchCount       { get; init; }
+    /// <summary>Maps to UserDailyUsage.MultiMatchCount — counts match.create + match.complete events.</summary>
+    public int MatchActivityCount    { get; init; }
     public int MentorBookingCount    { get; init; }
 }
 

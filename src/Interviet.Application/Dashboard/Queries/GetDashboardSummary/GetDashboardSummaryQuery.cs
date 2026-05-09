@@ -97,10 +97,10 @@ public sealed class GetDashboardSummaryQueryHandler
 
         var usageToday = new UsageTodayStats
         {
-            CvOptimizationUsed = dailyUsage?.CvOptimizationCount ?? 0,
-            InterviewUsed      = dailyUsage?.InterviewCount      ?? 0,
-            MultiMatchUsed     = dailyUsage?.MultiMatchCount     ?? 0,
-            MentorBookingUsed  = dailyUsage?.MentorBookingCount  ?? 0
+            ResumeActivityCount = dailyUsage?.CvOptimizationCount ?? 0,  // resume.upload + resume.parse
+            InterviewUsed       = dailyUsage?.InterviewCount      ?? 0,
+            MatchActivityCount  = dailyUsage?.MultiMatchCount     ?? 0,   // match.create + match.complete
+            MentorBookingUsed   = dailyUsage?.MentorBookingCount  ?? 0
         };
 
         // ── Onboarding ────────────────────────────────────────────────────────

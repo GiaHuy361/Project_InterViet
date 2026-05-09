@@ -122,21 +122,28 @@ public sealed class UsageTracker : IUsageTracker
             MaxRetries, userId, featureKey);
     }
 
-    // ── Maps featureKey → the correct UserDailyUsage counter column ──────────
+    // ── Maps featureKey → the correct UserDailyUsage DB column ───────────────
+    // DB column           → DTO field          → featureKeys tracked
+    // CvOptimizationCount → ResumeActivityCount → resume.upload, resume.parse
+    // MultiMatchCount     → MatchActivityCount  → match.create, match.complete
+    // InterviewCount      → InterviewCount      → (future: interview feature)
+    // MentorBookingCount  → MentorBookingCount  → (future: mentor booking)
     private static void IncrementDailyUsage(UserDailyUsage daily, string featureKey)
     {
         switch (featureKey)
         {
             case QuotaFeatureKeys.ResumeUpload:
             case QuotaFeatureKeys.ResumeParse:
-                daily.CvOptimizationCount++;  // reuse as general CV activity counter
+                daily.CvOptimizationCount++;  // → DTO: ResumeActivityCount
                 break;
             case QuotaFeatureKeys.MatchCreate:
             case QuotaFeatureKeys.MatchComplete:
-                daily.MultiMatchCount++;
+                daily.MultiMatchCount++;      // → DTO: MatchActivityCount
                 break;
-            // JdCreate — no dedicated column in UserDailyUsage, skip daily increment
-            // but still writes QuotaCounter + ConsumptionLog above
+            case QuotaFeatureKeys.JdCreate:
+                // No dedicated column in UserDailyUsage — only tracked via
+                // UserQuotaCounter + QuotaConsumptionLog (quota endpoint)
+                break;
         }
     }
 }
