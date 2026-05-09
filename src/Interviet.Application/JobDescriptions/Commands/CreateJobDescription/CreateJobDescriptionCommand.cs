@@ -49,24 +49,30 @@ public sealed class CreateJobDescriptionCommandHandler
     private readonly IActivityLogger _activityLogger;
     private readonly IUsageTracker _usageTracker;
     private readonly ILogger<CreateJobDescriptionCommandHandler> _logger;
+    private readonly IQuotaService _quotaService;
 
     public CreateJobDescriptionCommandHandler(
         IAppDbContext db,
         IDateTimeProvider dt,
         IActivityLogger activityLogger,
         IUsageTracker usageTracker,
-        ILogger<CreateJobDescriptionCommandHandler> logger)
+        ILogger<CreateJobDescriptionCommandHandler> logger,
+        IQuotaService quotaService)
     {
         _db             = db;
         _dt             = dt;
         _activityLogger = activityLogger;
         _usageTracker   = usageTracker;
         _logger         = logger;
+        _quotaService   = quotaService;
     }
 
     public async Task<Result<JobDescriptionResponse>> Handle(
         CreateJobDescriptionCommand request, CancellationToken ct)
     {
+        var quotaCheck = await _quotaService.CheckAsync(request.UserId, QuotaFeatureKeys.JdCreate, 1, ct);
+        if (!quotaCheck.IsSuccess) return quotaCheck.Error;
+
         var now = _dt.UtcNow;
         var jd = new JobDescription
         {
@@ -96,6 +102,8 @@ public sealed class CreateJobDescriptionCommandHandler
                 description: $"JD '{jd.Title ?? "(không tiêu đề)"}' đã được tạo.");
             await _usageTracker.TrackAsync(request.UserId, QuotaFeatureKeys.JdCreate,
                 referenceType: "JobDescription", referenceId: jd.Id);
+            await _quotaService.ConsumeAsync(request.UserId, QuotaFeatureKeys.JdCreate, 1,
+                referenceType: "JobDescription", referenceId: jd.Id, ct: ct);
         }
         catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed: job_description_created"); }
 

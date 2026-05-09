@@ -19,6 +19,19 @@ public sealed class GetQuotaSnapshotQueryHandler
     public async Task<Result<QuotaSnapshotResponse>> Handle(
         GetQuotaSnapshotQuery request, CancellationToken ct)
     {
+        var sub = await _db.Subscriptions
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == request.UserId && s.Status == Domain.Billing.SubscriptionStatus.Active)
+            .OrderByDescending(s => s.CurrentPeriodEndsAt)
+            .FirstOrDefaultAsync(ct);
+
+        var planId = sub?.PlanId ?? Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var planKey = sub?.Plan?.Code ?? "Free";
+
+        var policies = await _db.UsageQuotaPolicies
+            .Where(p => p.PlanId == planId && p.PeriodType == "daily")
+            .ToDictionaryAsync(p => p.FeatureKey, p => p.MaxValue, ct);
+
         var counters = await _db.UserQuotaCounters
             .Where(c => c.UserId == request.UserId)
             .OrderBy(c => c.FeatureKey)
@@ -27,15 +40,26 @@ public sealed class GetQuotaSnapshotQueryHandler
                 FeatureKey     = c.FeatureKey,
                 PeriodType     = c.PeriodType,
                 PeriodKey      = c.PeriodKey,
+                PlanKey        = planKey,
                 UsedValue      = c.UsedValue,
                 RemainingValue = c.RemainingValue,
                 LastConsumedAt = c.LastConsumedAt
             })
-            .ToArrayAsync(ct);
+            .ToListAsync(ct);
+
+        foreach (var c in counters)
+        {
+            if (policies.TryGetValue(c.FeatureKey, out var limit))
+            {
+                c.LimitValue = limit;
+                // Fix up remaining if it drifted
+                c.RemainingValue = Math.Max(0, limit - c.UsedValue);
+            }
+        }
 
         return Result<QuotaSnapshotResponse>.Success(new QuotaSnapshotResponse
         {
-            Counters = counters
+            Counters = counters.ToArray()
         });
     }
 }

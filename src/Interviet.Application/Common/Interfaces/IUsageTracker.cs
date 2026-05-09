@@ -29,4 +29,6 @@ public static class QuotaFeatureKeys
     public const string JdCreate      = "jobdescription.create";
     public const string MatchCreate   = "match.create";
     public const string MatchComplete = "match.complete";
+    public const string CvStorage     = "cv.storage";
+    public const string CvOptimization= "cv.optimization";
 }

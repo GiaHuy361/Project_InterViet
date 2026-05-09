@@ -57,49 +57,6 @@ public sealed class UsageTracker : IUsageTracker
                 IncrementDailyUsage(daily, featureKey);
                 daily.UpdatedAt = DateTime.UtcNow;
 
-                // ── 2. Upsert UserQuotaCounter (daily) ───────────────────────
-                var counter = await _db.UserQuotaCounters
-                    .FirstOrDefaultAsync(c =>
-                        c.UserId     == userId     &&
-                        c.FeatureKey == featureKey &&
-                        c.PeriodType == "daily"    &&
-                        c.PeriodKey  == periodKey, ct);
-
-                if (counter is null)
-                {
-                    counter = new UserQuotaCounter
-                    {
-                        Id         = Guid.NewGuid(),
-                        UserId     = userId,
-                        FeatureKey = featureKey,
-                        PeriodType = "daily",
-                        PeriodKey  = periodKey,
-                        UsedValue  = 0,
-                        CreatedAt  = DateTime.UtcNow,
-                        UpdatedAt  = DateTime.UtcNow
-                    };
-                    _db.UserQuotaCounters.Add(counter);
-                }
-
-                counter.UsedValue++;
-                counter.LastConsumedAt = DateTime.UtcNow;
-                counter.UpdatedAt      = DateTime.UtcNow;
-
-                // ── 3. Write QuotaConsumptionLog ─────────────────────────────
-                _db.QuotaConsumptionLogs.Add(new QuotaConsumptionLog
-                {
-                    Id            = Guid.NewGuid(),
-                    UserId        = userId,
-                    FeatureKey    = featureKey,
-                    PeriodType    = "daily",
-                    PeriodKey     = periodKey,
-                    DeltaValue    = 1,
-                    ReferenceType = referenceType,
-                    ReferenceId   = referenceId,
-                    Status        = "consumed",
-                    CreatedAt     = DateTime.UtcNow
-                });
-
                 await _db.SaveChangesAsync(ct);
                 return; // success
             }
@@ -141,8 +98,7 @@ public sealed class UsageTracker : IUsageTracker
                 daily.MultiMatchCount++;      // → DTO: MatchActivityCount
                 break;
             case QuotaFeatureKeys.JdCreate:
-                // No dedicated column in UserDailyUsage — only tracked via
-                // UserQuotaCounter + QuotaConsumptionLog (quota endpoint)
+                // No dedicated column in UserDailyUsage.
                 break;
         }
     }

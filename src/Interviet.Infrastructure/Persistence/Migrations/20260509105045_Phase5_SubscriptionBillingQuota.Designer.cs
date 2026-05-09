@@ -4,6 +4,7 @@ using Interviet.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Interviet.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260509105045_Phase5_SubscriptionBillingQuota")]
+    partial class Phase5_SubscriptionBillingQuota
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -394,7 +397,7 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             BillingCycle = "free",
-                            Code = "free",
+                            Code = "Free",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CurrencyCode = "VND",
                             IsActive = true,
@@ -408,12 +411,12 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("22222222-2222-2222-2222-222222222222"),
                             BillingCycle = "monthly",
-                            Code = "monthly",
+                            Code = "PremiumMonthly",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CurrencyCode = "VND",
                             IsActive = true,
                             Name = "Premium (Monthly)",
-                            PriceAmount = 149000m,
+                            PriceAmount = 99000m,
                             SortOrder = 2,
                             TrialDays = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -422,12 +425,12 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
                             BillingCycle = "quarterly",
-                            Code = "quarterly",
+                            Code = "PremiumQuarterly",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CurrencyCode = "VND",
                             IsActive = true,
                             Name = "Premium (Quarterly)",
-                            PriceAmount = 387000m,
+                            PriceAmount = 249000m,
                             SortOrder = 3,
                             TrialDays = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -436,14 +439,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444444"),
                             BillingCycle = "yearly",
-                            Code = "yearly",
+                            Code = "PremiumYearly",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CurrencyCode = "VND",
                             IsActive = true,
                             Name = "Premium (Yearly)",
-                            PriceAmount = 1308000m,
+                            PriceAmount = 899000m,
                             SortOrder = 4,
-                            TrialDays = 7,
+                            TrialDays = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
@@ -481,404 +484,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PlanEntitlements", "app");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "ai.model.tier",
-                            FeatureValue = "Basic",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.export_pdf",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.share",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "analytics.advanced",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "headhunter.access",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000006"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "career.advancement",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000007"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "communication.analysis",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000008"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "industry.benchmark",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000009"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.choose_by_industry",
-                            FeatureValue = "false",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000010"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "history.retention",
-                            FeatureValue = "30_days",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1000000-0000-0000-0000-000000000011"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "support.level",
-                            FeatureValue = "Email",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "ai.model.tier",
-                            FeatureValue = "Stable",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.export_pdf",
-                            FeatureValue = "true",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.share",
-                            FeatureValue = "true",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "analytics.advanced",
-                            FeatureValue = "true",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "headhunter.access",
-                            FeatureValue = "false",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000006"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "career.advancement",
-                            FeatureValue = "false",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000007"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "communication.analysis",
-                            FeatureValue = "false",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000008"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "industry.benchmark",
-                            FeatureValue = "false",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000009"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.choose_by_industry",
-                            FeatureValue = "false",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000010"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "history.retention",
-                            FeatureValue = "90_days",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e2000000-0000-0000-0000-000000000011"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "support.level",
-                            FeatureValue = "Email",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "ai.model.tier",
-                            FeatureValue = "Premium",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.export_pdf",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.share",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "analytics.advanced",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "headhunter.access",
-                            FeatureValue = "false",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000006"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "career.advancement",
-                            FeatureValue = "false",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000007"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "communication.analysis",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000008"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "industry.benchmark",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000009"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.choose_by_industry",
-                            FeatureValue = "true",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000010"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "history.retention",
-                            FeatureValue = "1_year",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e3000000-0000-0000-0000-000000000011"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "support.level",
-                            FeatureValue = "Priority",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "ai.model.tier",
-                            FeatureValue = "Premium",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.export_pdf",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "report.share",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "analytics.advanced",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "headhunter.access",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000006"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "career.advancement",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000007"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "communication.analysis",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000008"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "industry.benchmark",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000009"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.choose_by_industry",
-                            FeatureValue = "true",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "boolean"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000010"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "history.retention",
-                            FeatureValue = "unlimited",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "string"
-                        },
-                        new
-                        {
-                            Id = new Guid("e4000000-0000-0000-0000-000000000011"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "support.level",
-                            FeatureValue = "Priority_24_7",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            ValueType = "string"
-                        });
                 });
 
             modelBuilder.Entity("Interviet.Domain.Billing.StoredPaymentMethod", b =>
@@ -2908,56 +2513,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("a1000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.storage",
-                            IsUnlimited = false,
-                            MaxValue = 1,
-                            PeriodType = "total",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a2000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.optimization",
-                            IsUnlimited = false,
-                            MaxValue = 3,
-                            PeriodType = "daily",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a3000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "interview.ai",
-                            IsUnlimited = false,
-                            MaxValue = 1,
-                            PeriodType = "daily",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a4000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.session",
-                            IsUnlimited = false,
-                            MaxValue = 0,
-                            PeriodType = "monthly",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a5000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "multi_jd.match",
-                            IsUnlimited = false,
-                            MaxValue = 3,
-                            PeriodType = "per_match",
-                            PlanId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a6000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "resume.upload",
                             IsUnlimited = false,
                             MaxValue = 3,
@@ -2966,7 +2521,7 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("a7000000-0000-0000-0000-000000000000"),
+                            Id = new Guid("a2000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "resume.parse",
                             IsUnlimited = false,
@@ -2976,7 +2531,7 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("a8000000-0000-0000-0000-000000000000"),
+                            Id = new Guid("a3000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "jobdescription.create",
                             IsUnlimited = false,
@@ -2986,7 +2541,7 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("a9000000-0000-0000-0000-000000000000"),
+                            Id = new Guid("a4000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "match.create",
                             IsUnlimited = false,
@@ -2998,19 +2553,19 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("b1000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.storage",
+                            FeatureKey = "resume.upload",
                             IsUnlimited = false,
-                            MaxValue = 5,
-                            PeriodType = "total",
+                            MaxValue = 20,
+                            PeriodType = "daily",
                             PlanId = new Guid("22222222-2222-2222-2222-222222222222")
                         },
                         new
                         {
                             Id = new Guid("b2000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.optimization",
+                            FeatureKey = "resume.parse",
                             IsUnlimited = false,
-                            MaxValue = 3,
+                            MaxValue = 20,
                             PeriodType = "daily",
                             PlanId = new Guid("22222222-2222-2222-2222-222222222222")
                         },
@@ -3018,9 +2573,9 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("b3000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "interview.ai",
+                            FeatureKey = "jobdescription.create",
                             IsUnlimited = false,
-                            MaxValue = 1,
+                            MaxValue = 50,
                             PeriodType = "daily",
                             PlanId = new Guid("22222222-2222-2222-2222-222222222222")
                         },
@@ -3028,59 +2583,9 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("b4000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.session",
-                            IsUnlimited = false,
-                            MaxValue = 0,
-                            PeriodType = "monthly",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("b5000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "multi_jd.match",
-                            IsUnlimited = false,
-                            MaxValue = 3,
-                            PeriodType = "per_match",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("b6000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.upload",
-                            IsUnlimited = false,
-                            MaxValue = 10,
-                            PeriodType = "daily",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("b7000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.parse",
-                            IsUnlimited = false,
-                            MaxValue = 10,
-                            PeriodType = "daily",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("b8000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "jobdescription.create",
-                            IsUnlimited = false,
-                            MaxValue = 20,
-                            PeriodType = "daily",
-                            PlanId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("b9000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "match.create",
                             IsUnlimited = false,
-                            MaxValue = 10,
+                            MaxValue = 30,
                             PeriodType = "daily",
                             PlanId = new Guid("22222222-2222-2222-2222-222222222222")
                         },
@@ -3088,19 +2593,19 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c1000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.storage",
+                            FeatureKey = "resume.upload",
                             IsUnlimited = false,
-                            MaxValue = 10,
-                            PeriodType = "total",
+                            MaxValue = 30,
+                            PeriodType = "daily",
                             PlanId = new Guid("33333333-3333-3333-3333-333333333333")
                         },
                         new
                         {
                             Id = new Guid("c2000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.optimization",
+                            FeatureKey = "resume.parse",
                             IsUnlimited = false,
-                            MaxValue = 5,
+                            MaxValue = 30,
                             PeriodType = "daily",
                             PlanId = new Guid("33333333-3333-3333-3333-333333333333")
                         },
@@ -3108,9 +2613,9 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c3000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "interview.ai",
+                            FeatureKey = "jobdescription.create",
                             IsUnlimited = false,
-                            MaxValue = 3,
+                            MaxValue = 80,
                             PeriodType = "daily",
                             PlanId = new Guid("33333333-3333-3333-3333-333333333333")
                         },
@@ -3118,47 +2623,7 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c4000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.session",
-                            IsUnlimited = false,
-                            MaxValue = 3,
-                            PeriodType = "monthly",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("c5000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "multi_jd.match",
-                            IsUnlimited = false,
-                            MaxValue = 10,
-                            PeriodType = "per_match",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("c6000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.upload",
-                            IsUnlimited = false,
-                            MaxValue = 30,
-                            PeriodType = "daily",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("c7000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.parse",
-                            IsUnlimited = false,
-                            MaxValue = 30,
-                            PeriodType = "daily",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("c8000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "jobdescription.create",
+                            FeatureKey = "match.create",
                             IsUnlimited = false,
                             MaxValue = 50,
                             PeriodType = "daily",
@@ -3166,31 +2631,21 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("c9000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "match.create",
-                            IsUnlimited = false,
-                            MaxValue = 30,
-                            PeriodType = "daily",
-                            PlanId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
                             Id = new Guid("d1000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.storage",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
-                            PeriodType = "total",
+                            FeatureKey = "resume.upload",
+                            IsUnlimited = false,
+                            MaxValue = 50,
+                            PeriodType = "daily",
                             PlanId = new Guid("44444444-4444-4444-4444-444444444444")
                         },
                         new
                         {
                             Id = new Guid("d2000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "cv.optimization",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
+                            FeatureKey = "resume.parse",
+                            IsUnlimited = false,
+                            MaxValue = 50,
                             PeriodType = "daily",
                             PlanId = new Guid("44444444-4444-4444-4444-444444444444")
                         },
@@ -3198,9 +2653,9 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("d3000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "interview.ai",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
+                            FeatureKey = "jobdescription.create",
+                            IsUnlimited = false,
+                            MaxValue = 150,
                             PeriodType = "daily",
                             PlanId = new Guid("44444444-4444-4444-4444-444444444444")
                         },
@@ -3208,59 +2663,9 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("d4000000-0000-0000-0000-000000000000"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "mentor.session",
-                            IsUnlimited = false,
-                            MaxValue = 4,
-                            PeriodType = "monthly",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("d5000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "multi_jd.match",
-                            IsUnlimited = false,
-                            MaxValue = 20,
-                            PeriodType = "per_match",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("d6000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.upload",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
-                            PeriodType = "daily",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("d7000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "resume.parse",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
-                            PeriodType = "daily",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("d8000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FeatureKey = "jobdescription.create",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
-                            PeriodType = "daily",
-                            PlanId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("d9000000-0000-0000-0000-000000000000"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FeatureKey = "match.create",
-                            IsUnlimited = true,
-                            MaxValue = 999999,
+                            IsUnlimited = false,
+                            MaxValue = 100,
                             PeriodType = "daily",
                             PlanId = new Guid("44444444-4444-4444-4444-444444444444")
                         });

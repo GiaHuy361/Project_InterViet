@@ -21,22 +21,28 @@ public sealed class CreateMatchCommandHandler
     private readonly IDateTimeProvider _dt;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CreateMatchCommandHandler> _logger;
+    private readonly IQuotaService _quotaService;
 
     public CreateMatchCommandHandler(
         IAppDbContext db,
         IDateTimeProvider dt,
         IServiceScopeFactory scopeFactory,
-        ILogger<CreateMatchCommandHandler> logger)
+        ILogger<CreateMatchCommandHandler> logger,
+        IQuotaService quotaService)
     {
         _db           = db;
         _dt           = dt;
         _scopeFactory = scopeFactory;
         _logger       = logger;
+        _quotaService = quotaService;
     }
 
     public async Task<Result<CreateMatchResponse>> Handle(
         CreateMatchCommand request, CancellationToken ct)
     {
+        var quotaCheck = await _quotaService.CheckAsync(request.UserId, QuotaFeatureKeys.MatchCreate, 1, ct);
+        if (!quotaCheck.IsSuccess) return quotaCheck.Error;
+
         var now = _dt.UtcNow;
 
         // ── Validate Resume ownership ────────────────────────────────────────
@@ -122,6 +128,9 @@ public sealed class CreateMatchCommandHandler
                 description: $"Phiên matching đã được tạo.");
             await usageTracker.TrackAsync(request.UserId, QuotaFeatureKeys.MatchCreate,
                 referenceType: "MatchSession", referenceId: sessionId);
+            var qs = hookSp.GetRequiredService<IQuotaService>();
+            await qs.ConsumeAsync(request.UserId, QuotaFeatureKeys.MatchCreate, 1,
+                referenceType: "MatchSession", referenceId: sessionId, ct: CancellationToken.None);
         }
         catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed: match_created"); }
 

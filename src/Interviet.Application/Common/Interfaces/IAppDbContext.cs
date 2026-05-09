@@ -74,7 +74,7 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<PlanEntitlement> PlanEntitlements { get; }
     Microsoft.EntityFrameworkCore.DbSet<BillingProfile> BillingProfiles { get; }
     Microsoft.EntityFrameworkCore.DbSet<StoredPaymentMethod> StoredPaymentMethods { get; }
-    Microsoft.EntityFrameworkCore.DbSet<Subscription> Subscriptions { get; }
+    Microsoft.EntityFrameworkCore.DbSet<Domain.Billing.Subscription> Subscriptions { get; }
     Microsoft.EntityFrameworkCore.DbSet<SubscriptionChangeLog> SubscriptionChangeLogs { get; }
     Microsoft.EntityFrameworkCore.DbSet<PaymentTransaction> PaymentTransactions { get; }
     Microsoft.EntityFrameworkCore.DbSet<Invoice> Invoices { get; }

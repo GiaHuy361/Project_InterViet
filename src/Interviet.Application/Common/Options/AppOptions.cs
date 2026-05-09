@@ -57,3 +57,9 @@ public sealed class AiServicesOptions
     public int TimeoutSeconds { get; set; } = 60;
 }
 
+public sealed class BillingOptions
+{
+    public const string SectionName = "Billing";
+
+    public bool EnableDevSubscriptionActivation { get; set; } = false;
+}

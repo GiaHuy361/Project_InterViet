@@ -88,6 +88,7 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
     private readonly IDateTimeProvider _dt;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadResumeCommandHandler> _logger;
+    private readonly IQuotaService _quotaService;
 
     public UploadResumeCommandHandler(
         IAppDbContext db,
@@ -95,7 +96,8 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
         IOptions<StorageOptions> storageOpts,
         IDateTimeProvider dt,
         IServiceScopeFactory scopeFactory,
-        ILogger<UploadResumeCommandHandler> logger)
+        ILogger<UploadResumeCommandHandler> logger,
+        IQuotaService quotaService)
     {
         _db           = db;
         _storage      = storage;
@@ -103,12 +105,20 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
         _dt           = dt;
         _scopeFactory = scopeFactory;
         _logger       = logger;
+        _quotaService = quotaService;
     }
 
     public async Task<Result<ResumeResponse>> Handle(UploadResumeCommand request, CancellationToken ct)
     {
         var now    = _dt.UtcNow;
         var userId = request.UserId;
+
+        // ── Quota Check ────────────────────────────────────────────────────────
+        var uploadCheck = await _quotaService.CheckAsync(userId, QuotaFeatureKeys.CvStorage, 1, ct);
+        if (!uploadCheck.IsSuccess) return uploadCheck.Error;
+
+        var parseCheck = await _quotaService.CheckAsync(userId, QuotaFeatureKeys.CvOptimization, 1, ct);
+        if (!parseCheck.IsSuccess) return parseCheck.Error;
 
         // ── Sanitize filename ──────────────────────────────────────────────
         var originalName = Path.GetFileName(request.OriginalFileName); // strip traversal
@@ -221,6 +231,10 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
 
         _logger.LogInformation("Resume uploaded. ResumeId={ResumeId} UserId={UserId} File={File}",
             resumeId, userId, originalName);
+
+        // ── Quota Consume ──────────────────────────────────────────────────────
+        await _quotaService.ConsumeAsync(userId, QuotaFeatureKeys.CvStorage, 1, "Resume", resumeId, ct);
+        await _quotaService.ConsumeAsync(userId, QuotaFeatureKeys.CvOptimization, 1, "Resume", resumeId, ct);
 
         // ── Activity + Usage (best-effort, never fails upload) ────────────
         try
@@ -359,6 +373,15 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             resume.UpdatedAt        = now;
             _logger.LogWarning("CV Service unavailable. ResumeId={ResumeId}", resumeId);
 
+            // ── Refund quota ───────────────────────────────────────────────────
+            try
+            {
+                using var scopeRefund = _scopeFactory.CreateScope();
+                var quotaService = scopeRefund.ServiceProvider.GetRequiredService<IQuotaService>();
+                await quotaService.RefundAsync(userId, QuotaFeatureKeys.CvOptimization, 1, "Resume", resumeId, "CV Service unavailable", default);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to refund resume.parse quota"); }
+
             try
             {
                 using var scope2  = _scopeFactory.CreateScope();
@@ -382,6 +405,15 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             version.ProcessingError = result.ErrorMessage;
             resume.UpdatedAt        = now;
             _logger.LogWarning("CV parse failed. ResumeId={ResumeId} Code={Code}", resumeId, result.ErrorCode);
+
+            // ── Refund quota ───────────────────────────────────────────────────
+            try
+            {
+                using var scopeRefund = _scopeFactory.CreateScope();
+                var quotaService = scopeRefund.ServiceProvider.GetRequiredService<IQuotaService>();
+                await quotaService.RefundAsync(userId, QuotaFeatureKeys.CvOptimization, 1, "Resume", resumeId, "Parse failed", default);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to refund resume.parse quota"); }
 
             try
             {

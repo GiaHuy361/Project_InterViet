@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<AiServicesOptions>(configuration.GetSection(AiServicesOptions.SectionName));
+        services.Configure<BillingOptions>(configuration.GetSection(BillingOptions.SectionName));
 
         // ── Email service ─────────────────────────────────────────────────
         services.AddTransient<IEmailService>(sp =>
@@ -68,6 +69,7 @@ public static class DependencyInjection
         // ── Dashboard / Activity / Usage ──────────────────────────────────
         services.AddScoped<IActivityLogger, ActivityLogger>();
         services.AddScoped<IUsageTracker, UsageTracker>();
+        services.AddScoped<IQuotaService, QuotaService>();
 
         // ── Storage service ───────────────────────────────────────────────
         services.AddSingleton<IStorageService>(sp =>

@@ -121,7 +121,9 @@ public sealed class QuotaCounterItem
     public string    FeatureKey       { get; init; } = string.Empty;
     public string    PeriodType       { get; init; } = string.Empty;
     public string    PeriodKey        { get; init; } = string.Empty;
+    public string?   PlanKey          { get; init; }
     public int       UsedValue        { get; init; }
-    public int?      RemainingValue   { get; init; }
+    public int?      LimitValue       { get; set; }
+    public int?      RemainingValue   { get; set; }
     public DateTime? LastConsumedAt   { get; init; }
 }
