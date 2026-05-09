@@ -21,16 +21,16 @@ public sealed class GetQuotaSnapshotQueryHandler
     {
         var sub = await _db.Subscriptions
             .Include(s => s.Plan)
-            .Where(s => s.UserId == request.UserId && s.Status == Domain.Billing.SubscriptionStatus.Active)
+            .Where(s => s.UserId == request.UserId && (s.Status == Domain.Billing.SubscriptionStatus.Active || s.Status == Domain.Billing.SubscriptionStatus.Trial))
             .OrderByDescending(s => s.CurrentPeriodEndsAt)
             .FirstOrDefaultAsync(ct);
 
         var planId = sub?.PlanId ?? Guid.Parse("11111111-1111-1111-1111-111111111111");
-        var planKey = sub?.Plan?.Code ?? "Free";
+        var planKey = sub?.Plan?.Code ?? "free";
 
         var policies = await _db.UsageQuotaPolicies
-            .Where(p => p.PlanId == planId && p.PeriodType == "daily")
-            .ToDictionaryAsync(p => p.FeatureKey, p => p.MaxValue, ct);
+            .Where(p => p.PlanId == planId)
+            .ToDictionaryAsync(p => p.FeatureKey, p => p, ct);
 
         var counters = await _db.UserQuotaCounters
             .Where(c => c.UserId == request.UserId)
@@ -49,11 +49,18 @@ public sealed class GetQuotaSnapshotQueryHandler
 
         foreach (var c in counters)
         {
-            if (policies.TryGetValue(c.FeatureKey, out var limit))
+            if (policies.TryGetValue(c.FeatureKey, out var policy))
             {
-                c.LimitValue = limit;
-                // Fix up remaining if it drifted
-                c.RemainingValue = Math.Max(0, limit - c.UsedValue);
+                if (policy.IsUnlimited)
+                {
+                    c.LimitValue = null;
+                    c.RemainingValue = null;
+                }
+                else
+                {
+                    c.LimitValue = policy.MaxValue;
+                    c.RemainingValue = Math.Max(0, policy.MaxValue - c.UsedValue);
+                }
             }
         }
 

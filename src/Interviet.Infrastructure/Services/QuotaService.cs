@@ -18,11 +18,11 @@ public sealed class QuotaService : IQuotaService
         _logger = logger;
     }
 
-    private async Task<(Guid PlanId, int MaxValue)> GetPolicyAsync(Guid userId, string featureKey, CancellationToken ct)
+    private async Task<(Guid PlanId, UsageQuotaPolicy? Policy)> GetPolicyAsync(Guid userId, string featureKey, CancellationToken ct)
     {
         // Get active subscription
         var sub = await _db.Subscriptions
-            .Where(s => s.UserId == userId && s.Status == SubscriptionStatus.Active)
+            .Where(s => s.UserId == userId && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial))
             .OrderByDescending(s => s.CurrentPeriodEndsAt)
             .FirstOrDefaultAsync(ct);
 
@@ -34,32 +34,41 @@ public sealed class QuotaService : IQuotaService
         else
         {
             // Default to Free plan
-            var freePlan = await _db.Plans.FirstOrDefaultAsync(p => p.Code == "Free", ct);
+            var freePlan = await _db.Plans.FirstOrDefaultAsync(p => p.Code == "free", ct);
             planId = freePlan?.Id ?? Guid.Parse("11111111-1111-1111-1111-111111111111");
         }
 
         var policy = await _db.UsageQuotaPolicies
-            .FirstOrDefaultAsync(p => p.PlanId == planId && p.FeatureKey == featureKey && p.PeriodType == "daily", ct);
+            .FirstOrDefaultAsync(p => p.PlanId == planId && p.FeatureKey == featureKey, ct);
 
-        return (planId, policy?.MaxValue ?? 0);
+        return (planId, policy);
     }
 
     public async Task<Result> CheckAsync(Guid userId, string featureKey, int amount = 1, CancellationToken ct = default)
     {
-        var (_, maxValue) = await GetPolicyAsync(userId, featureKey, ct);
-        if (maxValue == 0) return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
+        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
+            return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var periodKey = today.ToString("yyyy-MM-dd");
+        if (policy.IsUnlimited) return Result.Success();
+
+        var periodType = policy.PeriodType;
+        var periodKey = periodType switch
+        {
+            "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "total" => "total",
+            _ => "total"
+        };
 
         var counter = await _db.UserQuotaCounters
-            .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == "daily" && c.PeriodKey == periodKey, ct);
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == periodType && c.PeriodKey == periodKey, ct);
 
         int used = counter?.UsedValue ?? 0;
         
-        if (used + amount > maxValue)
+        if (used + amount > policy.MaxValue)
         {
-            return Error.Forbidden("Quota.Exceeded", "Bạn đã dùng hết quota hôm nay cho tính năng này.");
+            return Error.Forbidden("Quota.Exceeded", $"Bạn đã dùng hết quota cho tính năng {featureKey}.");
         }
 
         return Result.Success();
@@ -67,11 +76,18 @@ public sealed class QuotaService : IQuotaService
 
     public async Task<Result> ConsumeAsync(Guid userId, string featureKey, int amount = 1, string referenceType = "", Guid? referenceId = null, CancellationToken ct = default)
     {
-        var (planId, maxValue) = await GetPolicyAsync(userId, featureKey, ct);
-        if (maxValue == 0) return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
+        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
+            return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var periodKey = today.ToString("yyyy-MM-dd");
+        var periodType = policy.PeriodType;
+        var periodKey = periodType switch
+        {
+            "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "total" => "total",
+            _ => "total"
+        };
 
         const int MaxRetries = 3;
 
@@ -80,7 +96,7 @@ public sealed class QuotaService : IQuotaService
             try
             {
                 var counter = await _db.UserQuotaCounters
-                    .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == "daily" && c.PeriodKey == periodKey, ct);
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == periodType && c.PeriodKey == periodKey, ct);
 
                 if (counter == null)
                 {
@@ -89,23 +105,23 @@ public sealed class QuotaService : IQuotaService
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         FeatureKey = featureKey,
-                        PeriodType = "daily",
+                        PeriodType = periodType,
                         PeriodKey = periodKey,
                         UsedValue = 0,
-                        RemainingValue = maxValue,
+                        RemainingValue = policy.IsUnlimited ? null : policy.MaxValue,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
                     _db.UserQuotaCounters.Add(counter);
                 }
 
-                if (counter.UsedValue + amount > maxValue)
+                if (!policy.IsUnlimited && counter.UsedValue + amount > policy.MaxValue)
                 {
-                    return Error.Forbidden("Quota.Exceeded", "Bạn đã dùng hết quota hôm nay cho tính năng này.");
+                    return Error.Forbidden("Quota.Exceeded", $"Bạn đã dùng hết quota cho tính năng {featureKey}.");
                 }
 
                 counter.UsedValue += amount;
-                counter.RemainingValue = Math.Max(0, maxValue - counter.UsedValue);
+                counter.RemainingValue = policy.IsUnlimited ? null : Math.Max(0, policy.MaxValue - counter.UsedValue);
                 counter.LastConsumedAt = DateTime.UtcNow;
                 counter.UpdatedAt = DateTime.UtcNow;
 
@@ -114,7 +130,7 @@ public sealed class QuotaService : IQuotaService
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     FeatureKey = featureKey,
-                    PeriodType = "daily",
+                    PeriodType = periodType,
                     PeriodKey = periodKey,
                     DeltaValue = amount,
                     ReferenceType = referenceType,
@@ -138,10 +154,17 @@ public sealed class QuotaService : IQuotaService
 
     public async Task RefundAsync(Guid userId, string featureKey, int amount = 1, string referenceType = "", Guid? referenceId = null, string reason = "", CancellationToken ct = default)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var periodKey = today.ToString("yyyy-MM-dd");
-        
-        var (_, maxValue) = await GetPolicyAsync(userId, featureKey, ct);
+        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        if (policy == null) return;
+
+        var periodType = policy.PeriodType;
+        var periodKey = periodType switch
+        {
+            "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "total" => "total",
+            _ => "total"
+        };
 
         const int MaxRetries = 3;
 
@@ -150,12 +173,12 @@ public sealed class QuotaService : IQuotaService
             try
             {
                 var counter = await _db.UserQuotaCounters
-                    .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == "daily" && c.PeriodKey == periodKey, ct);
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.FeatureKey == featureKey && c.PeriodType == periodType && c.PeriodKey == periodKey, ct);
 
                 if (counter != null && counter.UsedValue >= amount)
                 {
                     counter.UsedValue -= amount;
-                    counter.RemainingValue = maxValue > 0 ? maxValue - counter.UsedValue : null;
+                    counter.RemainingValue = policy.IsUnlimited ? null : (policy.MaxValue > 0 ? policy.MaxValue - counter.UsedValue : null);
                     counter.UpdatedAt = DateTime.UtcNow;
 
                     _db.QuotaConsumptionLogs.Add(new QuotaConsumptionLog
@@ -163,7 +186,7 @@ public sealed class QuotaService : IQuotaService
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         FeatureKey = featureKey,
-                        PeriodType = "daily",
+                        PeriodType = periodType,
                         PeriodKey = periodKey,
                         DeltaValue = -amount,
                         ReferenceType = referenceType,
