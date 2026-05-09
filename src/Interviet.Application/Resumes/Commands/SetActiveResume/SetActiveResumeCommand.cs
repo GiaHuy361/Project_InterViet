@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Domain.Resumes;
 using Interviet.Shared.Results;
+using Microsoft.Extensions.Logging;
 
 namespace Interviet.Application.Resumes.Commands.SetActiveResume;
 
@@ -12,11 +13,19 @@ public sealed class SetActiveResumeCommandHandler : IRequestHandler<SetActiveRes
 {
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
+    private readonly IActivityLogger _activityLogger;
+    private readonly ILogger<SetActiveResumeCommandHandler> _logger;
 
-    public SetActiveResumeCommandHandler(IAppDbContext db, IDateTimeProvider dt)
+    public SetActiveResumeCommandHandler(
+        IAppDbContext db,
+        IDateTimeProvider dt,
+        IActivityLogger activityLogger,
+        ILogger<SetActiveResumeCommandHandler> logger)
     {
-        _db = db;
-        _dt = dt;
+        _db             = db;
+        _dt             = dt;
+        _activityLogger = activityLogger;
+        _logger         = logger;
     }
 
     public async Task<Result> Handle(SetActiveResumeCommand request, CancellationToken ct)
@@ -47,6 +56,16 @@ public sealed class SetActiveResumeCommandHandler : IRequestHandler<SetActiveRes
         target.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
+
+        // Activity log — non-critical
+        try
+        {
+            await _activityLogger.LogAsync(request.UserId, ActivityActionKeys.ActiveResumeChanged,
+                entityType: "Resume", entityId: request.ResumeId,
+                description: "CV active đã được thay đổi.");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: active_resume_changed"); }
+
         return Result.Success();
     }
 }

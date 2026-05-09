@@ -13,11 +13,19 @@ public sealed class DeleteJobDescriptionCommandHandler
 {
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
+    private readonly IActivityLogger _activityLogger;
+    private readonly ILogger<DeleteJobDescriptionCommandHandler> _logger;
 
-    public DeleteJobDescriptionCommandHandler(IAppDbContext db, IDateTimeProvider dt)
+    public DeleteJobDescriptionCommandHandler(
+        IAppDbContext db,
+        IDateTimeProvider dt,
+        IActivityLogger activityLogger,
+        ILogger<DeleteJobDescriptionCommandHandler> logger)
     {
-        _db = db;
-        _dt = dt;
+        _db             = db;
+        _dt             = dt;
+        _activityLogger = activityLogger;
+        _logger         = logger;
     }
 
     public async Task<Result> Handle(DeleteJobDescriptionCommand request, CancellationToken ct)
@@ -35,6 +43,14 @@ public sealed class DeleteJobDescriptionCommandHandler
         jd.DeletedAt  = _dt.UtcNow;
         jd.UpdatedAt  = _dt.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            await _activityLogger.LogAsync(request.UserId, ActivityActionKeys.JobDescriptionDeleted,
+                entityType: "JobDescription", entityId: jd.Id,
+                description: "JD đã được xóa.");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: job_description_deleted"); }
 
         return Result.Success();
     }

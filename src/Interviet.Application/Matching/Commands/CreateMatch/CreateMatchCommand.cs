@@ -110,6 +110,16 @@ public sealed class CreateMatchCommandHandler
             "MatchSession created. SessionId={SessionId} ResumeId={ResumeId} JdId={JdId}",
             sessionId, request.ResumeId, request.JobDescriptionId);
 
+        // Activity log — non-critical, isolated scope
+        try
+        {
+            var actLog = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+            await actLog.LogAsync(request.UserId, ActivityActionKeys.MatchCreated,
+                entityType: "MatchSession", entityId: sessionId,
+                description: $"Phiên matching đã được tạo.");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: match_created"); }
+
         // ── Fire-and-forget: call Python matching service ─────────────────────
         // Capture primitives/values — do NOT capture scoped services
         var capturedScopeFactory  = _scopeFactory;
@@ -165,7 +175,8 @@ public sealed class CreateMatchCommandHandler
                 });
 
                 await ApplyMatchResultAsync(
-                    db, dt, capturedSessionId, capturedTargetId, capturedUserId, result);
+                    db, dt, capturedSessionId, capturedTargetId, capturedUserId, result,
+                    capturedScopeFactory, capturedLogger);
             }
             catch (Exception ex)
             {
@@ -188,7 +199,9 @@ public sealed class CreateMatchCommandHandler
         IAppDbContext db,
         IDateTimeProvider dt,
         Guid sessionId, Guid targetId, Guid userId,
-        AiMatchResult result)
+        AiMatchResult result,
+        IServiceScopeFactory scopeFactory,
+        ILogger<CreateMatchCommandHandler> logger)
     {
         var now     = dt.UtcNow;
         var session = await db.MatchSessions.FindAsync(sessionId);
@@ -199,7 +212,7 @@ public sealed class CreateMatchCommandHandler
 
         if (result.IsSuccess)
         {
-            session.Status         = MatchSessionStatus.Completed;
+            session.Status           = MatchSessionStatus.Completed;
             session.OverallBestScore = result.OverallScore;
 
             // Compute MatchBand
@@ -212,37 +225,57 @@ public sealed class CreateMatchCommandHandler
 
             db.MatchResults.Add(new MatchResult
             {
-                Id               = Guid.NewGuid(),
-                MatchSessionId   = sessionId,
-                MatchTargetId    = targetId,
-                TotalScore       = result.OverallScore ?? 0,
-                TechnicalScore   = result.SkillScore,
-                ExperienceScore  = result.ExperienceScore,
-                EducationScore   = result.EducationScore,
-                LanguageScore    = result.LanguageScore,
-                MatchBand        = band,
-                SummaryText      = result.SummaryText,
+                Id                = Guid.NewGuid(),
+                MatchSessionId    = sessionId,
+                MatchTargetId     = targetId,
+                TotalScore        = result.OverallScore ?? 0,
+                TechnicalScore    = result.SkillScore,
+                ExperienceScore   = result.ExperienceScore,
+                EducationScore    = result.EducationScore,
+                LanguageScore     = result.LanguageScore,
+                MatchBand         = band,
+                SummaryText       = result.SummaryText,
                 MatchedSkillsJson = result.MatchedSkillsJson,
                 MissingSkillsJson = result.MissingSkillsJson,
-                StrengthsJson    = result.StrengthsJson,
-                WeaknessesJson   = result.WeaknessesJson,
-                SuggestionsJson  = result.RecommendationsJson,
-                RawResponseJson  = result.RawResponseJson,
-                ModelVersion     = result.ModelVersion,
-                SchemaVersion    = result.SchemaVersion,
-                CreatedAt        = now
+                StrengthsJson     = result.StrengthsJson,
+                WeaknessesJson    = result.WeaknessesJson,
+                SuggestionsJson   = result.RecommendationsJson,
+                RawResponseJson   = result.RawResponseJson,
+                ModelVersion      = result.ModelVersion,
+                SchemaVersion     = result.SchemaVersion,
+                CreatedAt         = now
             });
+
+            await db.SaveChangesAsync();
+
+            // Activity log — separate scope, non-critical
+            try
+            {
+                var actLog = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+                await actLog.LogAsync(userId, ActivityActionKeys.MatchCompleted,
+                    entityType: "MatchSession", entityId: sessionId,
+                    description: $"Matching hoàn tất. Điểm: {result.OverallScore:F1}");
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "activity log failed: match_completed"); }
         }
         else
         {
-            session.Status       = result.IsServiceUnavailable
-                ? MatchSessionStatus.Failed
-                : MatchSessionStatus.Failed;
+            session.Status       = MatchSessionStatus.Failed;
             session.FailedAt     = now;
             session.ErrorCode    = result.ErrorCode;
             session.ErrorMessage = result.ErrorMessage;
-        }
 
-        await db.SaveChangesAsync();
+            await db.SaveChangesAsync();
+
+            // Activity log — separate scope, non-critical
+            try
+            {
+                var actLog = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+                await actLog.LogAsync(userId, ActivityActionKeys.MatchFailed,
+                    entityType: "MatchSession", entityId: sessionId,
+                    description: $"Matching thất bại: {result.ErrorCode}.");
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "activity log failed: match_failed"); }
+        }
     }
 }

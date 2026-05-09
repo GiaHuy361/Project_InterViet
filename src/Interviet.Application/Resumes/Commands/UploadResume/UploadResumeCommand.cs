@@ -222,6 +222,19 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
         _logger.LogInformation("Resume uploaded. ResumeId={ResumeId} UserId={UserId} File={File}",
             resumeId, userId, originalName);
 
+        // ── Activity + Usage (best-effort, never fails upload) ────────────
+        try
+        {
+            var activityLogger = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+            await activityLogger.LogAsync(userId, ActivityActionKeys.ResumeUploaded,
+                entityType: "Resume", entityId: resumeId,
+                description: $"CV '{originalName}' đã được tải lên.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to log resume_uploaded activity. ResumeId={ResumeId}", resumeId);
+        }
+
         // ── Fire-and-forget: call Python CV Service ────────────────────────
         // Use absolute path if BasePath is absolute, else combine with CWD
         var basePath = Path.IsPathRooted(_storageOpts.BasePath)
@@ -315,6 +328,17 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             });
 
             _logger.LogInformation("CV parsed successfully. ResumeId={ResumeId}", resumeId);
+
+            // ── Activity + Usage hook (separate SaveChanges, non-critical) ──
+            try
+            {
+                var scope2  = _scopeFactory.CreateScope();
+                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseSucceeded,
+                    entityType: "Resume", entityId: resumeId,
+                    description: "CV đã được phân tích thành công.");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-success"); }
         }
         else if (result.IsServiceUnavailable)
         {
@@ -325,6 +349,16 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             version.ProcessingError = result.ErrorMessage;
             resume.UpdatedAt        = now;
             _logger.LogWarning("CV Service unavailable. ResumeId={ResumeId}", resumeId);
+
+            try
+            {
+                var scope2  = _scopeFactory.CreateScope();
+                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseFailed,
+                    entityType: "Resume", entityId: resumeId,
+                    description: $"Phân tích CV thất bại: {result.ErrorCode}.");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-unavailable"); }
         }
         else
         {
@@ -335,6 +369,16 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
             version.ProcessingError = result.ErrorMessage;
             resume.UpdatedAt        = now;
             _logger.LogWarning("CV parse failed. ResumeId={ResumeId} Code={Code}", resumeId, result.ErrorCode);
+
+            try
+            {
+                var scope2  = _scopeFactory.CreateScope();
+                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseFailed,
+                    entityType: "Resume", entityId: resumeId,
+                    description: $"Phân tích CV thất bại: {result.ErrorCode}.");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-failed"); }
         }
 
         await db.SaveChangesAsync();

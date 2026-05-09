@@ -46,16 +46,19 @@ public sealed class CreateJobDescriptionCommandHandler
 {
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
+    private readonly IActivityLogger _activityLogger;
     private readonly ILogger<CreateJobDescriptionCommandHandler> _logger;
 
     public CreateJobDescriptionCommandHandler(
         IAppDbContext db,
         IDateTimeProvider dt,
+        IActivityLogger activityLogger,
         ILogger<CreateJobDescriptionCommandHandler> logger)
     {
-        _db     = db;
-        _dt     = dt;
-        _logger = logger;
+        _db             = db;
+        _dt             = dt;
+        _activityLogger = activityLogger;
+        _logger         = logger;
     }
 
     public async Task<Result<JobDescriptionResponse>> Handle(
@@ -81,6 +84,15 @@ public sealed class CreateJobDescriptionCommandHandler
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("JobDescription created. Id={Id} UserId={UserId}", jd.Id, jd.UserId);
+
+        // Activity log — non-critical
+        try
+        {
+            await _activityLogger.LogAsync(request.UserId, ActivityActionKeys.JobDescriptionCreated,
+                entityType: "JobDescription", entityId: jd.Id,
+                description: $"JD '{jd.Title ?? "(không tiêu đề)"}' đã được tạo.");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: job_description_created"); }
 
         return Result<JobDescriptionResponse>.Success(MapToResponse(jd));
     }

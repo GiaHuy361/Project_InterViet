@@ -38,11 +38,19 @@ public sealed class UpdateJobDescriptionCommandHandler
 {
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
+    private readonly IActivityLogger _activityLogger;
+    private readonly ILogger<UpdateJobDescriptionCommandHandler> _logger;
 
-    public UpdateJobDescriptionCommandHandler(IAppDbContext db, IDateTimeProvider dt)
+    public UpdateJobDescriptionCommandHandler(
+        IAppDbContext db,
+        IDateTimeProvider dt,
+        IActivityLogger activityLogger,
+        ILogger<UpdateJobDescriptionCommandHandler> logger)
     {
-        _db = db;
-        _dt = dt;
+        _db             = db;
+        _dt             = dt;
+        _activityLogger = activityLogger;
+        _logger         = logger;
     }
 
     public async Task<Result<JobDescriptionResponse>> Handle(
@@ -67,6 +75,14 @@ public sealed class UpdateJobDescriptionCommandHandler
 
         jd.UpdatedAt = _dt.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            await _activityLogger.LogAsync(request.UserId, ActivityActionKeys.JobDescriptionUpdated,
+                entityType: "JobDescription", entityId: jd.Id,
+                description: $"JD '{jd.Title ?? "(không tiêu đề)"}' đã được cập nhật.");
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: job_description_updated"); }
 
         return Result<JobDescriptionResponse>.Success(CreateJobDescriptionCommandHandler.MapToResponse(jd));
     }

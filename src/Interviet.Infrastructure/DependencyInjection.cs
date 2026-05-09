@@ -65,6 +65,10 @@ public static class DependencyInjection
         services.AddTransient<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 
+        // ── Dashboard / Activity / Usage ──────────────────────────────────
+        services.AddScoped<IActivityLogger, ActivityLogger>();
+        services.AddScoped<IUsageTracker, UsageTracker>();
+
         // ── Storage service ───────────────────────────────────────────────
         services.AddSingleton<IStorageService>(sp =>
         {
