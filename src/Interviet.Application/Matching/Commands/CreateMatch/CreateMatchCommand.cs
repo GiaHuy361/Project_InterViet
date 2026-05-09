@@ -110,15 +110,20 @@ public sealed class CreateMatchCommandHandler
             "MatchSession created. SessionId={SessionId} ResumeId={ResumeId} JdId={JdId}",
             sessionId, request.ResumeId, request.JobDescriptionId);
 
-        // Activity log — non-critical, isolated scope
+        // Activity + Usage — non-critical, isolated scope
         try
         {
-            var actLog = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+            using var hookScope  = _scopeFactory.CreateScope();
+            var hookSp           = hookScope.ServiceProvider;
+            var actLog           = hookSp.GetRequiredService<IActivityLogger>();
+            var usageTracker     = hookSp.GetRequiredService<IUsageTracker>();
             await actLog.LogAsync(request.UserId, ActivityActionKeys.MatchCreated,
                 entityType: "MatchSession", entityId: sessionId,
                 description: $"Phiên matching đã được tạo.");
+            await usageTracker.TrackAsync(request.UserId, QuotaFeatureKeys.MatchCreate,
+                referenceType: "MatchSession", referenceId: sessionId);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: match_created"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed: match_created"); }
 
         // ── Fire-and-forget: call Python matching service ─────────────────────
         // Capture primitives/values — do NOT capture scoped services
@@ -153,6 +158,7 @@ public sealed class CreateMatchCommandHandler
                 var db           = sp.GetRequiredService<IAppDbContext>();
                 var matchClient  = sp.GetRequiredService<IAiMatchingClient>();
                 var dt           = sp.GetRequiredService<IDateTimeProvider>();
+                var usageTracker = sp.GetRequiredService<IUsageTracker>();
 
                 var result = await matchClient.MatchAsync(new AiMatchRequest
                 {
@@ -176,7 +182,7 @@ public sealed class CreateMatchCommandHandler
 
                 await ApplyMatchResultAsync(
                     db, dt, capturedSessionId, capturedTargetId, capturedUserId, result,
-                    capturedScopeFactory, capturedLogger);
+                    capturedScopeFactory, capturedLogger, usageTracker);
             }
             catch (Exception ex)
             {
@@ -201,7 +207,8 @@ public sealed class CreateMatchCommandHandler
         Guid sessionId, Guid targetId, Guid userId,
         AiMatchResult result,
         IServiceScopeFactory scopeFactory,
-        ILogger<CreateMatchCommandHandler> logger)
+        ILogger<CreateMatchCommandHandler> logger,
+        IUsageTracker usageTracker)
     {
         var now     = dt.UtcNow;
         var session = await db.MatchSessions.FindAsync(sessionId);
@@ -248,15 +255,19 @@ public sealed class CreateMatchCommandHandler
 
             await db.SaveChangesAsync();
 
-            // Activity log — separate scope, non-critical
+            // Activity + Usage — separate scope, non-critical
             try
             {
-                var actLog = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+                using var hookScope  = scopeFactory.CreateScope();
+                var hookSp           = hookScope.ServiceProvider;
+                var actLog           = hookSp.GetRequiredService<IActivityLogger>();
                 await actLog.LogAsync(userId, ActivityActionKeys.MatchCompleted,
                     entityType: "MatchSession", entityId: sessionId,
                     description: $"Matching hoàn tất. Điểm: {result.OverallScore:F1}");
+                await usageTracker.TrackAsync(userId, QuotaFeatureKeys.MatchComplete,
+                    referenceType: "MatchSession", referenceId: sessionId);
             }
-            catch (Exception ex) { logger.LogWarning(ex, "activity log failed: match_completed"); }
+            catch (Exception ex) { logger.LogWarning(ex, "activity/usage log failed: match_completed"); }
         }
         else
         {
@@ -267,15 +278,19 @@ public sealed class CreateMatchCommandHandler
 
             await db.SaveChangesAsync();
 
-            // Activity log — separate scope, non-critical
+            // Activity + Usage — separate scope, non-critical
             try
             {
-                var actLog = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+                using var hookScope  = scopeFactory.CreateScope();
+                var hookSp           = hookScope.ServiceProvider;
+                var actLog           = hookSp.GetRequiredService<IActivityLogger>();
                 await actLog.LogAsync(userId, ActivityActionKeys.MatchFailed,
                     entityType: "MatchSession", entityId: sessionId,
                     description: $"Matching thất bại: {result.ErrorCode}.");
+                await usageTracker.TrackAsync(userId, QuotaFeatureKeys.MatchCreate,
+                    referenceType: "MatchSession", referenceId: sessionId);
             }
-            catch (Exception ex) { logger.LogWarning(ex, "activity log failed: match_failed"); }
+            catch (Exception ex) { logger.LogWarning(ex, "activity/usage log failed: match_failed"); }
         }
     }
 }

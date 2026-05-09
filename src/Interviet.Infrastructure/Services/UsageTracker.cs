@@ -6,7 +6,8 @@ using Interviet.Domain.Quotas;
 namespace Interviet.Infrastructure.Services;
 
 /// <summary>
-/// Upserts UserDailyUsage counters for feature tracking.
+/// Upserts UserDailyUsage counters and UserQuotaCounter for feature tracking.
+/// Also writes QuotaConsumptionLog for audit trail.
 /// Never throws externally — on error logs warning and swallows the exception.
 /// </summary>
 public sealed class UsageTracker : IUsageTracker
@@ -20,70 +21,122 @@ public sealed class UsageTracker : IUsageTracker
         _logger = logger;
     }
 
-    public Task TrackCvOptimizationAsync(Guid userId, DateOnly date, CancellationToken ct = default)
-        => TrackAsync(userId, date, u => u.CvOptimizationCount++, ct);
-
-    public Task TrackInterviewAsync(Guid userId, DateOnly date, CancellationToken ct = default)
-        => TrackAsync(userId, date, u => u.InterviewCount++, ct);
-
-    public Task TrackMultiMatchAsync(Guid userId, DateOnly date, CancellationToken ct = default)
-        => TrackAsync(userId, date, u => u.MultiMatchCount++, ct);
-
-    public Task TrackMentorBookingAsync(Guid userId, DateOnly date, CancellationToken ct = default)
-        => TrackAsync(userId, date, u => u.MentorBookingCount++, ct);
-
-    // ── Core upsert ───────────────────────────────────────────────────────────
-    private async Task TrackAsync(
+    public async Task TrackAsync(
         Guid userId,
-        DateOnly date,
-        Action<UserDailyUsage> increment,
-        CancellationToken ct)
+        string featureKey,
+        string referenceType,
+        Guid? referenceId = null,
+        CancellationToken ct = default)
     {
+        var today     = DateOnly.FromDateTime(DateTime.UtcNow);
+        var periodKey = today.ToString("yyyy-MM-dd"); // daily period
+
         const int MaxRetries = 3;
 
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
         {
             try
             {
-                var row = await _db.UserDailyUsages
-                    .FirstOrDefaultAsync(u => u.UserId == userId && u.UsageDate == date, ct);
+                // ── 1. Upsert UserDailyUsage ─────────────────────────────────
+                var daily = await _db.UserDailyUsages
+                    .FirstOrDefaultAsync(u => u.UserId == userId && u.UsageDate == today, ct);
 
-                if (row is null)
+                if (daily is null)
                 {
-                    row = new UserDailyUsage
+                    daily = new UserDailyUsage
                     {
                         Id        = Guid.NewGuid(),
                         UserId    = userId,
-                        UsageDate = date,
+                        UsageDate = today,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
-                    _db.UserDailyUsages.Add(row);
+                    _db.UserDailyUsages.Add(daily);
                 }
 
-                increment(row);
-                row.UpdatedAt = DateTime.UtcNow;
+                IncrementDailyUsage(daily, featureKey);
+                daily.UpdatedAt = DateTime.UtcNow;
+
+                // ── 2. Upsert UserQuotaCounter (daily) ───────────────────────
+                var counter = await _db.UserQuotaCounters
+                    .FirstOrDefaultAsync(c =>
+                        c.UserId     == userId     &&
+                        c.FeatureKey == featureKey &&
+                        c.PeriodType == "daily"    &&
+                        c.PeriodKey  == periodKey, ct);
+
+                if (counter is null)
+                {
+                    counter = new UserQuotaCounter
+                    {
+                        Id         = Guid.NewGuid(),
+                        UserId     = userId,
+                        FeatureKey = featureKey,
+                        PeriodType = "daily",
+                        PeriodKey  = periodKey,
+                        UsedValue  = 0,
+                        CreatedAt  = DateTime.UtcNow,
+                        UpdatedAt  = DateTime.UtcNow
+                    };
+                    _db.UserQuotaCounters.Add(counter);
+                }
+
+                counter.UsedValue++;
+                counter.LastConsumedAt = DateTime.UtcNow;
+                counter.UpdatedAt      = DateTime.UtcNow;
+
+                // ── 3. Write QuotaConsumptionLog ─────────────────────────────
+                _db.QuotaConsumptionLogs.Add(new QuotaConsumptionLog
+                {
+                    Id            = Guid.NewGuid(),
+                    UserId        = userId,
+                    FeatureKey    = featureKey,
+                    PeriodType    = "daily",
+                    PeriodKey     = periodKey,
+                    DeltaValue    = 1,
+                    ReferenceType = referenceType,
+                    ReferenceId   = referenceId,
+                    Status        = "consumed",
+                    CreatedAt     = DateTime.UtcNow
+                });
 
                 await _db.SaveChangesAsync(ct);
                 return; // success
             }
             catch (DbUpdateConcurrencyException) when (attempt < MaxRetries)
             {
-                // Retry on optimistic concurrency conflict
                 _logger.LogDebug(
-                    "UsageTracker concurrency conflict for UserId={UserId} Date={Date}, retrying attempt {Attempt}",
-                    userId, date, attempt + 1);
+                    "UsageTracker concurrency conflict UserId={UserId} Feature={Feature}, retry {Attempt}",
+                    userId, featureKey, attempt + 1);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "UsageTracker failed for UserId={UserId} Date={Date}", userId, date);
+                    "UsageTracker failed UserId={UserId} Feature={Feature}", userId, featureKey);
                 return; // swallow — non-critical
             }
         }
 
         _logger.LogWarning(
-            "UsageTracker gave up after {MaxRetries} retries for UserId={UserId} Date={Date}",
-            MaxRetries, userId, date);
+            "UsageTracker gave up after {MaxRetries} retries UserId={UserId} Feature={Feature}",
+            MaxRetries, userId, featureKey);
+    }
+
+    // ── Maps featureKey → the correct UserDailyUsage counter column ──────────
+    private static void IncrementDailyUsage(UserDailyUsage daily, string featureKey)
+    {
+        switch (featureKey)
+        {
+            case QuotaFeatureKeys.ResumeUpload:
+            case QuotaFeatureKeys.ResumeParse:
+                daily.CvOptimizationCount++;  // reuse as general CV activity counter
+                break;
+            case QuotaFeatureKeys.MatchCreate:
+            case QuotaFeatureKeys.MatchComplete:
+                daily.MultiMatchCount++;
+                break;
+            // JdCreate — no dedicated column in UserDailyUsage, skip daily increment
+            // but still writes QuotaCounter + ConsumptionLog above
+        }
     }
 }

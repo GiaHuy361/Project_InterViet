@@ -225,14 +225,19 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
         // ── Activity + Usage (best-effort, never fails upload) ────────────
         try
         {
-            var activityLogger = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IActivityLogger>();
+            using var hookScope   = _scopeFactory.CreateScope();
+            var hookSp            = hookScope.ServiceProvider;
+            var activityLogger    = hookSp.GetRequiredService<IActivityLogger>();
+            var usageTracker      = hookSp.GetRequiredService<IUsageTracker>();
             await activityLogger.LogAsync(userId, ActivityActionKeys.ResumeUploaded,
                 entityType: "Resume", entityId: resumeId,
                 description: $"CV '{originalName}' đã được tải lên.");
+            await usageTracker.TrackAsync(userId, QuotaFeatureKeys.ResumeUpload,
+                referenceType: "Resume", referenceId: resumeId);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to log resume_uploaded activity. ResumeId={ResumeId}", resumeId);
+            _logger.LogWarning(ex, "Failed to log/track resume_uploaded. ResumeId={ResumeId}", resumeId);
         }
 
         // ── Fire-and-forget: call Python CV Service ────────────────────────
@@ -329,16 +334,20 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
 
             _logger.LogInformation("CV parsed successfully. ResumeId={ResumeId}", resumeId);
 
-            // ── Activity + Usage hook (separate SaveChanges, non-critical) ──
+            // ── Activity + Usage hook (separate scope, non-critical) ────────────
             try
             {
-                var scope2  = _scopeFactory.CreateScope();
-                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                using var scope2  = _scopeFactory.CreateScope();
+                var sp2           = scope2.ServiceProvider;
+                var actLog2       = sp2.GetRequiredService<IActivityLogger>();
+                var usageTracker2 = sp2.GetRequiredService<IUsageTracker>();
                 await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseSucceeded,
                     entityType: "Resume", entityId: resumeId,
                     description: "CV đã được phân tích thành công.");
+                await usageTracker2.TrackAsync(userId, QuotaFeatureKeys.ResumeParse,
+                    referenceType: "Resume", referenceId: resumeId);
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-success"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed post-parse-success"); }
         }
         else if (result.IsServiceUnavailable)
         {
@@ -352,13 +361,17 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
 
             try
             {
-                var scope2  = _scopeFactory.CreateScope();
-                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                using var scope2  = _scopeFactory.CreateScope();
+                var sp2           = scope2.ServiceProvider;
+                var actLog2       = sp2.GetRequiredService<IActivityLogger>();
+                var usageTracker2 = sp2.GetRequiredService<IUsageTracker>();
                 await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseFailed,
                     entityType: "Resume", entityId: resumeId,
                     description: $"Phân tích CV thất bại: {result.ErrorCode}.");
+                await usageTracker2.TrackAsync(userId, QuotaFeatureKeys.ResumeParse,
+                    referenceType: "Resume", referenceId: resumeId);
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-unavailable"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed post-parse-unavailable"); }
         }
         else
         {
@@ -372,13 +385,17 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
 
             try
             {
-                var scope2  = _scopeFactory.CreateScope();
-                var actLog2 = scope2.ServiceProvider.GetRequiredService<IActivityLogger>();
+                using var scope2  = _scopeFactory.CreateScope();
+                var sp2           = scope2.ServiceProvider;
+                var actLog2       = sp2.GetRequiredService<IActivityLogger>();
+                var usageTracker2 = sp2.GetRequiredService<IUsageTracker>();
                 await actLog2.LogAsync(userId, ActivityActionKeys.ResumeParseFailed,
                     entityType: "Resume", entityId: resumeId,
                     description: $"Phân tích CV thất bại: {result.ErrorCode}.");
+                await usageTracker2.TrackAsync(userId, QuotaFeatureKeys.ResumeParse,
+                    referenceType: "Resume", referenceId: resumeId);
             }
-            catch (Exception ex) { _logger.LogWarning(ex, "activity log failed post-parse-failed"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed post-parse-failed"); }
         }
 
         await db.SaveChangesAsync();

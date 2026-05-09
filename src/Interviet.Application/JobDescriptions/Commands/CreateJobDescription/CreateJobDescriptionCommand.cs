@@ -47,17 +47,20 @@ public sealed class CreateJobDescriptionCommandHandler
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
     private readonly IActivityLogger _activityLogger;
+    private readonly IUsageTracker _usageTracker;
     private readonly ILogger<CreateJobDescriptionCommandHandler> _logger;
 
     public CreateJobDescriptionCommandHandler(
         IAppDbContext db,
         IDateTimeProvider dt,
         IActivityLogger activityLogger,
+        IUsageTracker usageTracker,
         ILogger<CreateJobDescriptionCommandHandler> logger)
     {
         _db             = db;
         _dt             = dt;
         _activityLogger = activityLogger;
+        _usageTracker   = usageTracker;
         _logger         = logger;
     }
 
@@ -85,14 +88,16 @@ public sealed class CreateJobDescriptionCommandHandler
 
         _logger.LogInformation("JobDescription created. Id={Id} UserId={UserId}", jd.Id, jd.UserId);
 
-        // Activity log — non-critical
+        // Activity + Usage — non-critical
         try
         {
             await _activityLogger.LogAsync(request.UserId, ActivityActionKeys.JobDescriptionCreated,
                 entityType: "JobDescription", entityId: jd.Id,
                 description: $"JD '{jd.Title ?? "(không tiêu đề)"}' đã được tạo.");
+            await _usageTracker.TrackAsync(request.UserId, QuotaFeatureKeys.JdCreate,
+                referenceType: "JobDescription", referenceId: jd.Id);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "activity log failed: job_description_created"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed: job_description_created"); }
 
         return Result<JobDescriptionResponse>.Success(MapToResponse(jd));
     }
