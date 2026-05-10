@@ -1,10 +1,14 @@
 import json
+import logging
 from typing import Optional
 from fastapi import APIRouter, Request, Header
 from datetime import datetime
 from schemas.match_schema import MatchRequest, MatchResponseEnvelope, MatchDataResponse
 from core.ai_logic import call_gemini_with_retry
 from core.security import match_clients, limiter
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cv-jd-match")
 
 # Khởi tạo Router
 router = APIRouter()
@@ -32,7 +36,7 @@ def normalize_json_field(field_value: str) -> str:
 
 # --- ENDPOINT MATCHING ---
 @router.post("/v1/cv/match", response_model=MatchResponseEnvelope)
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 async def match_cv_jd(
     request: Request,
     payload: MatchRequest,
@@ -44,6 +48,14 @@ async def match_cv_jd(
     user_id = x_user_id or payload.userId
     correlation_id = x_correlation_id or payload.correlationId
     request_id = x_request_id or payload.requestId
+    m_job_id = payload.matchJobId
+    m_index = payload.matchIndex or "N/A"
+
+    logger.info(
+        f"[MATCH_START] Corr: {correlation_id} | Request: {request_id} | "
+        f"User: {user_id} | JobID: {m_job_id} | Index: {m_index} | "
+        f"CV_Len: {len(payload.resumeParsedData.rawText)} | JD_Len: {len(payload.jobDescription.rawText)}"
+    )
 
     # 2. Bắt lỗi Validation cơ bản
     if not payload.resumeParsedData.rawText or not payload.resumeParsedData.rawText.strip():
@@ -135,10 +147,12 @@ Dựa vào thông tin trên, hãy tính điểm và điền đầy đủ các tr
             summary=ai_result.get("summary", "Không có tóm tắt.")
         )
         
+        logger.info(f"[MATCH_SUCCESS] Corr: {correlation_id} | JobID: {m_job_id} | Score: {match_data.overallScore}")
         return MatchResponseEnvelope(success=True, data=match_data, error=None)
 
     except Exception as e:
         error_msg = str(e)
+        logger.error(f"[MATCH_ERROR] Corr: {correlation_id} | JobID: {m_job_id} | Error: {error_msg}")
         # Bắt đúng lỗi 503 để báo Service Unavailable theo Contract của C#
         if "503" in error_msg or "high demand" in error_msg.lower():
             # Tương tự, khi ráp main.py ta sẽ ném CustomAPIException

@@ -53,7 +53,7 @@ def calculate_metadata(parsed_data: dict, raw_text: str) -> ParseMetadata:
 router = APIRouter()
 
 @router.post("/v1/cv/parse", response_model=ParseResponseEnvelope)
-@limiter.limit("5/minute") # Đã cập nhật lên 10 request / phút
+@limiter.limit("30/minute")
 async def parse_cv(
     request: Request,
     file: UploadFile = File(...),

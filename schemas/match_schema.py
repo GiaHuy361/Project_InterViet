@@ -21,6 +21,7 @@ class MatchRequest(BaseModel):
     resumeVersionId: Optional[str] = None
     jobDescriptionId: str
     matchJobId: str # Lưu ý C# gửi key là matchJobId
+    matchIndex: Optional[str] = None # Dùng để trace thứ tự trong Multi-match
     resumeParsedData: ResumeParsedDataInput
     jobDescription: JobDescriptionInput
     correlationId: str
