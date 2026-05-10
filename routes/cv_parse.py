@@ -5,9 +5,50 @@ from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, Request, Header
 from google.genai import types
 
-from schemas.parse_schema import ParseResponseEnvelope, ParseDataResponse
+from schemas.parse_schema import ParseMetadata, ParseResponseEnvelope, ParseDataResponse
 from core.ai_logic import call_gemini_with_retry
 from core.security import parse_clients, limiter
+
+def calculate_metadata(parsed_data: dict, raw_text: str) -> ParseMetadata:
+    # 1. Cơ bản
+    text_len = len(raw_text)
+    warning_list = parsed_data.get("warnings", [])
+    
+    # 2. Phân tích các section
+    expected_fields = ["skills", "experiences", "educations", "projects", "languages", "certifications"]
+    detected = []
+    missing = []
+    
+    filled_count = 0
+    for field in expected_fields:
+        val = parsed_data.get(field, "")
+        if val and len(str(val).strip()) > 10: # Nếu có dữ liệu và đủ dài
+            detected.append(field)
+            filled_count += 1
+        else:
+            missing.append(field)
+            
+    # 3. Tính toán Confidence Score (Độ tin cậy) dựa trên tỷ lệ lấp đầy và độ dài của rawText (CV quá ngắn thường khó parse chính xác)
+    base_score = filled_count / len(expected_fields)
+    length_penalty = 1.0 if text_len > 500 else (text_len / 500)
+    final_score = round(base_score * length_penalty, 2)
+    
+    # 4. Phân loại chất lượng
+    if final_score > 0.8:
+        quality = "High"
+    elif final_score > 0.5:
+        quality = "Medium"
+    else:
+        quality = "Low"
+        
+    return ParseMetadata(
+        textLength=text_len,
+        warningCount=len(warning_list),
+        detectedSections=detected,
+        missingSections=missing,
+        confidenceScore=final_score,
+        parseQuality=quality
+    )
 
 router = APIRouter()
 
@@ -98,6 +139,9 @@ async def parse_cv(
         print(f"[DEBUG] PARSE CV | resumeId: {resumeId} | rawText length: {len(parsed_data.get('rawText', ''))}")
 
         # --- XÂY DỰNG RESPONSE ---
+        # Tính toán metadata thực tế
+        metadata_payload = calculate_metadata(parsed_data, parsed_data.get("rawText", ""))
+
         data_payload = ParseDataResponse(
             resumeId=resumeId,
             resumeVersionId=resumeVersionId,
@@ -112,7 +156,8 @@ async def parse_cv(
             languages=parsed_data.get("languages", ""),
             warnings=parsed_data.get("warnings", []),
             modelVersion="cv-parser-v1-gemini-flash",
-            schemaVersion="resume-parse-v1"
+            schemaVersion="resume-parse-v1",
+            metadata=metadata_payload
         )
 
         return ParseResponseEnvelope(success=True, data=data_payload, error=None)
