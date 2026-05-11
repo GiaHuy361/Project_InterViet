@@ -35,6 +35,9 @@ public sealed class AiMatchRequest
 
     // Job description
     public string JobDescriptionRawText { get; init; } = string.Empty;
+    
+    // Optional: match index for multi-match tracing, e.g. "1/3"
+    public string? MatchIndex { get; init; }
 }
 
 // ── Result ────────────────────────────────────────────────────────────────────

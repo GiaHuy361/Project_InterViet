@@ -166,13 +166,19 @@ public sealed class CreateMultiMatchCommandHandler
             Id = j.Id,
             RawText = j.RawText
         }).ToList();
+        
+        int totalTargets = capturedTargets.Count;
 
         Task.Run(async () =>
         {
             // The orchestrator loops through each target
-            foreach (var t in capturedTargets)
+            for (int idx = 0; idx < capturedTargets.Count; idx++)
             {
+                var t = capturedTargets[idx];
                 var jdSnapshot = snapshotJds.First(j => j.Id == t.JdId);
+                // Per-target requestId for independent tracing; correlationId shared for the session
+                var targetRequestId = Guid.NewGuid().ToString("N");
+                var matchIndex = $"{idx + 1}/{totalTargets}";
                 
                 using var scope = capturedScopeFactory.CreateScope();
                 var sp = scope.ServiceProvider;
@@ -193,9 +199,9 @@ public sealed class CreateMultiMatchCommandHandler
                         ResumeId         = capturedResumeId,
                         ResumeVersionId  = capturedVersionId,
                         JobDescriptionId = jdSnapshot.Id,
-                        MatchSessionId   = capturedSessionId, // Note: The Python backend will associate this with the session. Wait, the Python API might save the matchResult with the targetId. Actually, our MatchClient handles it.
+                        MatchSessionId   = capturedSessionId,
                         CorrelationId    = capturedCorrelationId,
-                        RequestId        = capturedRequestId,
+                        RequestId        = targetRequestId,
                         RawText          = capturedRawText,
                         SkillsJson       = capturedSkillsJson,
                         ExperiencesJson  = capturedExperiencesJson,
@@ -204,7 +210,8 @@ public sealed class CreateMultiMatchCommandHandler
                         ProjectsJson     = capturedProjectsJson,
                         CertificationsJson = capturedCertsJson,
                         LanguagesJson    = capturedLangsJson,
-                        JobDescriptionRawText = jdSnapshot.RawText
+                        JobDescriptionRawText = jdSnapshot.RawText,
+                        MatchIndex       = matchIndex
                     }, CancellationToken.None);
 
                     if (matchRes.IsSuccess)
@@ -237,9 +244,24 @@ public sealed class CreateMultiMatchCommandHandler
                     }
                     else
                     {
-                        targetRecord.Status = MatchSessionStatus.Failed;
-                        targetRecord.ErrorCode = matchRes.ErrorCode;
+                        // Python returned success=false — do NOT create MatchResult
+                        // Preserve the exact Python error code for tracing
+                        var errorCode = matchRes.ErrorCode switch
+                        {
+                            "VALIDATION_ERROR"            => "VALIDATION_ERROR",
+                            "RESUME_PARSED_DATA_REQUIRED" => "RESUME_PARSED_DATA_REQUIRED",
+                            "RATE_LIMIT_EXCEEDED"         => "RATE_LIMIT_EXCEEDED",
+                            "MATCH_FAILED"                => "MATCH_FAILED",
+                            "SERVICE_UNAVAILABLE"         => "SERVICE_UNAVAILABLE",
+                            "INTERNAL_ERROR"              => "INTERNAL_ERROR",
+                            _ => matchRes.ErrorCode ?? "MATCH_ERROR"
+                        };
+                        targetRecord.Status    = MatchSessionStatus.Failed;
+                        targetRecord.ErrorCode = errorCode;
                         targetRecord.CompletedAt = DateTime.UtcNow;
+                        capturedLogger.LogWarning(
+                            "Target failed. TargetId={TargetId} MatchIndex={MatchIndex} ErrorCode={Code}",
+                            t.TargetId, matchIndex, errorCode);
                     }
                 }
                 catch (Exception ex)

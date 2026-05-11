@@ -113,6 +113,20 @@ public class ResumeParsedData : BaseEntity
     public string? LanguagesJson { get; set; }
     public string? WarningsJson { get; set; }
 
+    // ── Parse Metadata (Phase 4 Python update) ──────────────────────────────
+    /// <summary>Number of characters in extracted raw text.</summary>
+    public int? ParseTextLength { get; set; }
+    /// <summary>Number of warnings emitted by Python parser.</summary>
+    public int? ParseWarningCount { get; set; }
+    /// <summary>Confidence score of parse quality (0.0-1.0).</summary>
+    public decimal? ParseConfidenceScore { get; set; }
+    /// <summary>Qualitative parse quality: high | medium | low</summary>
+    public string? ParseQuality { get; set; }
+    /// <summary>JSON array of detected section names.</summary>
+    public string? DetectedSectionsJson { get; set; }
+    /// <summary>JSON array of expected but missing section names.</summary>
+    public string? MissingSectionsJson { get; set; }
+
     public string? ModelVersion { get; set; }
     public string? SchemaVersion { get; set; }
 

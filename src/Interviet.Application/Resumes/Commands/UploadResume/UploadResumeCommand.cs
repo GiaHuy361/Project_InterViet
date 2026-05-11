@@ -342,6 +342,13 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
                 WarningsJson       = result.WarningsJson,
                 ModelVersion       = result.ModelVersion,
                 SchemaVersion      = result.SchemaVersion,
+                // Parse metadata (optional, Python Phase 4 update)
+                ParseTextLength      = result.ParseTextLength,
+                ParseWarningCount    = result.ParseWarningCount,
+                ParseConfidenceScore = result.ParseConfidenceScore,
+                ParseQuality         = result.ParseQuality,
+                DetectedSectionsJson = result.DetectedSectionsJson,
+                MissingSectionsJson  = result.MissingSectionsJson,
                 CreatedAt          = now,
                 UpdatedAt          = now
             });

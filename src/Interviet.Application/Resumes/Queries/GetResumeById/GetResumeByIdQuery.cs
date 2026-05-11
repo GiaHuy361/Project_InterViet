@@ -77,6 +77,13 @@ public sealed class GetResumeByIdQueryHandler : IRequestHandler<GetResumeByIdQue
                 WarningsJson     = pd.WarningsJson,
                 ModelVersion     = pd.ModelVersion,
                 SchemaVersion    = pd.SchemaVersion,
+                // Parse metadata (optional, backward-compatible)
+                ParseTextLength      = pd.ParseTextLength,
+                ParseWarningCount    = pd.ParseWarningCount,
+                ParseConfidenceScore = pd.ParseConfidenceScore,
+                ParseQuality         = pd.ParseQuality,
+                DetectedSectionsJson = pd.DetectedSectionsJson,
+                MissingSectionsJson  = pd.MissingSectionsJson,
                 CreatedAt        = pd.CreatedAt
             };
 

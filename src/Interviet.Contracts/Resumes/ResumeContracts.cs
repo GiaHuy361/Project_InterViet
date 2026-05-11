@@ -93,6 +93,13 @@ public sealed record ResumeParsedDataResponse
     public string? WarningsJson { get; init; }
     public string? ModelVersion { get; init; }
     public string? SchemaVersion { get; init; }
+    // Parse metadata (optional)
+    public int? ParseTextLength { get; init; }
+    public int? ParseWarningCount { get; init; }
+    public decimal? ParseConfidenceScore { get; init; }
+    public string? ParseQuality { get; init; }
+    public string? DetectedSectionsJson { get; init; }
+    public string? MissingSectionsJson { get; init; }
     public DateTime CreatedAt { get; init; }
 }
 

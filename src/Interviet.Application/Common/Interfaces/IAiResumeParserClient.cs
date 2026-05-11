@@ -48,6 +48,14 @@ public sealed class AiParseResumeResult
     public string? SchemaVersion { get; init; }
     public string? ExternalJobId { get; init; }
 
+    // Parse metadata (optional, from Python Phase 4 update)
+    public int? ParseTextLength { get; init; }
+    public int? ParseWarningCount { get; init; }
+    public decimal? ParseConfidenceScore { get; init; }
+    public string? ParseQuality { get; init; }
+    public string? DetectedSectionsJson { get; init; }
+    public string? MissingSectionsJson { get; init; }
+
     // Failure fields
     public string? ErrorCode { get; init; }
     public string? ErrorMessage { get; init; }
@@ -63,7 +71,10 @@ public sealed class AiParseResumeResult
         string? projectsJson, string? certificationsJson,
         string? languagesJson, string? warningsJson,
         string? modelVersion, string? schemaVersion,
-        string? externalJobId = null)
+        string? externalJobId = null,
+        int? parseTextLength = null, int? parseWarningCount = null,
+        decimal? parseConfidenceScore = null, string? parseQuality = null,
+        string? detectedSectionsJson = null, string? missingSectionsJson = null)
         => new()
         {
             IsSuccess = true,
@@ -79,7 +90,13 @@ public sealed class AiParseResumeResult
             WarningsJson = warningsJson,
             ModelVersion = modelVersion,
             SchemaVersion = schemaVersion,
-            ExternalJobId = externalJobId
+            ExternalJobId = externalJobId,
+            ParseTextLength = parseTextLength,
+            ParseWarningCount = parseWarningCount,
+            ParseConfidenceScore = parseConfidenceScore,
+            ParseQuality = parseQuality,
+            DetectedSectionsJson = detectedSectionsJson,
+            MissingSectionsJson = missingSectionsJson
         };
 
     public static AiParseResumeResult Failure(string errorCode, string errorMessage, string? rawResponseJson = null)

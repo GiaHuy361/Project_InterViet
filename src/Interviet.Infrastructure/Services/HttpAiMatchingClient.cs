@@ -50,6 +50,7 @@ public sealed class HttpAiMatchingClient : IAiMatchingClient
                 correlationId    = request.CorrelationId,
                 requestId        = request.RequestId,
                 schemaVersion    = "cv-jd-match-v1",
+                matchIndex       = request.MatchIndex,   // optional, e.g. "1/3" for multi-match
                 resumeParsedData = new
                 {
                     rawText          = request.RawText,
@@ -81,8 +82,8 @@ public sealed class HttpAiMatchingClient : IAiMatchingClient
                 httpRequest.Headers.Add("X-Interviet-Api-Key", _opts.ApiKey);
 
             _logger.LogInformation(
-                "Calling CV Matching Service. SessionId={SessionId} CorrelationId={CorrelationId}",
-                request.MatchSessionId, request.CorrelationId);
+                "Calling CV Matching Service. SessionId={SessionId} MatchIndex={MatchIndex} CorrelationId={CorrelationId}",
+                request.MatchSessionId, request.MatchIndex ?? "single", request.CorrelationId);
 
             using var response = await _http.SendAsync(httpRequest, ct);
             var responseBody   = await response.Content.ReadAsStringAsync(ct);

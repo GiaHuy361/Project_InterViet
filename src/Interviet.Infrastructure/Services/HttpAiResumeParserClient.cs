@@ -137,6 +137,30 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
             var sections = data.TryGetProperty("sections", out var s) && s.ValueKind != JsonValueKind.Null
                 ? s.GetRawText() : null;
 
+            // ── Parse metadata (optional, Python Phase 4 update) ────────────────
+            int? parseTextLength = null;
+            int? parseWarningCount = null;
+            decimal? parseConfidenceScore = null;
+            string? parseQuality = null;
+            string? detectedSectionsJson = null;
+            string? missingSectionsJson = null;
+
+            if (data.TryGetProperty("metadata", out var meta) && meta.ValueKind == JsonValueKind.Object)
+            {
+                if (meta.TryGetProperty("textLength", out var tl) && tl.ValueKind == JsonValueKind.Number)
+                    parseTextLength = tl.GetInt32();
+                if (meta.TryGetProperty("warningCount", out var wc) && wc.ValueKind == JsonValueKind.Number)
+                    parseWarningCount = wc.GetInt32();
+                if (meta.TryGetProperty("confidenceScore", out var cs) && cs.ValueKind == JsonValueKind.Number)
+                    parseConfidenceScore = cs.GetDecimal();
+                if (meta.TryGetProperty("parseQuality", out var pq) && pq.ValueKind == JsonValueKind.String)
+                    parseQuality = pq.GetString();
+                if (meta.TryGetProperty("detectedSections", out var ds) && ds.ValueKind != JsonValueKind.Null)
+                    detectedSectionsJson = ds.GetRawText();
+                if (meta.TryGetProperty("missingSections", out var ms) && ms.ValueKind != JsonValueKind.Null)
+                    missingSectionsJson = ms.GetRawText();
+            }
+
             return AiParseResumeResult.Success(
                 rawText:         GetStr("rawText"),
                 detectedLanguage: GetStr("detectedLanguage"),
@@ -150,7 +174,13 @@ public sealed class HttpAiResumeParserClient : IAiResumeParserClient
                 warningsJson:    GetJson("warnings"),
                 modelVersion:    GetStr("modelVersion"),
                 schemaVersion:   GetStr("schemaVersion"),
-                externalJobId:   GetStr("jobId")
+                externalJobId:   GetStr("jobId"),
+                parseTextLength:      parseTextLength,
+                parseWarningCount:    parseWarningCount,
+                parseConfidenceScore: parseConfidenceScore,
+                parseQuality:         parseQuality,
+                detectedSectionsJson: detectedSectionsJson,
+                missingSectionsJson:  missingSectionsJson
             );
         }
         catch (JsonException)
