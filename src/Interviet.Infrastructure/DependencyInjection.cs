@@ -98,6 +98,17 @@ public static class DependencyInjection
             client.Timeout     = TimeSpan.FromSeconds(opts.TimeoutSeconds);
         });
 
+        // ── AI Interview Client ───────────────────────────────────────────────────────────
+        services.AddHttpClient<IAiInterviewClient, HttpAiInterviewClient>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiServicesOptions>>().Value;
+            var baseUrl = !string.IsNullOrEmpty(opts.InterviewBaseUrl)
+                ? opts.InterviewBaseUrl
+                : opts.CvServiceBaseUrl;   // fallback to same host if not separately configured
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(opts.TimeoutSeconds);
+        });
+
         return services;
     }
 }

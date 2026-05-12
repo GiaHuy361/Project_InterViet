@@ -51,6 +51,7 @@ public sealed class AiServicesOptions
 
     public bool CvServiceEnabled { get; set; } = false;
     public bool MatchingEnabled { get; set; } = false;
+    public bool InterviewEnabled { get; set; } = false;
     public string CvServiceBaseUrl { get; set; } = "http://localhost:8001";
     public string InterviewBaseUrl { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;

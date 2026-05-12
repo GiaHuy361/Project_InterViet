@@ -66,6 +66,8 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<InterviewReport> InterviewReports => Set<InterviewReport>();
     public DbSet<InterviewScoreBreakdown> InterviewScoreBreakdowns => Set<InterviewScoreBreakdown>();
     public DbSet<InterviewFeedbackItem> InterviewFeedbackItems => Set<InterviewFeedbackItem>();
+    public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
+    public DbSet<InterviewAnswer> InterviewAnswers => Set<InterviewAnswer>();
 
     // ── Mentor ──────────────────────────────────────────────────────────────
     public DbSet<Mentor> Mentors => Set<Mentor>();

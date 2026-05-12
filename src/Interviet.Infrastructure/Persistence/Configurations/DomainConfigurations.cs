@@ -232,13 +232,55 @@ public class InterviewSessionConfiguration : IEntityTypeConfiguration<InterviewS
         b.Property(x => x.SeniorityLevel).HasMaxLength(50).IsRequired();
         b.Property(x => x.InterviewType).HasMaxLength(50).IsRequired();
         b.Property(x => x.Mode).HasMaxLength(50).IsRequired();
+        b.Property(x => x.AiModel).HasMaxLength(100);
+        b.Property(x => x.InterviewerMode).HasMaxLength(100);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
         b.Property(x => x.ExternalSessionId).HasMaxLength(100);
         b.Property(x => x.CorrelationId).HasMaxLength(100);
         b.HasIndex(x => new { x.UserId, x.CreatedAt });
         b.HasIndex(x => new { x.Status, x.UpdatedAt });
+        b.HasIndex(x => new { x.UserId, x.Status });
         b.HasOne(x => x.Transcript).WithOne().HasForeignKey<InterviewTranscript>(t => t.InterviewSessionId);
         b.HasOne(x => x.Report).WithOne().HasForeignKey<InterviewReport>(r => r.InterviewSessionId);
+        b.HasMany(x => x.Questions).WithOne(q => q.Session).HasForeignKey(q => q.InterviewSessionId);
+    }
+}
+
+public class InterviewQuestionConfiguration : IEntityTypeConfiguration<InterviewQuestion>
+{
+    public void Configure(EntityTypeBuilder<InterviewQuestion> b)
+    {
+        b.ToTable("InterviewQuestions");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.QuestionType).HasMaxLength(50).IsRequired();
+        b.Property(x => x.QuestionText).HasColumnType("nvarchar(max)").IsRequired();
+        b.Property(x => x.ExpectedAnswerPointsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.Difficulty).HasMaxLength(20);
+        b.HasIndex(x => new { x.InterviewSessionId, x.QuestionNumber }).IsUnique();
+        b.HasOne(x => x.Answer).WithOne(a => a.Question)
+         .HasForeignKey<InterviewAnswer>(a => a.InterviewQuestionId)
+         .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class InterviewAnswerConfiguration : IEntityTypeConfiguration<InterviewAnswer>
+{
+    public void Configure(EntityTypeBuilder<InterviewAnswer> b)
+    {
+        b.ToTable("InterviewAnswers");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.AnswerText).HasColumnType("nvarchar(max)");
+        b.Property(x => x.AudioFileUrl).HasMaxLength(500);
+        b.Property(x => x.Feedback).HasColumnType("nvarchar(max)");
+        b.Property(x => x.PositivePointsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.NegativePointsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.SuggestionsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.TranscriptionConfidence).HasColumnType("decimal(5,4)");
+        b.Property(x => x.AnswerScore).HasColumnType("decimal(5,2)");
+        b.Property(x => x.ClarityScore).HasColumnType("decimal(5,2)");
+        b.Property(x => x.RelevanceScore).HasColumnType("decimal(5,2)");
+        b.Property(x => x.CompletenessScore).HasColumnType("decimal(5,2)");
+        b.HasIndex(x => x.InterviewQuestionId).IsUnique();
     }
 }
 

@@ -42,4 +42,10 @@ public static class ActivityActionKeys
     public const string MultiMatchCreated     = "multi_match_created";
     public const string MultiMatchCompleted   = "multi_match_completed";
     public const string MultiMatchFailed      = "multi_match_failed";
+
+    public const string InterviewStarted      = "interview_started";
+    public const string InterviewAnswerSubmitted = "interview_answer_submitted";
+    public const string InterviewCompleted    = "interview_completed";
+    public const string InterviewAbandoned    = "interview_abandoned";
+    public const string InterviewFailed       = "interview_failed";
 }

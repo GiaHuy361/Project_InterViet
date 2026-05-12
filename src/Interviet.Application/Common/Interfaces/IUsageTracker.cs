@@ -31,4 +31,5 @@ public static class QuotaFeatureKeys
     public const string MatchComplete = "match.complete";
     public const string CvStorage     = "cv.storage";
     public const string CvOptimization= "cv.optimization";
+    public const string InterviewAi   = "interview.ai";
 }

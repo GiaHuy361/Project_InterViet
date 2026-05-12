@@ -17,6 +17,12 @@ public class InterviewSession : AuditableEntity
     /// <summary>voice | text | hybrid</summary>
     public string Mode { get; set; } = string.Empty;
 
+    /// <summary>AI model identifier e.g. gpt-4o, gemini-pro</summary>
+    public string? AiModel { get; set; }
+
+    /// <summary>interviewer persona / mode e.g. professional, friendly, strict</summary>
+    public string? InterviewerMode { get; set; }
+
     /// <summary>draft | ready | live | processing | completed | failed | cancelled</summary>
     public string Status { get; set; } = InterviewSessionStatus.Draft;
 
@@ -30,17 +36,19 @@ public class InterviewSession : AuditableEntity
 
     public InterviewTranscript? Transcript { get; set; }
     public InterviewReport? Report { get; set; }
+    public ICollection<InterviewQuestion> Questions { get; set; } = [];
 }
 
 public static class InterviewSessionStatus
 {
-    public const string Draft = "draft";
-    public const string Ready = "ready";
-    public const string Live = "live";
+    public const string Draft      = "draft";
+    public const string Ready      = "ready";
+    public const string Live       = "live";  // aka in_progress
     public const string Processing = "processing";
-    public const string Completed = "completed";
-    public const string Failed = "failed";
-    public const string Cancelled = "cancelled";
+    public const string Completed  = "completed";
+    public const string Failed     = "failed";
+    public const string Cancelled  = "cancelled";
+    public const string Abandoned  = "abandoned";
 }
 
 public class InterviewTranscript : AuditableEntity
@@ -105,4 +113,47 @@ public class InterviewFeedbackItem : BaseEntity
     public string? PriorityLevel { get; set; }
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// ── Phase 7A: Question / Answer turn model ───────────────────────────────────
+public class InterviewQuestion : BaseEntity
+{
+    public Guid InterviewSessionId { get; set; }
+    public int QuestionNumber { get; set; }
+
+    /// <summary>opening | technical | behavioral | situational | closing</summary>
+    public string QuestionType { get; set; } = string.Empty;
+    public string QuestionText { get; set; } = string.Empty;
+    public string? ExpectedAnswerPointsJson { get; set; }
+
+    /// <summary>easy | medium | hard</summary>
+    public string? Difficulty { get; set; }
+    public DateTime? AskedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation
+    public InterviewSession Session { get; set; } = null!;
+    public InterviewAnswer? Answer { get; set; }
+}
+
+public class InterviewAnswer : BaseEntity
+{
+    public Guid InterviewQuestionId { get; set; }
+    public string? AnswerText { get; set; }
+    public string? AudioFileUrl { get; set; }
+    public int? AudioDurationSeconds { get; set; }
+    public decimal? TranscriptionConfidence { get; set; }
+    public decimal? AnswerScore { get; set; }
+    public string? Feedback { get; set; }
+    public decimal? ClarityScore { get; set; }
+    public decimal? RelevanceScore { get; set; }
+    public decimal? CompletenessScore { get; set; }
+    public string? PositivePointsJson { get; set; }
+    public string? NegativePointsJson { get; set; }
+    public string? SuggestionsJson { get; set; }
+    public DateTime? AnsweredAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation
+    public InterviewQuestion Question { get; set; } = null!;
 }
