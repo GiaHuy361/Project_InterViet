@@ -83,11 +83,11 @@ async def _call_provider_sdk(provider: str, model: str, api_key: str, system_pro
         client = genai.Client(api_key=api_key)
         contents = []
         for turn in recent_turns:
-            if turn.get("question"): contents.append(types.Content(role="model", parts=[types.Part.from_text(turn["question"])]))
-            if turn.get("answer"): contents.append(types.Content(role="user", parts=[types.Part.from_text(turn["answer"])]))
+            if turn.get("question"): contents.append(types.Content(role="model", parts=[types.Part.from_text(text=turn["question"])]))
+            if turn.get("answer"): contents.append(types.Content(role="user", parts=[types.Part.from_text(text=turn["answer"])]))
         # Nếu chưa có lịch sử (câu 1), Gemini cần mảng contents chứa mồi
         if not contents:
-             contents.append(types.Content(role="user", parts=[types.Part.from_text("Bắt đầu phỏng vấn.")]))
+             contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Bắt đầu phỏng vấn.")]))
              
         response = client.models.generate_content(
             model=model,

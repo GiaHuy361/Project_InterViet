@@ -56,10 +56,12 @@ async def analyze_interview(
             answer = item.get('answer', '')
             formatted_transcript += f"Q{q_num}: {question}\nA: {answer}\n---\n"
 
+    goal_text = payload.goal if payload.goal else "Không có mục tiêu cụ thể"
+
     # 3. System Prompt "Chuyên gia"
     system_prompt = f"""Bạn là Hội đồng chuyên gia đánh giá phỏng vấn cao cấp.
 Nhiệm vụ: Phân tích transcript buổi phỏng vấn cho vị trí {payload.position} (Level: {payload.level}).
-Mục tiêu của ứng viên: {payload.goal}.
+Mục tiêu của ứng viên: {goal_text}.
 
 Tiêu chí đánh giá (Thang điểm 10):
 - Overall: Điểm tổng quát.

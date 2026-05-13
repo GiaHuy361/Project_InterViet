@@ -34,12 +34,14 @@ async def generate_question(
         
         topic_memory_str = "\n".join([f"- {t}" for t in topic_memory]) if topic_memory else "Chưa hỏi gì."
         
+        goal_text = payload.goal if payload.goal else "Không có mục tiêu cụ thể"
+
         # 3. Kỹ thuật Prompt Engineering bám sát hợp đồng C#
         system_prompt = f"""Bạn là nhà tuyển dụng/phỏng vấn viên chuyên nghiệp (Tiếng Việt).
 Thông tin ứng viên:
 - Vị trí: {payload.position}
 - Level: {payload.level}
-- Mục tiêu: {payload.goal}
+- Mục tiêu: {goal_text}
 - Loại phỏng vấn: {payload.interviewType} (Technical ưu tiên chuyên môn, Behavioral ưu tiên STAR)
 - Phong cách: {payload.interviewerMode}
 

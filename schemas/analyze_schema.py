@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class ScoreBreakdown(BaseModel):
     dimension: str
@@ -31,7 +31,7 @@ class AnalyzeRequest(BaseModel):
     requestId: str
     position: str
     level: str
-    goal: str
+    goal: Optional[str] = None
     interviewType: str
     aiModel: str
     transcriptJson: str # Stringified JSON từ C#

@@ -8,7 +8,7 @@ class GenerateQuestionRequest(BaseModel):
     requestId: str
     position: str
     level: str
-    goal: str
+    goal: Optional[str] = None
     interviewType: str
     interviewerMode: str
     aiModel: str
