@@ -38,19 +38,52 @@ public sealed class CompleteInterviewCommandHandler
         var session = await _db.InterviewSessions
             .Include(s => s.Questions)
                 .ThenInclude(q => q.Answer)
+            .Include(s => s.Report)
             .FirstOrDefaultAsync(s => s.Id == command.SessionId, ct);
 
         if (session is null)
             return Error.NotFound("Interview.NotFound", "Không tìm thấy phiên phỏng vấn.");
         if (session.UserId != command.UserId)
             return Error.Forbidden("Interview.Forbidden", "Bạn không có quyền truy cập phiên phỏng vấn này.");
+
+        // ── Idempotent: already completed — return existing report ────────────
+        if (session.Status == InterviewSessionStatus.Completed && session.Report is not null)
+        {
+            return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
+            {
+                SessionId   = session.Id,
+                Status      = session.Status,
+                CompletedAt = session.CompletedAt,
+                Report      = BuildReportResponse(session.Report),
+                Message     = "Phiên phỏng vấn đã hoàn thành trước đó."
+            });
+        }
+
+        // ── State machine guards ─────────────────────────────────────────────
+        if (session.Status == InterviewSessionStatus.Cancelled)
+            return Error.Conflict("Interview.Cancelled", "Phiên phỏng vấn đã bị hủy.");
+        if (session.Status == InterviewSessionStatus.Abandoned)
+            return Error.Conflict("Interview.Abandoned", "Phiên phỏng vấn đã bị bỏ dở.");
+        if (session.Status == InterviewSessionStatus.Failed)
+            return Error.Conflict("Interview.Failed",
+                "Phiên phỏng vấn đã thất bại trong lần trước. Tạo phiên mới để thử lại.");
         if (session.Status != InterviewSessionStatus.Live)
             return Error.Validation("Interview.InvalidStatus",
                 $"Phiên phỏng vấn ở trạng thái '{session.Status}', không thể hoàn thành.");
 
         var now = _dt.UtcNow;
 
-        // Build transcript for analysis
+        // ── Require at least one answered question ────────────────────────────
+        var answeredQuestions = session.Questions
+            .Where(q => q.Answer is not null)
+            .OrderBy(q => q.QuestionNumber)
+            .ToList();
+
+        if (answeredQuestions.Count == 0)
+            return Error.Validation("Interview.NoAnswers",
+                "Phiên phỏng vấn chưa có câu trả lời nào. Vui lòng trả lời ít nhất một câu hỏi trước khi hoàn thành.");
+
+        // ── Build transcript ─────────────────────────────────────────────────
         var transcript = session.Questions
             .OrderBy(q => q.QuestionNumber)
             .Select(q => new
@@ -62,42 +95,12 @@ public sealed class CompleteInterviewCommandHandler
                 answeredAt     = q.Answer?.AnsweredAt
             }).ToList();
 
-        // Mark processing
+        // ── Mark processing ──────────────────────────────────────────────────
         session.Status    = InterviewSessionStatus.Processing;
         session.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
 
         // ── Call Python for analysis ─────────────────────────────────────────
-        InterviewReportResponse? reportResponse = null;
-        string finalStatus;
-
-        if (transcript.Count == 0)
-        {
-            // No Q&A — abandon instead
-            session.Status      = InterviewSessionStatus.Abandoned;
-            session.CompletedAt = now;
-            session.UpdatedAt   = now;
-            finalStatus         = InterviewSessionStatus.Abandoned;
-
-            try
-            {
-                await _actLog.LogAsync(command.UserId, ActivityActionKeys.InterviewAbandoned,
-                    entityType: "InterviewSession", entityId: session.Id,
-                    description: "Phiên phỏng vấn kết thúc mà không có câu hỏi nào được trả lời.");
-            }
-            catch { /* non-critical */ }
-
-            await _db.SaveChangesAsync(ct);
-
-            return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
-            {
-                SessionId   = session.Id,
-                Status      = finalStatus,
-                CompletedAt = now,
-                Message     = "Phiên phỏng vấn kết thúc mà không có câu hỏi nào. Không có báo cáo được tạo."
-            });
-        }
-
         var aiResult = await _aiClient.AnalyzeInterviewAsync(new AiAnalyzeInterviewRequest
         {
             SessionId      = session.Id,
@@ -135,20 +138,8 @@ public sealed class CompleteInterviewCommandHandler
             session.Status      = InterviewSessionStatus.Completed;
             session.CompletedAt = now;
             session.UpdatedAt   = now;
-            finalStatus         = InterviewSessionStatus.Completed;
 
             await _db.SaveChangesAsync(ct);
-
-            reportResponse = new InterviewReportResponse
-            {
-                OverallScore      = aiResult.OverallScore,
-                ConfidenceScore   = aiResult.ConfidenceScore,
-                VoiceClarityScore = aiResult.ClarityScore,
-                StrengthsJson     = aiResult.StrengthsJson,
-                WeaknessesJson    = aiResult.WeaknessesJson,
-                RecommendationsJson = aiResult.RecommendationsJson,
-                ModelVersion      = aiResult.ModelVersion
-            };
 
             try
             {
@@ -157,19 +148,26 @@ public sealed class CompleteInterviewCommandHandler
                     description: $"Phiên phỏng vấn hoàn thành. Điểm: {aiResult.OverallScore:F1}.");
             }
             catch { /* non-critical */ }
+
+            return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
+            {
+                SessionId   = session.Id,
+                Status      = InterviewSessionStatus.Completed,
+                CompletedAt = now,
+                Report      = BuildReportResponse(report, aiResult)
+            });
         }
         else
         {
-            // Python failed — mark failed, no fake report
-            _logger.LogWarning("AI analysis failed for SessionId={SessionId} ErrorCode={Code}",
+            // ── Python failed — mark failed, NO fake report ───────────────────
+            _logger.LogWarning("AI analysis failed for SessionId={SessionId} Code={Code}",
                 session.Id, aiResult.ErrorCode);
 
-            session.Status      = InterviewSessionStatus.Failed;
-            session.FailedAt    = now;
-            session.ErrorCode   = aiResult.ErrorCode;
+            session.Status       = InterviewSessionStatus.Failed;
+            session.FailedAt     = now;
+            session.ErrorCode    = aiResult.ErrorCode;
             session.ErrorMessage = aiResult.ErrorMessage;
-            session.UpdatedAt   = now;
-            finalStatus         = InterviewSessionStatus.Failed;
+            session.UpdatedAt    = now;
 
             await _db.SaveChangesAsync(ct);
 
@@ -181,20 +179,38 @@ public sealed class CompleteInterviewCommandHandler
             }
             catch { /* non-critical */ }
 
-            if (aiResult.IsServiceUnavailable)
-                return Error.Failure("Interview.ServiceUnavailable",
-                    "Dịch vụ phân tích phỏng vấn hiện chưa sẵn sàng. Câu trả lời đã lưu, không có báo cáo.");
-
-            return Error.Failure(aiResult.ErrorCode ?? "ANALYSIS_FAILED",
-                aiResult.ErrorMessage ?? "Phân tích phỏng vấn thất bại.");
+            return MapAiError(aiResult.ErrorCode, aiResult.ErrorMessage, aiResult.IsServiceUnavailable);
         }
+    }
 
-        return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
+    private static InterviewReportResponse BuildReportResponse(InterviewReport report, AiInterviewAnalysisResult? ai = null) =>
+        new()
         {
-            SessionId   = session.Id,
-            Status      = finalStatus,
-            CompletedAt = now,
-            Report      = reportResponse
-        });
+            OverallScore      = report.OverallScore,
+            ConfidenceScore   = report.ConfidenceScore,
+            ClarityScore      = report.VoiceClarityScore,
+            RelevanceScore    = ai?.RelevanceScore,                    // not persisted in DB
+            PaceScore         = report.PaceScore,
+            Strengths         = JsonParseHelper.ParseStringArray(report.StrengthsJson),
+            Weaknesses        = JsonParseHelper.ParseStringArray(report.WeaknessesJson),
+            Recommendations   = JsonParseHelper.ParseStringArray(report.RecommendationsJson),
+            ScoreBreakdowns   = JsonParseHelper.ParseObjectArray(ai?.ScoreBreakdownsJson),
+            FeedbackItems     = JsonParseHelper.ParseObjectArray(ai?.FeedbackItemsJson),
+            ModelVersion      = report.ModelVersion,
+            SchemaVersion     = report.SchemaVersion
+        };
+
+    private static Error MapAiError(string? errorCode, string? errorMessage, bool isUnavailable)
+    {
+        if (isUnavailable || string.Equals(errorCode, "SERVICE_UNAVAILABLE", StringComparison.OrdinalIgnoreCase))
+            return Error.ServiceUnavailable("Interview.ServiceUnavailable",
+                "Dịch vụ AI phỏng vấn hiện chưa sẵn sàng. Vui lòng thử lại sau.");
+        if (string.Equals(errorCode, "RATE_LIMIT_EXCEEDED", StringComparison.OrdinalIgnoreCase))
+            return Error.TooManyRequests("Interview.RateLimitExceeded",
+                "Hệ thống đang xử lý quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.");
+        if (string.Equals(errorCode, "VALIDATION_ERROR", StringComparison.OrdinalIgnoreCase))
+            return Error.Validation("Interview.PythonValidation", errorMessage ?? "Dữ liệu gửi lên không hợp lệ.");
+        return Error.Failure(errorCode ?? "ANALYSIS_FAILED",
+            errorMessage ?? "Phân tích phỏng vấn thất bại.");
     }
 }

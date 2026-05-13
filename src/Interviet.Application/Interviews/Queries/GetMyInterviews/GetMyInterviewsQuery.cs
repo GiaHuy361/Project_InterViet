@@ -33,9 +33,10 @@ public sealed class GetMyInterviewsQueryHandler
             .Take(pageSize)
             .Select(s => new
             {
-                s.Id, s.Status, s.RoleName, s.SeniorityLevel, s.InterviewType, s.Mode,
+                s.Id, s.Status, s.RoleName, s.SeniorityLevel, s.InterviewType, s.Mode, s.AiModel,
                 s.DurationMinutes, s.CreatedAt, s.StartedAt, s.CompletedAt,
                 QuestionCount = s.Questions.Count(),
+                AnsweredCount = s.Questions.Count(q => q.Answer != null),
                 OverallScore  = (decimal?)_db.InterviewReports
                     .Where(r => r.InterviewSessionId == s.Id)
                     .Select(r => r.OverallScore)
@@ -45,18 +46,20 @@ public sealed class GetMyInterviewsQueryHandler
 
         var items = sessions.Select(s => new InterviewSessionListItemResponse
         {
-            SessionId      = s.Id,
-            Status         = s.Status,
-            Position       = s.RoleName,
-            Level          = s.SeniorityLevel,
-            InterviewType  = s.InterviewType,
-            Mode           = s.Mode,
+            SessionId       = s.Id,
+            Status          = s.Status,
+            Position        = s.RoleName,
+            Level           = s.SeniorityLevel,
+            InterviewType   = s.InterviewType,
+            Mode            = s.Mode,
+            AiModel         = s.AiModel,
             DurationMinutes = s.DurationMinutes,
-            QuestionCount  = s.QuestionCount,
-            OverallScore   = s.OverallScore,
-            CreatedAt      = s.CreatedAt,
-            StartedAt      = s.StartedAt,
-            CompletedAt    = s.CompletedAt
+            QuestionCount   = s.QuestionCount,
+            AnsweredCount   = s.AnsweredCount,
+            OverallScore    = s.OverallScore,
+            CreatedAt       = s.CreatedAt,
+            StartedAt       = s.StartedAt,
+            CompletedAt     = s.CompletedAt
         }).ToList();
 
         return Result<GetMyInterviewsResult>.Success(new GetMyInterviewsResult(items, total, page, pageSize));

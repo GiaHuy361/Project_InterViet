@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Interviews;
 using Interviet.Shared.Results;
@@ -55,8 +54,11 @@ public sealed class CreateInterviewSessionCommandHandler
             return Error.Validation("Interview.InterviewerModeRequired", "Vui lòng chọn phong cách phỏng vấn.");
         if (string.IsNullOrWhiteSpace(req.AiModel))
             return Error.Validation("Interview.AiModelRequired", "Vui lòng chọn mô hình AI.");
-        if (req.DurationMinutes <= 0)
-            return Error.Validation("Interview.DurationInvalid", "Thời lượng phỏng vấn phải lớn hơn 0 phút.");
+        if (!AllowedAiModels.IsValid(req.AiModel))
+            return Error.Validation("Interview.AiModelUnsupported",
+                $"AI model '{req.AiModel}' không được hỗ trợ. Các model hợp lệ: gpt-4o-mini, gpt-4o, gemini-3-flash-preview, standard, basic, advanced.");
+        if (req.DurationMinutes is <= 0 or > 120)
+            return Error.Validation("Interview.DurationInvalid", "Thời lượng phỏng vấn phải từ 1 đến 120 phút.");
 
         // ── Check quota BEFORE creating ─────────────────────────────────────
         var quotaCheck = await _quota.CheckAsync(command.UserId, QuotaFeatureKeys.InterviewAi, 1, ct);
@@ -78,7 +80,7 @@ public sealed class CreateInterviewSessionCommandHandler
             InterviewerMode = req.InterviewerMode.Trim(),
             AiModel         = req.AiModel.Trim(),
             CorrelationId   = command.CorrelationId,
-            Status          = InterviewSessionStatus.Live, // in_progress = live
+            Status          = InterviewSessionStatus.Live,
             CreatedAt       = now,
             UpdatedAt       = now
         };

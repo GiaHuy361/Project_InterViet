@@ -39,12 +39,14 @@ public abstract class ApiControllerBase : ControllerBase
 
         return result.Error.Type switch
         {
-            Shared.Results.ErrorType.NotFound     => NotFound(Problem(result.Error)),
-            Shared.Results.ErrorType.Validation   => BadRequest(Problem(result.Error)),
-            Shared.Results.ErrorType.Conflict     => Conflict(Problem(result.Error)),
-            Shared.Results.ErrorType.Forbidden    => StatusCode(StatusCodes.Status403Forbidden, Problem(result.Error)),
-            Shared.Results.ErrorType.Unauthorized => Unauthorized(Problem(result.Error)),
-            _                                     => StatusCode(500, Problem(result.Error))
+            Shared.Results.ErrorType.NotFound          => NotFound(Problem(result.Error)),
+            Shared.Results.ErrorType.Validation        => BadRequest(Problem(result.Error)),
+            Shared.Results.ErrorType.Conflict          => Conflict(Problem(result.Error)),
+            Shared.Results.ErrorType.Forbidden         => StatusCode(StatusCodes.Status403Forbidden, Problem(result.Error)),
+            Shared.Results.ErrorType.Unauthorized      => Unauthorized(Problem(result.Error)),
+            Shared.Results.ErrorType.ServiceUnavailable => StatusCode(StatusCodes.Status503ServiceUnavailable, Problem(result.Error)),
+            Shared.Results.ErrorType.TooManyRequests   => StatusCode(StatusCodes.Status429TooManyRequests, Problem(result.Error)),
+            _                                          => StatusCode(500, Problem(result.Error))
         };
     }
 
@@ -56,12 +58,14 @@ public abstract class ApiControllerBase : ControllerBase
 
         return result.Error.Type switch
         {
-            Shared.Results.ErrorType.NotFound     => NotFound(Problem(result.Error)),
-            Shared.Results.ErrorType.Validation   => BadRequest(Problem(result.Error)),
-            Shared.Results.ErrorType.Conflict     => Conflict(Problem(result.Error)),
-            Shared.Results.ErrorType.Forbidden    => StatusCode(StatusCodes.Status403Forbidden, Problem(result.Error)),
-            Shared.Results.ErrorType.Unauthorized => Unauthorized(Problem(result.Error)),
-            _                                     => StatusCode(500, Problem(result.Error))
+            Shared.Results.ErrorType.NotFound          => NotFound(Problem(result.Error)),
+            Shared.Results.ErrorType.Validation        => BadRequest(Problem(result.Error)),
+            Shared.Results.ErrorType.Conflict          => Conflict(Problem(result.Error)),
+            Shared.Results.ErrorType.Forbidden         => StatusCode(StatusCodes.Status403Forbidden, Problem(result.Error)),
+            Shared.Results.ErrorType.Unauthorized      => Unauthorized(Problem(result.Error)),
+            Shared.Results.ErrorType.ServiceUnavailable => StatusCode(StatusCodes.Status503ServiceUnavailable, Problem(result.Error)),
+            Shared.Results.ErrorType.TooManyRequests   => StatusCode(StatusCodes.Status429TooManyRequests, Problem(result.Error)),
+            _                                          => StatusCode(500, Problem(result.Error))
         };
     }
 

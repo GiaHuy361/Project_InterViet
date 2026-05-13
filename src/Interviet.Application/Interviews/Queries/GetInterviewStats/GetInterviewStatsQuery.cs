@@ -48,27 +48,29 @@ public sealed class GetInterviewStatsQueryHandler
             .Take(5)
             .Select(s => new InterviewSessionListItemResponse
             {
-                SessionId      = s.Id,
-                Status         = s.Status,
-                Position       = s.RoleName,
-                Level          = s.SeniorityLevel,
-                InterviewType  = s.InterviewType,
-                Mode           = s.Mode,
+                SessionId       = s.Id,
+                Status          = s.Status,
+                Position        = s.RoleName,
+                Level           = s.SeniorityLevel,
+                InterviewType   = s.InterviewType,
+                Mode            = s.Mode,
                 DurationMinutes = s.DurationMinutes,
-                QuestionCount  = s.QuestionCount,
-                OverallScore   = scoreMap.GetValueOrDefault(s.Id),
-                CreatedAt      = s.CreatedAt,
-                StartedAt      = s.StartedAt,
-                CompletedAt    = s.CompletedAt
+                QuestionCount   = s.QuestionCount,
+                AnsweredCount   = 0,   // not projected in stats list query — use GET detail for full info
+                OverallScore    = scoreMap.GetValueOrDefault(s.Id),
+                CreatedAt       = s.CreatedAt,
+                StartedAt       = s.StartedAt,
+                CompletedAt     = s.CompletedAt
             }).ToList();
 
         return Result<InterviewStatsResponse>.Success(new InterviewStatsResponse
         {
-            TotalSessions  = sessions.Count,
-            AverageScore   = avg,
-            BestScore      = best,
-            TotalMinutes   = totalMinutes,
-            RecentSessions = recent
+            TotalSessions      = sessions.Count,
+            CompletedSessions  = completedIds.Count,
+            AverageScore       = avg,
+            BestScore          = best,
+            TotalMinutes       = totalMinutes,
+            RecentSessions     = recent
         });
     }
 }
