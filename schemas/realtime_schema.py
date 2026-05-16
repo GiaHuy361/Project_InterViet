@@ -25,6 +25,7 @@ class RealtimeSessionData(BaseModel):
     expiresAt: str  # Định dạng ISO 8601 (VD: 2026-05-16T10:00:00Z)
     provider: str   # "openai" hoặc "gemini"
     model: str      # Tên model thực tế được gán
+    instructions: Optional[str] = None
 
 # --- ENVELOPE RESPONSE CHUẨN ---
 # Dùng chung InterviewResponseEnvelope từ schemas.interview_schema
