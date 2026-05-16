@@ -9,6 +9,7 @@ using Interviet.Application.Interviews.Commands.CompleteInterview;
 using Interviet.Application.Interviews.Commands.DeleteInterview;
 using Interviet.Application.Interviews.Commands.StartInterviewRealtime;
 using Interviet.Application.Interviews.Commands.EndInterviewRealtime;
+using Interviet.Application.Interviews.Commands.FinalizeInterviewRealtime;
 using Interviet.Application.Interviews.Queries.CheckInterviewQuota;
 using Interviet.Application.Interviews.Queries.GetMyInterviews;
 using Interviet.Application.Interviews.Queries.GetInterviewById;
@@ -196,6 +197,60 @@ public sealed class InterviewsController : ApiControllerBase
     {
         var result = await _mediator.Send(
             new GetInterviewRealtimeQuery(id, _currentUser.UserId, eventPage, eventPageSize), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Finalize a realtime interview session by submitting the transcript and Q/A pairs.
+    /// Saves transcript as InterviewQuestions + InterviewAnswers so POST /complete can run AI analysis.
+    /// Idempotent: calling with the same realtimeSessionId multiple times is safe.
+    /// 
+    /// Example body:
+    /// {
+    ///   "realtimeSessionId": "00000000-0000-0000-0000-000000000000",
+    ///   "transcriptText": "Assistant: Xin chào...\nUser: Tôi là backend developer...",
+    ///   "qaPairs": [
+    ///     { "questionNumber": 1, "questionText": "Bạn hãy giới thiệu bản thân.",
+    ///       "answerText": "Tôi là backend developer...", "questionType": "opening", "difficulty": "easy" },
+    ///     { "questionNumber": 2, "questionText": "Bạn đã xây dựng API nào?",
+    ///       "answerText": "Tôi từng xây dựng API upload CV...", "questionType": "technical", "difficulty": "medium" }
+    ///   ],
+    ///   "modelVersion": "gpt-realtime",
+    ///   "schemaVersion": "interview-realtime-v1"
+    /// }
+    /// </summary>
+    [HttpPost("{id:guid}/realtime/finalize")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> FinalizeRealtime(
+        Guid id, [FromBody] PublicFinalizeRealtimeRequest request, CancellationToken ct)
+    {
+        if (request.RealtimeSessionId == Guid.Empty)
+            return BadRequest(new { code = "Validation", detail = "realtimeSessionId is required." });
+
+        var pairs = request.QaPairs
+            .Select(p => new RealtimeQaPairInput(
+                p.QuestionNumber,
+                p.QuestionText,
+                p.AnswerText,
+                p.QuestionType,
+                p.Difficulty,
+                AskedAt:    p.AskedAt,
+                AnsweredAt: p.AnsweredAt))
+            .ToList();
+
+        var result = await _mediator.Send(new FinalizeInterviewRealtimeCommand(
+            SessionId:         id,
+            UserId:            _currentUser.UserId,
+            RealtimeSessionId: request.RealtimeSessionId,
+            QaPairs:           pairs,
+            TranscriptText:    request.TranscriptText,
+            ModelVersion:      request.ModelVersion,
+            SchemaVersion:     request.SchemaVersion), ct);
+
         return FromResult(result);
     }
 }

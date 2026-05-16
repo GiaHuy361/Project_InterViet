@@ -26,6 +26,40 @@ public sealed record EndInterviewRealtimeRequest
     public string? Reason { get; init; }
 }
 
+public sealed record PublicRealtimeQaPair
+{
+    public int QuestionNumber { get; init; }
+    public string QuestionText { get; init; } = string.Empty;
+    public string? AnswerText { get; init; }
+    /// <summary>opening | technical | behavioral | situational | closing | general</summary>
+    public string? QuestionType { get; init; }
+    /// <summary>easy | medium | hard</summary>
+    public string? Difficulty { get; init; }
+    public DateTime? AskedAt { get; init; }
+    public DateTime? AnsweredAt { get; init; }
+}
+
+public sealed record PublicFinalizeRealtimeRequest
+{
+    public Guid RealtimeSessionId { get; init; }
+    public string? TranscriptText { get; init; }
+    public List<PublicRealtimeQaPair> QaPairs { get; init; } = [];
+    public string? ModelVersion { get; init; }
+    public string? SchemaVersion { get; init; }
+}
+
+public sealed record PublicFinalizeRealtimeResponse
+{
+    public Guid SessionId { get; init; }
+    public Guid RealtimeSessionId { get; init; }
+    public string Status { get; init; } = "finalized";
+    public int SavedQuestionCount { get; init; }
+    public int SavedAnswerCount { get; init; }
+    public bool CanComplete { get; init; }
+    public bool IsIdempotent { get; init; }
+    public string? Message { get; init; }
+}
+
 // ── Realtime Responses ────────────────────────────────────────────────────────
 public sealed record StartInterviewRealtimeResponse
 {

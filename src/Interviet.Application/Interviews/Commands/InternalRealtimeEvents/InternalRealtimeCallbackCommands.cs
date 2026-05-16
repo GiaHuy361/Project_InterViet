@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Interviet.Application.Common.Interfaces;
+using Interviet.Application.Interviews.Commands.FinalizeInterviewRealtime;
 using Interviet.Contracts.Interviews;
 using Interviet.Shared.Results;
 using Interviet.Domain.Interviews;
@@ -58,23 +59,27 @@ public sealed class InternalSaveRealtimeEventsCommandHandler
         {
             if (existing.Contains(ev.SequenceNumber)) continue; // idempotent skip
 
-            string? metaJson = ev.Metadata is null
-                ? null
-                : JsonSerializer.Serialize(ev.Metadata);
+            // Serialize metadata safely — handle null and complex objects
+            string? metaJson = null;
+            if (ev.Metadata is not null)
+            {
+                try { metaJson = JsonSerializer.Serialize(ev.Metadata); }
+                catch { metaJson = null; } // never crash on bad metadata
+            }
 
             toSave.Add(new InterviewRealtimeEvent
             {
-                Id                = Guid.NewGuid(),
+                Id                 = Guid.NewGuid(),
                 InterviewSessionId = req.SessionId,
-                RealtimeSessionId = req.RealtimeSessionId,
-                SequenceNumber    = ev.SequenceNumber,
-                EventType         = ev.EventType,
-                Role              = ev.Role,
-                Text              = ev.Text,
-                ProviderEventId   = ev.ProviderEventId,
-                OccurredAt        = ev.OccurredAt,
-                CreatedAt         = now,
-                MetadataJson      = metaJson
+                RealtimeSessionId  = req.RealtimeSessionId,
+                SequenceNumber     = ev.SequenceNumber,
+                EventType          = ev.EventType,
+                Role               = ev.Role,
+                Text               = ev.Text,
+                ProviderEventId    = ev.ProviderEventId,
+                OccurredAt         = ev.OccurredAt,
+                CreatedAt          = now,
+                MetadataJson       = metaJson
             });
         }
 
@@ -97,24 +102,22 @@ public sealed class InternalSaveRealtimeEventsCommandHandler
     }
 }
 
-// ── Finalize Callback ─────────────────────────────────────────────────────────
+// ── Finalize Callback (delegates to shared FinalizeInterviewRealtimeCommand) ──
 public sealed record InternalFinalizeRealtimeCommand(
     InternalRealtimeFinalizeRequest Request) : IRequest<Result<InternalCallbackResponse>>;
 
 public sealed class InternalFinalizeRealtimeCommandHandler
     : IRequestHandler<InternalFinalizeRealtimeCommand, Result<InternalCallbackResponse>>
 {
-    private readonly IAppDbContext _db;
-    private readonly IDateTimeProvider _dt;
+    private readonly ISender _mediator;
     private readonly ILogger<InternalFinalizeRealtimeCommandHandler> _logger;
 
     public InternalFinalizeRealtimeCommandHandler(
-        IAppDbContext db, IDateTimeProvider dt,
+        ISender mediator,
         ILogger<InternalFinalizeRealtimeCommandHandler> logger)
     {
-        _db     = db;
-        _dt     = dt;
-        _logger = logger;
+        _mediator = mediator;
+        _logger   = logger;
     }
 
     public async Task<Result<InternalCallbackResponse>> Handle(
@@ -122,99 +125,40 @@ public sealed class InternalFinalizeRealtimeCommandHandler
     {
         var req = command.Request;
 
-        var rs = await _db.InterviewRealtimeSessions
-            .FirstOrDefaultAsync(r => r.Id == req.RealtimeSessionId
-                                   && r.InterviewSessionId == req.SessionId, ct);
+        // Map internal contract → shared command (UserId = null = internal, skip ownership)
+        var pairs = req.QaPairs
+            .Select(p => new RealtimeQaPairInput(
+                p.QuestionNumber,
+                p.QuestionText,
+                p.AnswerText,
+                p.QuestionType,
+                p.Difficulty,
+                AskedAt:    null,
+                AnsweredAt: null))
+            .ToList();
 
-        if (rs is null)
-            return Error.NotFound("Interview.RealtimeNotFound", "Realtime session không tồn tại.");
+        var sharedResult = await _mediator.Send(new FinalizeInterviewRealtimeCommand(
+            SessionId:        req.SessionId,
+            UserId:           null,           // internal — no ownership check
+            RealtimeSessionId: req.RealtimeSessionId,
+            QaPairs:          pairs,
+            TranscriptText:   req.TranscriptText,
+            ModelVersion:     req.ModelVersion,
+            SchemaVersion:    req.SchemaVersion), ct);
 
-        var session = await _db.InterviewSessions
-            .Include(s => s.Questions)
-                .ThenInclude(q => q.Answer)
-            .FirstOrDefaultAsync(s => s.Id == req.SessionId, ct);
-
-        if (session is null)
-            return Error.NotFound("Interview.NotFound", "Phiên phỏng vấn không tồn tại.");
-
-        var now     = _dt.UtcNow;
-        int saved   = 0;
-
-        foreach (var pair in req.QaPairs.Where(p => !string.IsNullOrWhiteSpace(p.QuestionText)))
+        if (!sharedResult.IsSuccess)
         {
-            // Skip if question with same number already exists
-            var existing = session.Questions.FirstOrDefault(q => q.QuestionNumber == pair.QuestionNumber);
-            if (existing is not null)
-            {
-                // If no answer yet, save the answer from transcript
-                if (existing.Answer is null && !string.IsNullOrWhiteSpace(pair.AnswerText))
-                {
-                    _db.InterviewAnswers.Add(new InterviewAnswer
-                    {
-                        Id                  = Guid.NewGuid(),
-                        InterviewQuestionId = existing.Id,
-                        AnswerText          = pair.AnswerText,
-                        AnsweredAt          = now,
-                        CreatedAt           = now
-                    });
-                    saved++;
-                }
-                continue;
-            }
-
-            // Create new question
-            var question = new InterviewQuestion
-            {
-                Id                 = Guid.NewGuid(),
-                InterviewSessionId = session.Id,
-                QuestionNumber     = pair.QuestionNumber,
-                QuestionType       = pair.QuestionType ?? "general",
-                QuestionText       = pair.QuestionText,
-                Difficulty         = pair.Difficulty,
-                AskedAt            = now,
-                CreatedAt          = now
-            };
-            _db.InterviewQuestions.Add(question);
-
-            if (!string.IsNullOrWhiteSpace(pair.AnswerText))
-            {
-                _db.InterviewAnswers.Add(new InterviewAnswer
-                {
-                    Id                  = Guid.NewGuid(),
-                    InterviewQuestionId = question.Id,
-                    AnswerText          = pair.AnswerText,
-                    AnsweredAt          = now,
-                    CreatedAt           = now
-                });
-            }
-            saved++;
+            _logger.LogWarning("Internal finalize failed: {Code} {Message}",
+                sharedResult.Error.Code, sharedResult.Error.Description);
+            return Error.Failure(sharedResult.Error.Code, sharedResult.Error.Description);
         }
 
-        // Mark realtime session completed (if not already)
-        if (rs.Status is not (InterviewRealtimeSessionStatus.Completed or InterviewRealtimeSessionStatus.Failed))
-        {
-            rs.Status    = InterviewRealtimeSessionStatus.Completed;
-            rs.EndedAt   = now;
-            rs.UpdatedAt = now;
-        }
-
-        // Ensure session is still Live (so POST /complete can run analysis)
-        if (session.Status == InterviewSessionStatus.Processing)
-        {
-            // leave — do not force status change here
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        _logger.LogInformation(
-            "Finalized realtime session {RealtimeId}: {Saved} Q/A pairs saved. Call POST /complete to analyze.",
-            req.RealtimeSessionId, saved);
-
+        var r = sharedResult.Value!;
         return Result<InternalCallbackResponse>.Success(new InternalCallbackResponse
         {
             Success        = true,
-            ProcessedCount = saved,
-            Message        = $"Finalized {saved} Q/A pairs. Call POST /api/v1/interviews/{req.SessionId}/complete to run analysis."
+            ProcessedCount = r.SavedQuestionCount + r.SavedAnswerCount,
+            Message        = r.Message ?? $"Finalized. {r.SavedQuestionCount} questions, {r.SavedAnswerCount} answers saved."
         });
     }
 }

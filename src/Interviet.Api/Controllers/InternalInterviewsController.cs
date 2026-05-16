@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Interviet.Application.Common.Options;
+using Interviet.Application.Interviews.Commands.FinalizeInterviewRealtime;
 using Interviet.Application.Interviews.Commands.InternalRealtimeEvents;
 using Interviet.Contracts.Interviews;
 
@@ -30,6 +31,7 @@ public sealed class InternalInterviewsController : ControllerBase
     /// Python realtime service pushes transcript events here.
     /// Requires X-Interviet-Api-Key header matching AiServices.ApiKey.
     /// Events are saved idempotently by (realtimeSessionId, sequenceNumber).
+    /// Duplicate sequenceNumbers are silently ignored.
     /// </summary>
     [HttpPost("realtime/events")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -60,6 +62,7 @@ public sealed class InternalInterviewsController : ControllerBase
     /// <summary>
     /// Python finalizes a realtime session by pushing full transcript + Q/A pairs.
     /// Saves as InterviewQuestions/InterviewAnswers so POST /complete can run analysis.
+    /// Idempotent: duplicate questionNumbers are safely skipped.
     /// Requires X-Interviet-Api-Key header.
     /// </summary>
     [HttpPost("realtime/finalize")]
@@ -76,6 +79,9 @@ public sealed class InternalInterviewsController : ControllerBase
         if (request.SessionId == Guid.Empty || request.RealtimeSessionId == Guid.Empty)
             return BadRequest(new { code = "Validation", detail = "sessionId and realtimeSessionId are required." });
 
+        if (request.QaPairs.Count == 0)
+            return BadRequest(new { code = "Validation", detail = "qaPairs must not be empty." });
+
         var result = await _mediator.Send(new InternalFinalizeRealtimeCommand(request), ct);
 
         if (result.IsSuccess)
@@ -83,7 +89,9 @@ public sealed class InternalInterviewsController : ControllerBase
 
         return result.Error.Type switch
         {
-            Shared.Results.ErrorType.NotFound => NotFound(new { code = result.Error.Code, detail = result.Error.Description }),
+            Shared.Results.ErrorType.NotFound   => NotFound(  new { code = result.Error.Code, detail = result.Error.Description }),
+            Shared.Results.ErrorType.Validation => BadRequest( new { code = result.Error.Code, detail = result.Error.Description }),
+            Shared.Results.ErrorType.Conflict   => Conflict(  new { code = result.Error.Code, detail = result.Error.Description }),
             _ => StatusCode(500, new { code = result.Error.Code, detail = result.Error.Description })
         };
     }

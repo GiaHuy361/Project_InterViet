@@ -47,14 +47,28 @@ public sealed class CompleteInterviewCommandHandler
         if (session.UserId != command.UserId)
             return Error.Forbidden("Interview.Forbidden", "Bạn không có quyền truy cập phiên phỏng vấn này.");
 
-        // ── Guard: active realtime must be finalized first ────────────────────
-        var activeRealtime = session.RealtimeSessions
-            .FirstOrDefault(rs => rs.Status == InterviewRealtimeSessionStatus.Active);
-        if (activeRealtime is not null)
-            return Error.Validation("Interview.RealtimeNotFinalized",
-                "Phiên phỏng vấn realtime đang hoạt động. Vui lòng kết thúc và finalize transcript trước khi phân tích.");
+        // ── Guard: realtime session state machine ─────────────────────────────
+        var hasRealtime = session.RealtimeSessions.Count > 0;
+        if (hasRealtime)
+        {
+            var activeRealtime = session.RealtimeSessions
+                .FirstOrDefault(rs => rs.Status == InterviewRealtimeSessionStatus.Active);
+            if (activeRealtime is not null)
+                return Error.Validation("Interview.RealtimeNotFinalized",
+                    "Phiên phỏng vấn realtime đang hoạt động. Vui lòng gọi POST /realtime/end rồi POST /realtime/finalize trước khi phân tích.");
+
+            // Has completed realtime session but zero answeredQuestions
+            var hasCompletedRealtime = session.RealtimeSessions
+                .Any(rs => rs.Status == InterviewRealtimeSessionStatus.Completed);
+            var answeredAny = session.Questions.Any(q => q.Answer is not null
+                                                      && !string.IsNullOrWhiteSpace(q.Answer.AnswerText));
+            if (hasCompletedRealtime && !answeredAny)
+                return Error.Validation("Interview.RealtimeNotFinalized",
+                    "Phiên realtime đã kết thúc nhưng chưa có transcript. Vui lòng gọi POST /realtime/finalize với qaPairs trước khi phân tích.");
+        }
 
         // ── Idempotent: already completed — return existing report ────────────
+
         if (session.Status == InterviewSessionStatus.Completed && session.Report is not null)
         {
             return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
