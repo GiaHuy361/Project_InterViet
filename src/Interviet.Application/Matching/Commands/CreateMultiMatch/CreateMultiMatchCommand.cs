@@ -169,7 +169,7 @@ public sealed class CreateMultiMatchCommandHandler
         
         int totalTargets = capturedTargets.Count;
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             // The orchestrator loops through each target
             for (int idx = 0; idx < capturedTargets.Count; idx++)
