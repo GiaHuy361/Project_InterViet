@@ -21,7 +21,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 # Import các module nội bộ
 from core.security import limiter
-from routes import generate_question, analyze
+from routes import generate_question, analyze, realtime_session, realtime_ws
 from schemas.interview_schema import InterviewResponseEnvelope, ErrorDetail
 
 # Khởi tạo FastAPI
@@ -94,9 +94,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 # --- ĐĂNG KÝ ROUTERS ---
 app.include_router(generate_question.router, tags=["Interview Engine"])
 app.include_router(analyze.router, tags=["Interview Engine"])
+app.include_router(realtime_session.router, tags=["Interview Engine Realtime"])
+app.include_router(realtime_ws.router, tags=["Interview Engine Realtime Stream"])
 
 # --- HEALTH CHECK ---
 @app.get("/health", tags=["System"])
 async def health_check():
     """Endpoint để C# ping kiểm tra trạng thái service"""
-    return {"status": "ok", "service": "ai-interview", "port": 8002}
+    return {"status": "ok", "service": "ai-interview", "version": "1.1.0", "port": 8002}
