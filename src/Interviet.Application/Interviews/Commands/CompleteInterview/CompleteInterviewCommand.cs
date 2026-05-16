@@ -39,12 +39,20 @@ public sealed class CompleteInterviewCommandHandler
             .Include(s => s.Questions)
                 .ThenInclude(q => q.Answer)
             .Include(s => s.Report)
+            .Include(s => s.RealtimeSessions)
             .FirstOrDefaultAsync(s => s.Id == command.SessionId, ct);
 
         if (session is null)
             return Error.NotFound("Interview.NotFound", "Không tìm thấy phiên phỏng vấn.");
         if (session.UserId != command.UserId)
             return Error.Forbidden("Interview.Forbidden", "Bạn không có quyền truy cập phiên phỏng vấn này.");
+
+        // ── Guard: active realtime must be finalized first ────────────────────
+        var activeRealtime = session.RealtimeSessions
+            .FirstOrDefault(rs => rs.Status == InterviewRealtimeSessionStatus.Active);
+        if (activeRealtime is not null)
+            return Error.Validation("Interview.RealtimeNotFinalized",
+                "Phiên phỏng vấn realtime đang hoạt động. Vui lòng kết thúc và finalize transcript trước khi phân tích.");
 
         // ── Idempotent: already completed — return existing report ────────────
         if (session.Status == InterviewSessionStatus.Completed && session.Report is not null)

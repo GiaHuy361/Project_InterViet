@@ -239,4 +239,114 @@ public sealed class HttpAiInterviewClient : IAiInterviewClient
                 "Dịch vụ phân tích phỏng vấn trả về dữ liệu không hợp lệ.");
         }
     }
+
+    // ── CreateRealtimeSession ─────────────────────────────────────────────────
+    public async Task<AiRealtimeSessionResult> CreateRealtimeSessionAsync(
+        AiCreateRealtimeSessionRequest request, CancellationToken ct = default)
+    {
+        if (!_opts.InterviewRealtimeEnabled)
+        {
+            _logger.LogInformation(
+                "Realtime interview disabled. SessionId={SessionId}", request.SessionId);
+            return AiRealtimeSessionResult.Unavailable("Dịch vụ phỏng vấn realtime hiện chưa được bật.");
+        }
+
+        var baseUrl = _opts.InterviewRealtimeBaseUrl ?? _opts.InterviewBaseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return AiRealtimeSessionResult.Unavailable("Chưa cấu hình URL dịch vụ realtime.");
+
+        try
+        {
+            var body = new
+            {
+                sessionId       = request.SessionId.ToString(),
+                userId          = request.UserId.ToString(),
+                correlationId   = request.CorrelationId,
+                requestId       = request.RequestId,
+                position        = request.Position,
+                level           = request.Level,
+                goal            = request.Goal,
+                interviewType   = request.InterviewType,
+                interviewerMode = request.InterviewerMode,
+                aiModel         = request.AiModel,
+                language        = request.Language,
+                voice           = request.Voice,
+                enableTranscript = request.EnableTranscript,
+                tokenTtlSeconds = request.TokenTtlSeconds
+            };
+
+            var json    = JsonSerializer.Serialize(body);
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/ai/interviews/realtime/session")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            req.Headers.TryAddWithoutValidation("X-Interviet-Api-Key", _opts.ApiKey);
+            req.Headers.TryAddWithoutValidation("X-User-ID", request.UserId.ToString());
+            req.Headers.TryAddWithoutValidation("X-Correlation-ID", request.CorrelationId);
+            req.Headers.TryAddWithoutValidation("X-Request-ID", request.RequestId);
+
+            using var resp = await _http.SendAsync(req, ct);
+            var raw        = await resp.Content.ReadAsStringAsync(ct);
+
+            using var doc  = JsonDocument.Parse(raw);
+            var root       = doc.RootElement;
+
+            var success = root.TryGetProperty("success", out var sv) && sv.GetBoolean();
+            if (!success)
+            {
+                string? errCode = root.TryGetProperty("error", out var errEl) &&
+                                  errEl.TryGetProperty("code", out var cProp)
+                                  ? cProp.GetString() : null;
+                string? errMsg  = root.TryGetProperty("error", out var errEl2) &&
+                                  errEl2.TryGetProperty("message", out var mProp)
+                                  ? mProp.GetString() : "Không thể tạo phiên realtime.";
+
+                return MapPythonError(errCode, errMsg);
+            }
+
+            if (!root.TryGetProperty("data", out var data))
+                return AiRealtimeSessionResult.Failure("INVALID_RESPONSE",
+                    "Dịch vụ realtime trả về dữ liệu không hợp lệ.");
+
+            DateTime? expiresAt = null;
+            if (data.TryGetProperty("expiresAt", out var exp) && exp.ValueKind != JsonValueKind.Null)
+                expiresAt = exp.GetDateTime();
+
+            // ⚠️ clientSecret is returned to caller but NEVER logged here
+            return AiRealtimeSessionResult.Success(
+                providerSessionId: data.TryGetProperty("providerSessionId", out var pSid)  ? pSid.GetString()  : null,
+                connectUrl:        data.TryGetProperty("connectUrl",        out var cu)    ? cu.GetString()    : null,
+                clientSecret:      data.TryGetProperty("clientSecret",      out var cs)    ? cs.GetString()    : null,
+                expiresAt:         expiresAt,
+                provider:          data.TryGetProperty("provider",          out var prov)  ? prov.GetString()  : null,
+                model:             data.TryGetProperty("model",             out var mdl)   ? mdl.GetString()   : null,
+                instructions:      data.TryGetProperty("instructions",      out var instr) ? instr.GetString() : null
+            );
+        }
+        catch (TaskCanceledException)
+        {
+            _logger.LogWarning("Realtime session creation timed out for SessionId={SessionId}", request.SessionId);
+            return AiRealtimeSessionResult.Unavailable("Dịch vụ realtime không phản hồi (timeout).");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Realtime session HTTP error for SessionId={SessionId}", request.SessionId);
+            return AiRealtimeSessionResult.Unavailable("Không thể kết nối tới dịch vụ realtime.");
+        }
+        catch (JsonException)
+        {
+            return AiRealtimeSessionResult.Failure("INVALID_RESPONSE",
+                "Dịch vụ realtime trả về dữ liệu không hợp lệ.");
+        }
+    }
+
+    private static AiRealtimeSessionResult MapPythonError(string? code, string? message) =>
+        code switch
+        {
+            "SERVICE_UNAVAILABLE"  => AiRealtimeSessionResult.Unavailable(message ?? "Dịch vụ chưa sẵn sàng."),
+            "RATE_LIMIT_EXCEEDED"  => AiRealtimeSessionResult.Failure(code, message ?? "Rate limit."),
+            "VALIDATION_ERROR"     => AiRealtimeSessionResult.Failure(code, message ?? "Validation error."),
+            "MODEL_UNAVAILABLE"    => AiRealtimeSessionResult.Failure(code, message ?? "Model không khả dụng."),
+            _                      => AiRealtimeSessionResult.Failure(code ?? "REALTIME_FAILED", message ?? "Lỗi tạo phiên realtime.")
+        };
 }

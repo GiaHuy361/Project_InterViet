@@ -7,16 +7,19 @@ using Interviet.Application.Interviews.Commands.StartInterview;
 using Interviet.Application.Interviews.Commands.SubmitInterviewMessage;
 using Interviet.Application.Interviews.Commands.CompleteInterview;
 using Interviet.Application.Interviews.Commands.DeleteInterview;
+using Interviet.Application.Interviews.Commands.StartInterviewRealtime;
+using Interviet.Application.Interviews.Commands.EndInterviewRealtime;
 using Interviet.Application.Interviews.Queries.CheckInterviewQuota;
 using Interviet.Application.Interviews.Queries.GetMyInterviews;
 using Interviet.Application.Interviews.Queries.GetInterviewById;
 using Interviet.Application.Interviews.Queries.GetInterviewStats;
+using Interviet.Application.Interviews.Queries.GetInterviewRealtime;
 using Interviet.Contracts.Interviews;
 
 namespace Interviet.Api.Controllers;
 
 /// <summary>
-/// AI Interview Foundation — Phase 7A endpoints.
+/// AI Interview — text and realtime voice endpoints (Phase 7A/7C/8A).
 /// All endpoints require JWT authentication.
 /// </summary>
 [Authorize]
@@ -56,7 +59,7 @@ public sealed class InterviewsController : ApiControllerBase
         return FromResult(result);
     }
 
-    /// <summary>Start an interview session — generates first AI question.</summary>
+    /// <summary>Start a text interview — generates first AI question.</summary>
     [HttpPost("{id:guid}/start")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -139,6 +142,60 @@ public sealed class InterviewsController : ApiControllerBase
     public async Task<IActionResult> GetStats(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetInterviewStatsQuery(_currentUser.UserId), ct);
+        return FromResult(result);
+    }
+
+    // ── Phase 8A: Realtime ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Start a realtime voice interview session.
+    /// Returns ephemeral clientSecret for provider connection (one-time, not stored).
+    /// When InterviewRealtimeEnabled=false returns 503 ServiceUnavailable.
+    /// </summary>
+    [HttpPost("{id:guid}/realtime/start")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> StartRealtime(
+        Guid id, [FromBody] StartInterviewRealtimeRequest request, CancellationToken ct)
+    {
+        var correlationId = HttpContext.TraceIdentifier;
+        var result = await _mediator.Send(
+            new StartInterviewRealtimeCommand(id, _currentUser.UserId, correlationId, request), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>End an active realtime session. Idempotent if already ended.</summary>
+    [HttpPost("{id:guid}/realtime/end")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> EndRealtime(
+        Guid id, [FromBody] EndInterviewRealtimeRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new EndInterviewRealtimeCommand(id, _currentUser.UserId, request), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Get active realtime session info and paginated events.</summary>
+    [HttpGet("{id:guid}/realtime")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetRealtime(
+        Guid id,
+        [FromQuery] int eventPage     = 1,
+        [FromQuery] int eventPageSize = 50,
+        CancellationToken ct          = default)
+    {
+        var result = await _mediator.Send(
+            new GetInterviewRealtimeQuery(id, _currentUser.UserId, eventPage, eventPageSize), ct);
         return FromResult(result);
     }
 }

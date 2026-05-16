@@ -64,6 +64,8 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<InterviewFeedbackItem> InterviewFeedbackItems { get; }
     Microsoft.EntityFrameworkCore.DbSet<InterviewQuestion> InterviewQuestions { get; }
     Microsoft.EntityFrameworkCore.DbSet<InterviewAnswer> InterviewAnswers { get; }
+    Microsoft.EntityFrameworkCore.DbSet<InterviewRealtimeSession> InterviewRealtimeSessions { get; }
+    Microsoft.EntityFrameworkCore.DbSet<InterviewRealtimeEvent> InterviewRealtimeEvents { get; }
 
     // Mentor
     Microsoft.EntityFrameworkCore.DbSet<Mentor> Mentors { get; }

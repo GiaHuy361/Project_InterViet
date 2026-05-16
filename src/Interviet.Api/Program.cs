@@ -53,9 +53,15 @@ try
     var emailProvider   = builder.Configuration["Email:Provider"] ?? "LogOnly";
     var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
     var cvEnabled       = builder.Configuration["AiServices:CvServiceEnabled"] ?? "false";
+    var interviewEnabled         = builder.Configuration["AiServices:InterviewEnabled"] ?? "false";
+    var realtimeEnabled          = builder.Configuration["AiServices:InterviewRealtimeEnabled"] ?? "false";
+    var realtimeBaseUrl          = builder.Configuration["AiServices:InterviewRealtimeBaseUrl"] ?? "(not set)";
     Log.Information("Email provider: {EmailProvider}", emailProvider);
     Log.Information("Storage provider: {StorageProvider}", storageProvider);
     Log.Information("CV Service enabled: {CvEnabled}", cvEnabled);
+    Log.Information("Interview enabled: {InterviewEnabled}", interviewEnabled);
+    Log.Information("Interview realtime enabled: {RealtimeEnabled}", realtimeEnabled);
+    Log.Information("Interview realtime base url: {RealtimeBaseUrl}", realtimeBaseUrl);
 
     // ── Application (MediatR + validators + pipeline behaviors) ──────────
     builder.Services.AddApplication();

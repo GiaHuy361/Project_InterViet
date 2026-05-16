@@ -403,3 +403,54 @@ public class MentorReviewConfiguration : IEntityTypeConfiguration<MentorReview>
         b.HasIndex(x => x.MentorBookingId).IsUnique();
     }
 }
+
+// ── Phase 8A: Realtime Interview ─────────────────────────────────────────────
+public class InterviewRealtimeSessionConfiguration : IEntityTypeConfiguration<InterviewRealtimeSession>
+{
+    public void Configure(EntityTypeBuilder<InterviewRealtimeSession> b)
+    {
+        b.ToTable("InterviewRealtimeSessions");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Provider).HasMaxLength(50);
+        b.Property(x => x.ProviderSessionId).HasMaxLength(200);
+        b.Property(x => x.Model).HasMaxLength(100);
+        b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        b.Property(x => x.ConnectUrl).HasMaxLength(1000);
+        b.Property(x => x.ClientSecretHash).HasMaxLength(200);
+        b.Property(x => x.ErrorCode).HasMaxLength(100);
+        b.Property(x => x.ErrorMessage).HasMaxLength(500);
+
+        b.HasOne(x => x.Session)
+         .WithMany(s => s.RealtimeSessions)
+         .HasForeignKey(x => x.InterviewSessionId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasMany(x => x.Events)
+         .WithOne(e => e.RealtimeSession)
+         .HasForeignKey(e => e.RealtimeSessionId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasIndex(x => x.InterviewSessionId);
+        b.HasIndex(x => new { x.InterviewSessionId, x.Status });
+        b.HasIndex(x => x.UserId);
+    }
+}
+
+public class InterviewRealtimeEventConfiguration : IEntityTypeConfiguration<InterviewRealtimeEvent>
+{
+    public void Configure(EntityTypeBuilder<InterviewRealtimeEvent> b)
+    {
+        b.ToTable("InterviewRealtimeEvents");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Role).HasMaxLength(30);
+        b.Property(x => x.Text).HasColumnType("nvarchar(max)");
+        b.Property(x => x.ProviderEventId).HasMaxLength(200);
+        b.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
+
+        b.HasIndex(x => x.RealtimeSessionId);
+        b.HasIndex(x => new { x.RealtimeSessionId, x.SequenceNumber }).IsUnique();
+        b.HasIndex(x => x.InterviewSessionId);
+    }
+}
+

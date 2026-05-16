@@ -37,6 +37,7 @@ public class InterviewSession : AuditableEntity
     public InterviewTranscript? Transcript { get; set; }
     public InterviewReport? Report { get; set; }
     public ICollection<InterviewQuestion> Questions { get; set; } = [];
+    public ICollection<InterviewRealtimeSession> RealtimeSessions { get; set; } = [];
 }
 
 public static class InterviewSessionStatus
@@ -157,3 +158,75 @@ public class InterviewAnswer : BaseEntity
     // Navigation
     public InterviewQuestion Question { get; set; } = null!;
 }
+
+// ── Phase 8A: Realtime Session / Event model ─────────────────────────────────
+
+public class InterviewRealtimeSession : BaseEntity
+{
+    public Guid InterviewSessionId { get; set; }
+    public Guid UserId { get; set; }
+
+    /// <summary>openai | gemini | python</summary>
+    public string? Provider { get; set; }
+    public string? ProviderSessionId { get; set; }
+    public string? Model { get; set; }
+
+    /// <summary>created | active | ending | completed | failed | expired</summary>
+    public string Status { get; set; } = InterviewRealtimeSessionStatus.Created;
+
+    /// <summary>WebSocket/HTTPS URL returned by provider (via Python). May be null for Python-brokered sessions.</summary>
+    public string? ConnectUrl { get; set; }
+
+    /// <summary>
+    /// Hashed representation of the client secret (ephemeral token).
+    /// NEVER store the raw secret. Frontend receives the raw value once via the API response.
+    /// </summary>
+    public string? ClientSecretHash { get; set; }
+
+    public DateTime? ExpiresAt { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? EndedAt { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+
+    // Navigation
+    public InterviewSession Session { get; set; } = null!;
+    public ICollection<InterviewRealtimeEvent> Events { get; set; } = [];
+}
+
+public static class InterviewRealtimeSessionStatus
+{
+    public const string Created   = "created";
+    public const string Active    = "active";
+    public const string Ending    = "ending";
+    public const string Completed = "completed";
+    public const string Failed    = "failed";
+    public const string Expired   = "expired";
+}
+
+public class InterviewRealtimeEvent : BaseEntity
+{
+    public Guid InterviewSessionId { get; set; }
+    public Guid RealtimeSessionId { get; set; }
+    public int SequenceNumber { get; set; }
+
+    /// <summary>
+    /// session_started | assistant_question | user_transcript_delta | user_transcript_final
+    /// | assistant_transcript_delta | assistant_transcript_final | answer_final | error | session_ended
+    /// </summary>
+    public string EventType { get; set; } = string.Empty;
+
+    /// <summary>user | assistant | system</summary>
+    public string? Role { get; set; }
+    public string? Text { get; set; }
+    public string? ProviderEventId { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? MetadataJson { get; set; }
+
+    // Navigation
+    public InterviewRealtimeSession RealtimeSession { get; set; } = null!;
+}
+
