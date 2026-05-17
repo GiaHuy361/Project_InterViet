@@ -5,6 +5,7 @@ import { RootLayout } from './layouts/RootLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 import { AppLayout } from './layouts/AppLayout';
+import { CVMatchingLayout } from './layouts/CVMatchingLayout';
 
 // Route guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -43,43 +44,14 @@ export const router = createBrowserRouter([
         path: '/',
         Component: AuthLayout,
         children: [
-          {
-            path: 'dang-nhap',
-            element: (
-              <PublicOnlyRoute>
-                <Pages.LoginPage />
-              </PublicOnlyRoute>
-            ),
-          },
-          {
-            path: 'login',
-            element: (
-              <PublicOnlyRoute>
-                <Pages.LoginPage />
-              </PublicOnlyRoute>
-            ),
-          },
-          {
-            path: 'dang-ky',
-            element: (
-              <PublicOnlyRoute>
-                <Pages.SignupPage />
-              </PublicOnlyRoute>
-            ),
-          },
-          {
-            path: 'register',
-            element: (
-              <PublicOnlyRoute>
-                <Pages.SignupPage />
-              </PublicOnlyRoute>
-            ),
-          },
+          { path: 'dang-nhap', element: <PublicOnlyRoute><Pages.LoginPage /></PublicOnlyRoute> },
+          { path: 'login', element: <PublicOnlyRoute><Pages.LoginPage /></PublicOnlyRoute> },
+          { path: 'dang-ky', element: <PublicOnlyRoute><Pages.SignupPage /></PublicOnlyRoute> },
+          { path: 'register', element: <PublicOnlyRoute><Pages.SignupPage /></PublicOnlyRoute> },
           { path: 'xac-minh-email', Component: Pages.VerifyEmailPage },
           { path: 'quen-mat-khau', Component: Pages.ForgotPasswordPage },
           { path: 'dat-lai-mat-khau', Component: Pages.ResetPasswordPage },
           { path: 'tai-khoan-bi-khoa', Component: Pages.AccountLockedPage },
-          // English aliases for consistency
           { path: 'verify-email', Component: Pages.VerifyEmailPage },
           { path: 'forgot-password', Component: Pages.ForgotPasswordPage },
           { path: 'reset-password', Component: Pages.ResetPasswordPage },
@@ -87,15 +59,23 @@ export const router = createBrowserRouter([
       },
       {
         path: '/',
-        element: (
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        ),
+        element: <ProtectedRoute><AppLayout /></ProtectedRoute>,
         children: [
           { path: 'onboarding', Component: Pages.OnboardingPage },
           { path: 'dashboard', Component: Pages.DashboardPage },
-          { path: 'cv-matching', Component: Pages.CVMatchingPage },
+          {
+            path: 'cv-matching',
+            Component: CVMatchingLayout,
+            children: [
+              { index: true, Component: Pages.CVPage },
+              { path: 'cv', Component: Pages.CVPage },
+              { path: 'jd', Component: Pages.JDPage },
+              { path: 'doi-sanh', Component: Pages.MatchingPage },
+            ],
+          },
+          { path: 'job-descriptions', Component: Pages.JobDescriptionsPage },
+          { path: 'matches', Component: Pages.MatchSessionsPage },
+          { path: 'matches/:sessionId', Component: Pages.MatchSessionsPage },
           { path: 'cv-history', Component: Pages.CVHistoryPage },
           { path: 'multi-jd-matching', Component: Pages.MultiJDMatchingPage },
           { path: 'network', Component: Pages.NetworkPage },
@@ -115,15 +95,10 @@ export const router = createBrowserRouter([
           { path: 'hoat-dong', Component: Pages.ActivityLogPage },
           { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
           { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
-
-          // System management
           { path: 'system/data', Component: Pages.DataManagementPage },
         ],
       },
-      {
-        path: '*',
-        Component: Pages.NotFoundPage,
-      },
+      { path: '*', Component: Pages.NotFoundPage },
     ],
   },
 ]);

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useApp } from '../contexts/AppContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -27,6 +27,8 @@ import {
   getPlanCTAVariant,
   type PlanActionType 
 } from '../config/pricing';
+import * as subscriptionService from '../../services/subscriptionService';
+import { createApiError } from '../../lib/api/apiError';
 import { toast } from 'sonner';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
@@ -388,10 +390,18 @@ export const SettingsPage: React.FC = () => {
 export const SubscriptionPage: React.FC = () => {
   const { state } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentPlan = state.user?.subscriptionPlan || 'free';
+  const isDevBillingEnabled = import.meta.env.VITE_ENABLE_DEV_BILLING === 'true';
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [selectedDowngradePlan, setSelectedDowngradePlan] = useState<string>('');
   const [downgradeLoading, setDowngradeLoading] = useState(false);
+  const [devBillingLoading, setDevBillingLoading] = useState(false);
+  const highlightFromRoute = useMemo<'monthly' | 'yearly'>(() => {
+    const raw = (location.state as { highlightPlan?: unknown } | null)?.highlightPlan;
+    return raw === 'yearly' ? 'yearly' : 'monthly';
+  }, [location.state]);
+  const [selectedDevPlan, setSelectedDevPlan] = useState<'monthly' | 'yearly'>(highlightFromRoute);
 
   // Scroll to comparison table
   const scrollToComparison = () => {
@@ -403,6 +413,19 @@ export const SubscriptionPage: React.FC = () => {
 
   const currentPlanInfo = CANDIDATE_PLANS[currentPlan];
   const isPaidPlan = currentPlan !== 'free';
+  const isYearlyUser = currentPlan === 'yearly';
+  const showDevBillingCard = isDevBillingEnabled && !isYearlyUser;
+
+  React.useEffect(() => {
+    const onSubscriptionUpdated = (event: Event) => {
+      const subscription = (event as CustomEvent).detail as { planKey?: string } | undefined;
+      if (subscription?.planKey === 'monthly' || subscription?.planKey === 'yearly') {
+        setSelectedDevPlan(subscription.planKey);
+      }
+    };
+    window.addEventListener('subscription-updated', onSubscriptionUpdated as EventListener);
+    return () => window.removeEventListener('subscription-updated', onSubscriptionUpdated as EventListener);
+  }, []);
 
   const handleSelectPlan = (planId: string) => {
     if (planId === currentPlan) {
@@ -438,9 +461,49 @@ export const SubscriptionPage: React.FC = () => {
 
   const quota = getPlanQuota(currentPlan);
 
+  const handleDevBillingActivate = async (planId: 'monthly' | 'yearly') => {
+    if (!isDevBillingEnabled) return;
+    setDevBillingLoading(true);
+    try {
+      const subscription = await subscriptionService.devActivatePlan({ planKey: planId });
+      const planName = subscription.planName || CANDIDATE_PLANS[planId].name;
+      toast.success(`Đã kích hoạt ${planName}`);
+      setSelectedDevPlan(planId);
+      window.dispatchEvent(new CustomEvent('subscription-updated', { detail: subscription }));
+    } catch (error) {
+      toast.error(createApiError(error).getUserMessage());
+    } finally {
+      setDevBillingLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
       <h1 className="text-3xl font-bold">Gói dịch vụ</h1>
+      {showDevBillingCard && (
+        <Card className="p-6 border-dashed border-amber-400 bg-amber-50/60">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <Badge variant="secondary" className="mb-2">DEV BILLING</Badge>
+              <h3 className="text-lg font-semibold text-amber-900">Kích hoạt gói test mà không cần cổng thanh toán</h3>
+              <p className="text-sm text-amber-800/80">
+                Chỉ hiển thị trong môi trường dev khi <code>VITE_ENABLE_DEV_BILLING=true</code>.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant={selectedDevPlan === 'monthly' ? 'default' : 'outline'} onClick={() => setSelectedDevPlan('monthly')}>
+                Gói Tháng
+              </Button>
+              <Button variant={selectedDevPlan === 'yearly' ? 'default' : 'outline'} onClick={() => setSelectedDevPlan('yearly')}>
+                Gói Năm
+              </Button>
+              <Button onClick={() => void handleDevBillingActivate(selectedDevPlan)} disabled={devBillingLoading}>
+                {devBillingLoading ? 'Đang kích hoạt...' : 'Kích hoạt gói test'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Current Plan Card */}
       <Card className="p-6">
@@ -855,8 +918,15 @@ export const SubscriptionPage: React.FC = () => {
 };
 
 // Invoices Page
+type InvoiceItem = {
+  id: string;
+  date: string;
+  amount: number;
+  status: string;
+};
+
 export const InvoicesPage: React.FC = () => {
-  const invoices: never[] = [];
+  const invoices: InvoiceItem[] = [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">

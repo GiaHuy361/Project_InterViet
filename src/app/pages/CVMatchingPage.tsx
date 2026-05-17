@@ -1,402 +1,419 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useApp } from '../contexts/AppContext';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Textarea } from '../components/ui/textarea';
-import { Label } from '../components/ui/label';
-import { Progress } from '../components/ui/progress';
-import { Badge } from '../components/ui/badge';
-import { Skeleton } from '../components/ui/skeleton';
-import { UpgradeModal } from '../components/UpgradeModal';
-import { LoadingButton } from '../components/design-system/LoadingButton';
-import { eventTracker } from '../utils/eventTracker';
-import { 
-  Upload, 
-  FileText, 
-  Sparkles, 
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  Download,
-  History,
-  Lightbulb,
-  Lock,
-  Info,
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { FileText } from 'lucide-react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
+import * as resumeService from '../../services/resumeService';
+import * as jobDescriptionService from '../../services/jobDescriptionService';
+import * as matchingService from '../../services/matchingService';
+import { safeParseJsonArray } from '../../lib/parsers/jsonSafeParse';
+import { getPhase3UserMessage } from '../../lib/api/phase3Errors';
+import { logApiAction } from '../../lib/api/apiDebug';
+import { ResumeUploadCard } from '../components/cv-matching/ResumeUploadCard';
+import { JobDescriptionCard } from '../components/cv-matching/JobDescriptionCard';
+import { ResumeListCard } from '../components/cv-matching/ResumeListCard';
+import { MatchingPanel } from '../components/cv-matching/MatchingPanel';
+import { ResumeDetailCard } from '../components/cv-matching/ResumeDetailCard';
 
-export const CVMatchingPage: React.FC = () => {
-  const { state, useCVOptimization, addCVVersion } = useApp();
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+function getLower(value: unknown): string { return String(value ?? '').trim().toLowerCase(); }
+function statusLabel(status?: string | null): string {
+  switch (getLower(status)) {
+    case 'queued': return 'Đang chờ xử lý';
+    case 'processing': return 'Đang phân tích CV';
+    case 'parsed': return 'Đã phân tích xong';
+    case 'failed': return 'Phân tích thất bại';
+    case 'serviceunavailable': return 'Dịch vụ AI/CV tạm thời không khả dụng';
+    case 'pending': return 'Đang chờ xử lý';
+    case 'completed': return 'Hoàn tất';
+    case 'cancelled': return 'Đã hủy';
+    default: return status ?? 'Chưa xác định';
+  }
+}
+
+interface CVMatchingPageProps {
+  initialSection?: 'cv' | 'jd' | 'matching';
+  showSectionSwitcher?: boolean;
+  pageTitle?: string;
+  pageSubtitle?: string;
+}
+
+export const CVMatchingPage: React.FC<CVMatchingPageProps> = ({ initialSection = 'cv', showSectionSwitcher = true, pageTitle, pageSubtitle }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'upload' | 'analyzing' | 'results'>('upload');
-  const [cvText, setCvText] = useState('');
-  const [jdText, setJdText] = useState('');
-  const [matchScore, setMatchScore] = useState(0);
-  const [analyzingProgress, setAnalyzingProgress] = useState(0);
-  const [analyzingStep, setAnalyzingStep] = useState('');
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const location = useLocation();
+  const detailRef = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [resumes, setResumes] = useState<resumeService.ResumeSummary[]>([]);
+  const [resumeDetail, setResumeDetail] = useState<resumeService.ResumeDetail | null>(null);
+  const [jobDescriptions, setJobDescriptions] = useState<jobDescriptionService.JobDescriptionSummary[]>([]);
+  const [activeResumeMissing, setActiveResumeMissing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [title, setTitle] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [selectedJdId, setSelectedJdId] = useState('');
+  const [matchSessionId, setMatchSessionId] = useState('');
+  const [newJdTitle, setNewJdTitle] = useState('');
+  const [newJdCompanyName, setNewJdCompanyName] = useState('');
+  const [newJdLocation, setNewJdLocation] = useState('');
+  const [newJdSalaryText, setNewJdSalaryText] = useState('');
+  const [newJdSourceUrl, setNewJdSourceUrl] = useState('');
+  const [newJdPostedAt, setNewJdPostedAt] = useState('');
+  const [newJdRawText, setNewJdRawText] = useState('');
+  const [creatingJd, setCreatingJd] = useState(false);
+  const [matchDetail, setMatchDetail] = useState<matchingService.MatchSessionDetail | null>(null);
+  const [activeSection, setActiveSection] = useState<'cv' | 'jd' | 'matching'>(initialSection);
 
-  const isPremium = state.user?.role === 'premium' || state.user?.role === 'trial';
-  const canUse = isPremium || (state.user && state.user.cvOptimizationsDaily < 3);
+  useEffect(() => {
+    if (location.pathname.includes('/doi-sanh')) setActiveSection('matching');
+    else if (location.pathname.includes('/jd')) setActiveSection('jd');
+    else setActiveSection('cv');
+  }, [location.pathname]);
 
-  const skillsData = [
-    { skill: 'Kỹ năng kỹ thuật', current: 75, required: 90 },
-    { skill: 'Kinh nghiệm', current: 80, required: 85 },
-    { skill: 'Học vấn', current: 95, required: 90 },
-    { skill: 'Kỹ năng mềm', current: 70, required: 85 },
-    { skill: 'Ngôn ngữ', current: 85, required: 80 },
-  ];
-
-  const missingKeywords = [
-    'React', 'TypeScript', 'Node.js', 'AWS', 'Docker', 'Agile', 'CI/CD'
-  ];
-
-  const suggestions = [
-    {
-      section: 'Kỹ năng kỹ thuật',
-      issue: 'Thiếu các công nghệ quan trọng trong JD',
-      suggestion: 'Thêm các từ khóa: React, TypeScript, Node.js vào phần kỹ năng của bạn'
-    },
-    {
-      section: 'Kinh nghiệm',
-      issue: 'Mô tả kinh nghiệm chưa cụ thể',
-      suggestion: 'Sử dụng số liệu cụ thể: \"Tăng hiệu suất 30%\" thay vì \"Cải thiện hiệu suất\"'
-    },
-    {
-      section: 'Thành tích',
-      issue: 'Thiếu các metric đo lường',
-      suggestion: 'Thêm các con số cụ thể về kết quả công việc của bạn'
-    }
-  ];
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setUploadError('File quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
-      toast.error('File quá lớn');
-      return;
-    }
-
-    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError('Định dạng file không được hỗ trợ. Vui lòng chọn file PDF hoặc DOCX.');
-      toast.error('Định dạng file không hợp lệ');
-      return;
-    }
-
-    setUploadError('');
-    toast.success('File đã được tải lên thành công');
-    eventTracker.track('cv_file_upload', { fileName: file.name, fileSize: file.size });
-  };
-
-  const handleAnalyze = () => {
-    if (!canUse) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'cv_limit_reached' });
-      return;
-    }
-
-    if (!cvText || !jdText) {
-      toast.error('Vui lòng nhập đầy đủ CV và JD');
-      return;
-    }
-
-    const success = useCVOptimization();
-    if (!success) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'cv_limit_reached' });
-      return;
-    }
-
-    setStep('analyzing');
-    setAnalyzingProgress(0);
-    eventTracker.track('jd_analyze_start');
-    
-    // Simulate progressive analysis
-    const steps = [
-      { progress: 20, text: 'Đang phân tích JD...' },
-      { progress: 40, text: 'Đang chấm điểm ATS...' },
-      { progress: 60, text: 'So khớp kỹ năng...' },
-      { progress: 80, text: 'Tìm từ khóa thiếu...' },
-      { progress: 100, text: 'Hoàn tất phân tích!' },
-    ];
-
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < steps.length) {
-        setAnalyzingProgress(steps[currentStep].progress);
-        setAnalyzingStep(steps[currentStep].text);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        const score = Math.floor(Math.random() * 30) + 65;
-        setMatchScore(score);
-        setStep('results');
-        
-        addCVVersion({
-          name: 'CV ' + new Date().toLocaleDateString('vi-VN'),
-          score,
-          content: cvText
-        });
-        
-        toast.success('Phân tích hoàn tất!');
-        eventTracker.track('jd_analyze_complete', { score });
-        eventTracker.track('jd_analyze', { score }); // For dashboard completion tracking
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [resumeList, jdList] = await Promise.all([
+        resumeService.safeGetResumes(),
+        jobDescriptionService.safeGetJobDescriptions(),
+      ]);
+      setResumes(resumeList);
+      setJobDescriptions(jdList);
+      const sessions = await matchingService.safeGetMatchSessions();
+      const completedSession = sessions.find((session) => getLower(session.status) === 'completed') ?? sessions[0] ?? null;
+      if (completedSession) {
+        const detail = await matchingService.getMatchSessionDetail(completedSession.sessionId);
+        setMatchDetail(detail);
+        setMatchSessionId(completedSession.sessionId);
       }
-    }, 600);
+      let active: resumeService.ResumeDetail | null = null;
+      try {
+        active = await resumeService.getActiveResume();
+        setActiveResumeMissing(false);
+      } catch (err) {
+        setActiveResumeMissing(true);
+        setResumeDetail(null);
+        setSelectedResumeId(resumeList[0]?.resumeId || '');
+        if ((err as { status?: number })?.status !== 404) throw err;
+      }
+      setSelectedResumeId((prev) => prev || active?.resumeId || resumeList[0]?.resumeId || '');
+    } catch (err) {
+      toast.error(getPhase3UserMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleExportPDF = () => {
-    if (!isPremium) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'pdf_export' });
+  useEffect(() => { void loadData(); }, []);
+  useEffect(() => {
+    if (!selectedResumeId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const detail = await resumeService.getResume(selectedResumeId);
+        if (!cancelled) setResumeDetail(detail);
+      } catch (err) {
+        if (!cancelled) toast.error(getPhase3UserMessage(err));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedResumeId]);
+
+  useEffect(() => {
+    if (!resumeDetail?.resumeId) return;
+    const status = getLower(resumeDetail.parseStatus);
+    if (!['queued', 'processing'].includes(status)) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const detail = await resumeService.getResume(resumeDetail.resumeId!);
+        setResumeDetail(detail);
+        setResumes((prev) => Array.isArray(prev) ? prev.map((item) => (item.resumeId === detail.resumeId ? { ...item, ...detail } : item)) : []);
+      } catch (err) {
+        window.clearInterval(timer);
+        toast.error(getPhase3UserMessage(err));
+      }
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [resumeDetail?.resumeId, resumeDetail?.parseStatus]);
+
+  useEffect(() => {
+    if (!matchSessionId) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const detail = await matchingService.getMatchSessionDetail(matchSessionId);
+        setMatchDetail(detail);
+      } catch (err) {
+        window.clearInterval(timer);
+        toast.error(getPhase3UserMessage(err));
+      }
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [matchSessionId]);
+
+  const validateFile = (file: File): string | null => {
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Định dạng file không được hỗ trợ.';
+    if (file.size > MAX_FILE_SIZE) return 'File vượt quá dung lượng tối đa 10MB.';
+    return null;
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return setUploadError('Vui lòng chọn CV trước khi tải lên.');
+    const error = validateFile(selectedFile);
+    if (error) return setUploadError(error);
+    setUploading(true);
+    setUploadError('');
+    try {
+      const uploaded = await resumeService.uploadResume({ file: selectedFile, title });
+      toast.success('CV đã được tải lên');
+      setSelectedFile(null);
+      setTitle('');
+      setSelectedResumeId(uploaded.resumeId);
+      await loadData();
+    } catch (err) {
+      const message = getPhase3UserMessage(err);
+      toast.error(message);
+      if (message.includes('gói hiện tại')) navigate('/goi-dich-vu');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSetActive = async (id: string) => {
+    logApiAction('ui.resume.setActive.click', { id });
+    try {
+      await resumeService.setActiveResume(id);
+      toast.success('Đã đặt CV active');
+      await loadData();
+    } catch (err) {
+      toast.error(getPhase3UserMessage(err));
+    }
+  };
+
+  const handleReprocess = async (id: string) => {
+    logApiAction('ui.resume.reprocess.click', { id });
+    try {
+      const job = await resumeService.reprocessResume(id);
+      toast.success(`Đã yêu cầu phân tích lại CV${job.jobId ? ` · Job ${job.jobId}` : ''}`);
+      const detail = await resumeService.getResume(id);
+      setResumeDetail(detail);
+      setSelectedResumeId(id);
+    } catch (err) {
+      toast.error(getPhase3UserMessage(err));
+    }
+  };
+
+  const handleDownload = async (id: string) => {
+    try {
+      const response = await resumeService.downloadResume(id);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `resume-${id}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Không thể tải CV về.');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm('Bạn có chắc muốn xóa CV này? Các kết quả matching cũ có thể vẫn được lưu để tham chiếu.');
+    if (!confirmed) return;
+    logApiAction('ui.resume.delete.click', { id });
+    try {
+      await resumeService.deleteResume(id);
+      toast.success('Đã xóa CV');
+      if (selectedResumeId === id) {
+        setSelectedResumeId('');
+        setResumeDetail(null);
+      }
+      await loadData();
+    } catch (err) {
+      toast.error(getPhase3UserMessage(err));
+    }
+  };
+
+  const handleSingleMatch = async () => {
+    if (!selectedResumeId || !selectedJdId) return toast.error('Vui lòng chọn CV và JD.');
+    logApiAction('ui.match.single.click', { resumeId: selectedResumeId, jobDescriptionId: selectedJdId });
+    try {
+      const session = await matchingService.createSingleMatch({ resumeId: selectedResumeId, jobDescriptionId: selectedJdId });
+      setMatchSessionId(session.sessionId);
+      const detail = await matchingService.getMatchSessionDetail(session.sessionId);
+      setMatchDetail(detail);
+      toast.success('Đã tạo phiên matching');
+      window.localStorage.setItem('interviet:lastMatchSessionId', session.sessionId);
+      setActiveSection('matching');
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      const message = getPhase3UserMessage(err);
+      toast.error(message);
+      if (message.includes('gói hiện tại')) navigate('/goi-dich-vu');
+    }
+  };
+
+  const handleSelectResume = (id: string) => {
+    setSelectedResumeId(id);
+  };
+
+  const handleCreateJobDescription = async () => {
+    if (!newJdTitle.trim() || !newJdRawText.trim()) {
+      toast.error('Vui lòng nhập tên JD và nội dung JD.');
       return;
     }
-    toast.success('Đang xuất PDF...');
-    eventTracker.track('pdf_export_click');
+    setCreatingJd(true);
+    try {
+      const salaryText = newJdSalaryText.trim();
+      const vndSalaryText = salaryText
+        ? /vnđ|vnd|₫/i.test(salaryText)
+          ? salaryText
+          : `${salaryText} VNĐ`
+        : undefined;
+      const created = await jobDescriptionService.createJobDescription({
+        title: newJdTitle.trim(),
+        companyName: newJdCompanyName.trim() || undefined,
+        location: newJdLocation.trim() || undefined,
+        salaryText: vndSalaryText,
+        sourceUrl: newJdSourceUrl.trim() || undefined,
+        postedAt: newJdPostedAt || undefined,
+        rawText: newJdRawText.trim(),
+      });
+      toast.success('Đã tạo mô tả công việc mới');
+      setJobDescriptions((prev) => [created, ...prev]);
+      setSelectedJdId(created.id);
+      setNewJdTitle('');
+      setNewJdCompanyName('');
+      setNewJdLocation('');
+      setNewJdSalaryText('');
+      setNewJdSourceUrl('');
+      setNewJdPostedAt('');
+      setNewJdRawText('');
+    } catch (err) {
+      toast.error(getPhase3UserMessage(err));
+    } finally {
+      setCreatingJd(false);
+    }
   };
+
+  const parsedSkills = safeParseJsonArray<string>(resumeDetail?.skillsJson, []);
+  const parsedExperiences = safeParseJsonArray<unknown>(resumeDetail?.experiencesJson, []);
+  const parsedEducations = safeParseJsonArray<unknown>(resumeDetail?.educationsJson, []);
+  const parsedProjects = safeParseJsonArray<unknown>(resumeDetail?.projectsJson, []);
+  const parsedCertifications = safeParseJsonArray<unknown>(resumeDetail?.certificationsJson, []);
+  const parsedLanguages = safeParseJsonArray<string>(resumeDetail?.languagesJson, []);
+  const parsedWarnings = safeParseJsonArray<string>((resumeDetail as { warningsJson?: string | null } | null)?.warningsJson, []);
+
+  useEffect(() => {
+    if (resumeDetail) detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [resumeDetail?.resumeId]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      <AppPageHeader
-        title="CV & So khớp JD"
-        subtitle="Tối ưu CV của bạn để phù hợp với mô tả công việc"
-        icon={FileText}
-        iconGradient="from-blue-500 to-cyan-500"
-        actions={
-          <Button variant="outline" className="hover-lift" onClick={() => navigate('/cv-history')}>
-            <History className="mr-2" size={16} />
-            Lịch sử
-          </Button>
-        }
-      />
+    <div className="relative space-y-6 overflow-hidden pb-12">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.12),transparent_28%),linear-gradient(to_bottom,#f8fbff,rgba(255,255,255,0))]" />
+      <AppPageHeader title={pageTitle || 'CV và đối sánh'} subtitle={pageSubtitle || 'Kết nối CV, mô tả công việc và đối sánh'} icon={FileText} iconGradient="from-blue-500 to-cyan-500" />
+      {activeResumeMissing && <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Bạn chưa có CV đang dùng. Hãy tải lên CV trước.</p>}
 
-      {!isPremium && (
-        <Card className="glass-card p-4 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/20">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-            <div className="flex-1">
-              <p className="text-sm text-blue-900">
-                <strong>Gói miễn phí:</strong> {state.user?.cvOptimizationsDaily || 0}/3 lần tối ưu hôm nay
-              </p>
-            </div>
-            {!canUse && (
-              <Button size="sm" onClick={() => navigate('/goi-dich-vu')}>
-                Nâng cấp
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {step === 'upload' && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="glass-card hover-lift p-6">
-            <Label className="flex items-center gap-2 mb-3">
-              <FileText size={18} />
-              <span className="font-semibold">CV của bạn</span>
-            </Label>
-            <Textarea
-              value={cvText}
-              onChange={(e) => setCvText(e.target.value)}
-              placeholder="Dán nội dung CV của bạn vào đây..."
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <div className="mt-4">
-              <Button variant="outline" className="w-full">
-                <Upload className="mr-2" size={16} />
-                Hoặc tải file PDF/DOCX
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="glass-card hover-lift p-6">
-            <Label className="flex items-center gap-2 mb-3">
-              <Sparkles size={18} />
-              <span className="font-semibold">Job Description</span>
-            </Label>
-            <Textarea
-              value={jdText}
-              onChange={(e) => setJdText(e.target.value)}
-              placeholder="Dán mô tả công việc (JD) vào đây..."
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <div className="mt-4 text-sm text-gray-600">
-              <p>💡 Tip: Copy toàn bộ nội dung JD để được phân tích chính xác nhất</p>
-            </div>
-          </Card>
+      {showSectionSwitcher && (
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <button type="button" onClick={() => navigate('/cv-matching/cv')} className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeSection === 'cv' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>
+            CV
+          </button>
+          <button type="button" onClick={() => navigate('/cv-matching/jd')} className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeSection === 'jd' ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>
+            Mô tả công việc
+          </button>
+          <button type="button" onClick={() => navigate('/cv-matching/doi-sanh')} className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeSection === 'matching' ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>
+            Đối sánh
+          </button>
         </div>
       )}
 
-      {step === 'analyzing' && (
-        <Card className="p-12">
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
-              <Sparkles className="text-white" size={40} />
+      {activeSection === 'cv' && (
+        <>
+          <ResumeUploadCard
+            selectedFile={selectedFile}
+            title={title}
+            uploadError={uploadError}
+            uploading={uploading}
+            onChangeFile={(file) => {
+              setSelectedFile(file);
+              setUploadError(file ? validateFile(file) ?? '' : '');
+            }}
+            onChangeTitle={setTitle}
+            onUpload={() => void handleUpload()}
+            validateFile={validateFile}
+          />
+
+          <ResumeListCard
+            loading={loading}
+            resumes={resumes}
+            onSelect={handleSelectResume}
+            onSetActive={(id) => void handleSetActive(id)}
+            onReprocess={(id) => void handleReprocess(id)}
+            onDownload={(id) => void handleDownload(id)}
+            onDelete={(id) => void handleDelete(id)}
+            statusLabel={statusLabel}
+          />
+
+          {resumeDetail && (
+            <div ref={detailRef}>
+              <ResumeDetailCard
+                resumeDetail={resumeDetail}
+                parsedSkills={parsedSkills}
+                parsedExperiences={parsedExperiences}
+                parsedEducations={parsedEducations}
+                parsedProjects={parsedProjects}
+                parsedCertifications={parsedCertifications}
+                parsedLanguages={parsedLanguages}
+                parsedWarnings={parsedWarnings}
+                statusLabel={statusLabel}
+              />
             </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-2">Đang phân tích CV...</h3>
-              <p className="text-gray-600">AI đang so khớp CV với JD và tìm các điểm cần cải thiện</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <Progress value={analyzingProgress} className="h-2" />
-            </div>
-            <div className="text-sm text-gray-500">
-              <p>{analyzingStep}</p>
-            </div>
-          </div>
-        </Card>
+          )}
+        </>
       )}
 
-      {step === 'results' && (
-        <div className="space-y-6">
-          {/* Match Score */}
-          <Card className="p-8">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-4">Điểm so khớp tổng thể</h3>
-              <div className="relative inline-block">
-                <div className="w-40 h-40 rounded-full border-8 border-gray-200 flex items-center justify-center relative">
-                  <div 
-                    className="absolute inset-0 rounded-full border-8 border-blue-600"
-                    style={{
-                      clipPath: `polygon(50% 50%, 50% 0%, ${matchScore >= 50 ? '100%' : '50%'} 0%, 100% ${matchScore >= 75 ? '100%' : matchScore >= 50 ? ((matchScore - 50) / 25) * 100 + '%' : '0%'}, ${matchScore >= 75 ? '0%' : '100%'} 100%, 0% 100%, 0% ${matchScore >= 25 ? (1 - (matchScore - 25) / 25) * 100 + '%' : '100%'}, ${matchScore < 25 ? '50%' : '0%'} ${matchScore < 25 ? (1 - matchScore / 25) * 100 + '%' : '0%'})`
-                    }}
-                  ></div>
-                  <div className="text-4xl font-bold z-10">{matchScore}%</div>
-                </div>
-              </div>
-              <p className="mt-4 text-gray-600">
-                {matchScore >= 80 ? 'Xuất sắc! CV của bạn rất phù hợp với JD' :
-                 matchScore >= 70 ? 'Tốt! Một vài điểm cần cải thiện' :
-                 'CV cần được tối ưu thêm'}
-              </p>
-            </div>
-          </Card>
-
-          {/* Skills Radar Chart */}
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Phân tích kỹ năng</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={skillsData}>
-                  <PolarGrid key="polar-grid" />
-                  <PolarAngleAxis key="polar-angle-axis" dataKey="skill" />
-                  <PolarRadiusAxis key="polar-radius-axis" angle={90} domain={[0, 100]} />
-                  <Radar 
-                    key="current-skill"
-                    name="Của bạn" 
-                    dataKey="current" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.5}
-                  />
-                  <Radar 
-                    key="required-skill"
-                    name="Yêu cầu" 
-                    dataKey="required" 
-                    stroke="#8b5cf6" 
-                    fill="#8b5cf6" 
-                    fillOpacity={0.3}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                <span className="text-sm">CV của bạn</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                <span className="text-sm">Yêu cầu JD</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Missing Keywords */}
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Từ khóa thiếu trong CV</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Các từ khóa này xuất hiện trong JD nhưng không có trong CV của bạn
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {missingKeywords.map(keyword => (
-                <Badge key={keyword} variant="outline" className="text-sm">
-                  {keyword}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-
-          {/* Suggestions */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="text-yellow-600" size={20} />
-              <h3 className="font-bold">Gợi ý cải thiện</h3>
-            </div>
-            <div className="space-y-4">
-              {suggestions.map((item, index) => (
-                <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{item.section}</h4>
-                      <p className="text-sm text-gray-600 mb-2">{item.issue}</p>
-                      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded border border-blue-200">
-                        <CheckCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={16} />
-                        <p className="text-sm text-blue-900">{item.suggestion}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Button onClick={() => navigate('/phong-van-setup')}>
-              <Sparkles className="mr-2" size={16} />
-              Luyện phỏng vấn ngay
-            </Button>
-            <Button variant="outline" onClick={() => setStep('upload')}>
-              Phân tích CV khác
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/cv-history')}>
-              <History className="mr-2" size={16} />
-              Xem lịch sử
-            </Button>
-            {isPremium && (
-              <Button variant="outline" onClick={handleExportPDF}>
-                <Download className="mr-2" size={16} />
-                Xuất PDF
-              </Button>
-            )}
-          </div>
-        </div>
+      {activeSection === 'jd' && (
+        <JobDescriptionCard
+          newJdTitle={newJdTitle}
+          newJdCompanyName={newJdCompanyName}
+          newJdLocation={newJdLocation}
+          newJdSalaryText={newJdSalaryText}
+          newJdSourceUrl={newJdSourceUrl}
+          newJdPostedAt={newJdPostedAt}
+          newJdRawText={newJdRawText}
+          creatingJd={creatingJd}
+          onChangeTitle={setNewJdTitle}
+          onChangeCompanyName={setNewJdCompanyName}
+          onChangeLocation={setNewJdLocation}
+          onChangeSalaryText={setNewJdSalaryText}
+          onChangeSourceUrl={setNewJdSourceUrl}
+          onChangePostedAt={setNewJdPostedAt}
+          onChangeRawText={setNewJdRawText}
+          onCreate={() => void handleCreateJobDescription()}
+        />
       )}
 
-      {step === 'upload' && (
-        <div className="flex justify-center">
-          <LoadingButton size="lg" onClick={handleAnalyze} disabled={!cvText || !jdText}>
-            <Sparkles className="mr-2" size={20} />
-            Phân tích ngay
-          </LoadingButton>
-        </div>
+      {activeSection === 'matching' && (
+        <MatchingPanel
+          resumes={resumes}
+          jobDescriptions={jobDescriptions}
+          selectedResumeId={selectedResumeId}
+          selectedJdId={selectedJdId}
+          matchDetail={matchDetail}
+          onSelectResume={handleSelectResume}
+          onSelectJd={setSelectedJdId}
+          onStartMatch={() => void handleSingleMatch()}
+          statusLabel={statusLabel}
+        />
       )}
 
-      {/* Upgrade Modal */}
-      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
     </div>
   );
 };

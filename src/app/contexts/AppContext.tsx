@@ -292,6 +292,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => apiClient.setAuthFailureHandler(null);
   }, []);
 
+  // Sync dev billing updates from subscription page / billing flow
+  useEffect(() => {
+    const handleSubscriptionUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ planKey?: string; planName?: string } | undefined>).detail;
+      const planKey = detail?.planKey;
+      if (planKey !== 'monthly' && planKey !== 'quarterly' && planKey !== 'yearly') return;
+      setState((prev) => ({
+        ...prev,
+        user: prev.user
+          ? {
+              ...prev.user,
+              subscriptionPlan: planKey,
+              role: planKey === 'monthly' || planKey === 'quarterly' || planKey === 'yearly'
+                ? 'premium'
+                : prev.user.role,
+            }
+          : null,
+      }));
+    };
+
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated as EventListener);
+    return () => window.removeEventListener('subscription-updated', handleSubscriptionUpdated as EventListener);
+  }, []);
+
   // Check subscription expiry
   useEffect(() => {
     if (state.user && state.user.role === 'trial' && state.user.trialEndsAt) {

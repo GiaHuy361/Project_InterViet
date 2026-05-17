@@ -21,8 +21,11 @@ export class ApiError extends Error {
     this.requestId = error.requestId;
 
     // Maintain proper stack trace (only available in V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
+    const errorConstructor = Error as ErrorConstructor & {
+      captureStackTrace?: (targetObject: object, constructorOpt?: Function) => void;
+    };
+    if (errorConstructor.captureStackTrace) {
+      errorConstructor.captureStackTrace(this, ApiError);
     }
   }
 
@@ -118,8 +121,18 @@ function getMessageForErrorCode(code: string): string | null {
     'RefreshToken.Revoked': 'Phiên đăng nhập đã bị thu hồi.',
     'RefreshToken.Expired': 'Phiên đăng nhập đã hết hạn.',
 
+    // Phase 3 domain errors
+    'Quota.Exceeded': 'Bạn đã dùng hết lượt trong gói hiện tại.',
+    'AI.ServiceUnavailable': 'Dịch vụ AI/CV hiện tạm thời không khả dụng. Vui lòng thử lại sau.',
+    'AI.CVServiceUnavailable': 'Dịch vụ AI/CV hiện tạm thời không khả dụng. Vui lòng thử lại sau.',
+    'CV.ServiceUnavailable': 'Dịch vụ AI/CV hiện tạm thời không khả dụng. Vui lòng thử lại sau.',
+    'Match.ServiceUnavailable': 'Dịch vụ AI/CV hiện tạm thời không khả dụng. Vui lòng thử lại sau.',
+    'MatchSession.NotFound': 'Không tìm thấy phiên matching.',
+    'Resume.NotFound': 'Không tìm thấy CV.',
+    'JobDescription.NotFound': 'Không tìm thấy JD.',
+
     // Network errors
-    'NETWORK_ERROR': 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend.',
+    'NETWORK_ERROR': 'Không thể kết nối máy chủ. Vui lòng thử lại sau.',
     'UNKNOWN_RESPONSE': 'Phản hồi từ máy chủ không hợp lệ.',
   };
 

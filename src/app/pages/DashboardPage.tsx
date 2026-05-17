@@ -13,6 +13,7 @@ import {
   ScaleOnHover,
 } from '../components/design-system/motion';
 import * as dashboardService from '../../services/dashboardService';
+import * as resumeService from '../../services/resumeService';
 import type {
   DashboardSummaryResponse,
   ActivityItem,
@@ -40,7 +41,7 @@ const QUICK_STEPS = [
     code: 'upload_cv',
     label: 'Tải CV',
     desc: 'Upload và phân tích CV',
-    path: '/cv-matching',
+    path: '/cv-matching/cv',
     icon: Upload,
     gradient: 'from-blue-500 to-cyan-500',
     shadow: 'shadow-blue-500/30',
@@ -50,7 +51,7 @@ const QUICK_STEPS = [
     code: 'create_jd',
     label: 'Thêm JD',
     desc: 'Phân tích Job Description',
-    path: '/cv-matching',
+    path: '/cv-matching/jd',
     icon: FileSearch,
     gradient: 'from-violet-500 to-purple-600',
     shadow: 'shadow-violet-500/30',
@@ -80,9 +81,9 @@ const QUICK_STEPS = [
 
 const CONTINUE_ITEMS = [
   {
-    title: 'Tối ưu CV cho vị trí mục tiêu',
-    desc: 'Tăng điểm matching với JD bạn quan tâm',
-    path: '/cv-matching',
+    title: 'Chuẩn hóa CV theo JD',
+    desc: 'Tăng điểm matching với vị trí bạn quan tâm',
+    path: '/cv-matching/jd',
     gradient: 'from-blue-500 to-indigo-600',
     icon: FileText,
   },
@@ -136,6 +137,8 @@ export const DashboardPage: React.FC = () => {
   const [summaryError, setSummaryError] = useState<ApiError | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
   const [quotaLoading, setQuotaLoading] = useState(true);
+  const [resumes, setResumes] = useState<resumeService.ResumeSummary[]>([]);
+  const [resumesLoading, setResumesLoading] = useState(true);
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -173,11 +176,23 @@ export const DashboardPage: React.FC = () => {
     }
   }, []);
 
+  const loadResumes = useCallback(async () => {
+    setResumesLoading(true);
+    try {
+      setResumes(await resumeService.safeGetResumes({ page: 1, pageSize: 3 }));
+    } catch {
+      setResumes([]);
+    } finally {
+      setResumesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadSummary();
     void loadActivity();
     void loadQuota();
-  }, [loadSummary, loadActivity, loadQuota]);
+    void loadResumes();
+  }, [loadSummary, loadActivity, loadQuota, loadResumes]);
 
   const onboardingSteps = summary?.onboardingSteps ?? [];
   const completedQuick = useMemo(() => {
@@ -202,6 +217,28 @@ export const DashboardPage: React.FC = () => {
       (a.activityType ?? a.type ?? '').toLowerCase().includes('resume') ||
       (a.resourceType ?? '').toLowerCase().includes('resume')
   );
+  const recentResumeItems = useMemo(
+    () => resumes.map((resume) => ({
+      id: resume.resumeId,
+      title: resume.title || resume.originalFileName || resume.resumeId,
+      message: `${resume.isActive ? 'Active' : 'Inactive'} · ${resume.parseStatus || 'unknown'}${resume.createdAt ? ` · ${formatLocalDateShort(resume.createdAt)}` : ''}`,
+      createdAt: resume.createdAt,
+      status: resume.parseStatus,
+      isActive: resume.isActive,
+      parseStatus: resume.parseStatus,
+    })),
+    [resumes]
+  );
+  const cvRecentItems = cvActivities.length > 0
+    ? cvActivities.slice(0, 3).map((item, index) => ({
+        id: item.id || `activity-${index}`,
+        title: item.title || item.message || item.activityType || 'CV',
+        message: item.description || item.message || item.activityType || 'Hoạt động gần đây',
+        createdAt: item.createdAt,
+        isActive: false,
+        parseStatus: 'parsed',
+      }))
+    : recentResumeItems;
   const interviewActivities = activities.filter((a) =>
     (a.activityType ?? a.type ?? '').toLowerCase().includes('interview')
   );
@@ -379,27 +416,24 @@ export const DashboardPage: React.FC = () => {
                       label="CV đã tải"
                       value={num(summary.resumes?.total)}
                       sub={`${num(summary.resumes?.parsed)} đã phân tích`}
-                      gradient=""
                     />
                   </StaggerItem>
                   <StaggerItem>
                     <MiniStat
                       label="JD"
                       value={num(summary.jobDescriptions?.total)}
-                      sub="Job Description"
-                      gradient=""
+                      sub="Mô tả công việc"
                     />
                   </StaggerItem>
                   <StaggerItem>
                     <MiniStat
-                      label="Matching"
+                      label="Đối sánh"
                       value={num(summary.matches?.total)}
                       sub={
                         num(summary.matches?.total) > 0
                           ? `TB ${formatScore(summary.matches?.averageScore)}%`
                           : 'Chưa có'
                       }
-                      gradient=""
                     />
                   </StaggerItem>
                 </Stagger>
@@ -407,14 +441,12 @@ export const DashboardPage: React.FC = () => {
             )}
           </PageState>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ActivityGlassCard
-              title="CV gần đây"
-              icon={FileText}
-              loading={activityLoading}
-              empty="Chưa có CV gần đây."
-              items={cvActivities.slice(0, 3)}
+          <div className="grid gap-5 lg:grid-cols-2">
+            <ResumeGlassCard
+              loading={resumesLoading}
+              resumes={cvRecentItems}
               onViewAll={() => navigate('/cv-history')}
+              empty={num(summary?.resumes?.total) > 0 ? 'Đã có CV trong hệ thống.' : 'Bạn chưa upload CV nào. Hãy tải CV đầu tiên để bắt đầu.'}
               delay={0.2}
             />
             <ActivityGlassCard
@@ -476,8 +508,7 @@ const MiniStat: React.FC<{
   label: string;
   value: number;
   sub: string;
-  gradient: string;
-}> = ({ label, value, sub, gradient }) => (
+}> = ({ label, value, sub }) => (
   <motion.div
     className="surface-card p-5 text-center"
     whileHover={{ y: -2 }}
@@ -495,6 +526,92 @@ const MiniStat: React.FC<{
     <p className="text-xs text-slate-500">{sub}</p>
   </motion.div>
 );
+
+type ResumeCardItem = {
+  id: string;
+  title?: string | null;
+  message?: string | null;
+  createdAt?: string | null;
+  isActive?: boolean;
+  parseStatus?: string | null;
+};
+
+const ResumeGlassCard: React.FC<{
+  loading: boolean;
+  resumes: ResumeCardItem[];
+  empty: string;
+  onViewAll: () => void;
+  delay?: number;
+}> = ({ loading, resumes, empty, onViewAll, delay = 0 }) => {
+  const badgeStyle = (resume: ResumeCardItem) => {
+    const status = String(resume.parseStatus ?? '').toLowerCase();
+    if (resume.isActive) return 'bg-emerald-100 text-emerald-700 ring-emerald-200';
+    if (['pending', 'processing', 'queued'].includes(status)) return 'bg-amber-100 text-amber-700 ring-amber-200';
+    if (['parsed', 'completed'].includes(status)) return 'bg-blue-100 text-blue-700 ring-blue-200';
+    return 'bg-slate-100 text-slate-700 ring-slate-200';
+  };
+
+  const badgeText = (resume: ResumeCardItem) => {
+    const status = String(resume.parseStatus ?? '').toLowerCase();
+    if (resume.isActive) return 'active';
+    if (['pending', 'processing', 'queued'].includes(status)) return 'pending';
+    if (['parsed', 'completed'].includes(status)) return 'parsed';
+    return resume.parseStatus || 'unknown';
+  };
+
+  return (
+    <FadeInImmediate delay={delay}>
+      <div className="surface-card p-5 lg:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <FileText className="h-4 w-4" />
+            </span>
+            CV gần đây
+          </h3>
+          <Button
+            variant="link"
+            className="h-auto p-0 text-xs font-semibold text-primary"
+            onClick={onViewAll}
+          >
+            Xem tất cả
+          </Button>
+        </div>
+        {loading ? (
+          <motion.div
+            className="h-20 rounded-lg bg-slate-100 dark:bg-slate-800"
+            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            transition={{ repeat: Infinity, duration: 1.2 }}
+          />
+        ) : resumes.length === 0 ? (
+          <p className="text-sm text-slate-500">{empty}</p>
+        ) : (
+          <ul className="space-y-3">
+            {resumes.slice(0, 3).map((resume, i) => (
+              <motion.li
+                key={resume.id}
+                className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900 dark:text-white">{resume.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">{resume.message || '—'}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ${badgeStyle(resume)}`}>
+                    {badgeText(resume)}
+                  </span>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </FadeInImmediate>
+  );
+};
 
 const ActivityGlassCard: React.FC<{
   title: string;

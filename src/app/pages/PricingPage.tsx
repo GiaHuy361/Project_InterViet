@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useApp } from '../contexts/AppContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -21,12 +21,14 @@ import { getPlanActionType, getPlanCTAText } from '../config/pricing';
 export const PricingPage: React.FC = () => {
   const { state } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [apiPlans, setApiPlans] = useState<Awaited<ReturnType<typeof plansService.getPlans>>>([]);
   const [subscription, setSubscription] = useState<Awaited<
     ReturnType<typeof subscriptionService.getCurrentSubscription>
   > | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [highlightPlanKey, setHighlightPlanKey] = useState<PlanKey | null>(null);
 
   const displayPlans = useMemo(() => mergePlansForDisplay(apiPlans), [apiPlans]);
   const currentPlanKey = useMemo(
@@ -53,6 +55,13 @@ export const PricingPage: React.FC = () => {
     };
     void load();
   }, [state.user]);
+
+  useEffect(() => {
+    const stateHighlight = (location.state as { highlightPlan?: unknown } | null)?.highlightPlan;
+    if (stateHighlight === 'monthly' || stateHighlight === 'quarterly' || stateHighlight === 'yearly') {
+      setHighlightPlanKey(stateHighlight);
+    }
+  }, [location.state]);
 
   const handleSelectPlan = (planKey: PlanKey) => {
     if (!state.user) {
@@ -98,6 +107,21 @@ export const PricingPage: React.FC = () => {
 
           {!loading && !error && (
             <>
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                {PLAN_CHOICES.map((choice) => (
+                  <Button
+                    key={choice.key}
+                    variant={highlightPlanKey === choice.key ? 'default' : 'outline'}
+                    onClick={() => setHighlightPlanKey(choice.key)}
+                  >
+                    {choice.label}
+                  </Button>
+                ))}
+                <Button variant="ghost" onClick={() => setHighlightPlanKey(null)}>
+                  Bỏ chọn
+                </Button>
+              </div>
+
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                 {displayPlans.map((plan) => {
                   const actionType = getPlanActionType(currentPlanKey, plan.planKey);
@@ -105,13 +129,16 @@ export const PricingPage: React.FC = () => {
                   const isQuarterly = plan.planKey === 'quarterly';
                   const isYearly = plan.planKey === 'yearly';
 
+                  const isHighlighted = highlightPlanKey === plan.planKey;
                   const borderClass = isCurrent
                     ? 'ring-2 ring-primary'
-                    : isQuarterly
-                      ? 'border-2 border-purple-200'
-                      : isYearly
-                        ? 'border-2 border-green-200'
-                        : '';
+                    : isHighlighted
+                      ? 'ring-2 ring-offset-2 ring-blue-400'
+                      : isQuarterly
+                        ? 'border-2 border-purple-200'
+                        : isYearly
+                          ? 'border-2 border-green-200'
+                          : '';
 
                   return (
                     <Card
