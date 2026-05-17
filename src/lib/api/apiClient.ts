@@ -221,6 +221,24 @@ class ApiClient {
       throw this.parseProblemDetails(data, response.status);
     }
 
+    if (
+      !response.ok &&
+      typeof data === 'object' &&
+      data !== null &&
+      ('errors' in data || 'detail' in data)
+    ) {
+      throw this.parseProblemDetails(
+        {
+          status: response.status,
+          title: (data as { title?: string }).title,
+          detail: (data as { detail?: string }).detail,
+          errors: (data as { errors?: Record<string, string[]> }).errors,
+          traceId: (data as { traceId?: string }).traceId,
+        },
+        response.status
+      );
+    }
+
     if (!response.ok) {
       const fallbackMessage =
         typeof data === 'object' &&
@@ -250,17 +268,21 @@ class ApiClient {
   }
 
   private isProblemDetails(data: unknown): data is ProblemDetails {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'status' in data &&
-      typeof (data as ProblemDetails).status === 'number' &&
-      ('errors' in data || 'title' in data || 'type' in data)
-    );
+    if (typeof data !== 'object' || data === null) return false;
+    const obj = data as ProblemDetails;
+    const hasStatus = typeof obj.status === 'number';
+    const hasErrors =
+      obj.errors != null && typeof obj.errors === 'object';
+    const hasProblemShape =
+      hasErrors || typeof obj.title === 'string' || typeof obj.type === 'string';
+    return hasStatus ? hasProblemShape : hasErrors;
   }
 
   private parseProblemDetails(details: ProblemDetails, status: number): ApiError {
-    let message = details.title || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.';
+    let message =
+      details.detail ||
+      details.title ||
+      'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.';
 
     if (details.errors) {
       const errorMessages: string[] = [];
@@ -268,12 +290,12 @@ class ApiClient {
         errorMessages.push(...messages);
       }
       if (errorMessages.length > 0) {
-        message = errorMessages.join('. ');
+        message = errorMessages.join(' ');
       }
     }
 
     return new ApiError({
-      status: details.status || status,
+      status: details.status ?? status,
       code: 'VALIDATION_ERROR',
       message,
       details: details.errors,

@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Mic, Volume2, Check, X, AlertCircle, Headphones, Wifi } from 'lucide-react';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 export const InterviewPreCallPage: React.FC = () => {
   const navigate = useNavigate();
@@ -68,18 +69,16 @@ export const InterviewPreCallPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <div className="text-6xl mb-4">{config.interviewerIcon}</div>
-        <h1 className="text-3xl font-bold mb-2">Chuẩn bị phỏng vấn</h1>
-        <p className="text-gray-600">
-          Kiểm tra thiết bị trước khi bắt đầu
-        </p>
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <div className="text-center text-6xl mb-2">{config.interviewerIcon}</div>
+      <AppPageHeader
+        title="Chuẩn bị phỏng vấn"
+        subtitle="Kiểm tra thiết bị trước khi bắt đầu"
+        icon={Mic}
+        iconGradient="from-fuchsia-500 to-pink-600"
+      />
 
-      {/* Interview Summary */}
-      <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+      <Card className="glass-card rounded-2xl p-6 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-violet-50/60">
         <h3 className="font-semibold mb-3">Thông tin phỏng vấn</h3>
         <div className="grid md:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2">

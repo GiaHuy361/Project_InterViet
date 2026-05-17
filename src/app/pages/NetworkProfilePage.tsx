@@ -13,6 +13,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 export const NetworkProfilePage: React.FC = () => {
   const { id } = useParams();
@@ -54,7 +55,7 @@ export const NetworkProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Back Button */}
       <Button variant="outline" onClick={() => navigate('/network')}>
         <ArrowLeft className="mr-2" size={16} />
@@ -62,7 +63,7 @@ export const NetworkProfilePage: React.FC = () => {
       </Button>
 
       {/* Profile Header */}
-      <Card className="p-8">
+      <Card className="glass-card card-aurora rounded-2xl p-8">
         <div className="flex items-start gap-6">
           <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
             NVM

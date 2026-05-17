@@ -1,193 +1,175 @@
-﻿// This file contains all remaining page components
 import React from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { useApp } from '../contexts/AppContext';
+import { useNavigate, useParams } from 'react-router';
+import { motion } from 'motion/react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
+import { PublicPageHero } from '../components/design-system/PublicPageHero';
+import { Stagger, StaggerItem, ScaleOnHover } from '../components/design-system/motion';
 import {
-  FileText, Mic, BarChart3, Mail, Shield, Book, HelpCircle,
-  Phone, MapPin, CheckCircle, AlertCircle, Clock, Users, Target,
-  TrendingUp, Download, Share2, Star, Activity, Settings, Bell, Loader2
+  FileText,
+  Mic,
+  BarChart3,
+  Mail,
+  Shield,
+  Book,
+  HelpCircle,
+  Phone,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+  Settings,
 } from 'lucide-react';
 
-// Features Page
-export const FeaturesPage: React.FC = () => {
+function GlassFeatureCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">TÃ­nh nÄƒng toÃ n diá»‡n</h1>
-          <p className="text-xl text-blue-100">
-            Giáº£i phÃ¡p AI hoÃ n chá»‰nh cho sá»± nghiá»‡p cá»§a báº¡n
-          </p>
-        </div>
-      </section>
-
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12">
-            <Card className="p-8">
-              <FileText className="w-12 h-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">Tá»‘i Æ°u CV thÃ´ng minh</h3>
-              <p className="text-gray-600">
-                AI phÃ¢n tÃ­ch CV chi tiáº¿t, so khá»›p vá»›i JD vÃ  Ä‘Æ°a ra gá»£i Ã½ cáº£i thiá»‡n cá»¥ thá»ƒ
-              </p>
-            </Card>
-            <Card className="p-8">
-              <Mic className="w-12 h-12 text-purple-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">Phỏng vấn AI real-time</h3>
-              <p className="text-gray-600">
-                Luyá»‡n táº­p phá»ng váº¥n báº±ng giá»ng nÃ³i vá»›i AI, nháº­n feedback tá»©c thÃ¬
-              </p>
-            </Card>
-            <Card className="p-8">
-              <BarChart3 className="w-12 h-12 text-green-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">Báo cáo chi tiết</h3>
-              <p className="text-gray-600">
-                PhÃ¢n tÃ­ch toÃ n diá»‡n hiá»‡u suáº¥t, so sÃ¡nh vá»›i benchmark ngÃ nh
-              </p>
-            </Card>
-          </div>
-        </div>
-      </section>
-    </div>
+    <ScaleOnHover>
+      <Card
+        className={`glass-card hover-lift rounded-2xl border-white/70 p-8 dark:border-slate-700/50 ${className ?? ''}`}
+      >
+        {children}
+      </Card>
+    </ScaleOnHover>
   );
-};
+}
 
-// Solutions Page
+export const FeaturesPage: React.FC = () => (
+  <div>
+    <PublicPageHero
+      title="Tính năng toàn diện"
+      subtitle="Giải pháp AI hoàn chỉnh cho sự nghiệp của bạn"
+    />
+    <section className="py-20">
+      <div className="mx-auto max-w-7xl px-6">
+        <Stagger className="grid gap-8 md:grid-cols-3">
+          {[
+            { icon: FileText, bg: 'from-blue-500 to-cyan-500', title: 'Tối ưu CV thông minh', desc: 'AI phân tích CV chi tiết, so khớp với JD và đưa ra gợi ý cải thiện cụ thể' },
+            { icon: Mic, bg: 'from-violet-500 to-fuchsia-500', title: 'Phỏng vấn AI real-time', desc: 'Luyện tập phỏng vấn bằng giọng nói với AI, nhận feedback tức thì' },
+            { icon: BarChart3, bg: 'from-emerald-500 to-teal-500', title: 'Báo cáo chi tiết', desc: 'Phân tích toàn diện hiệu suất, so sánh với benchmark ngành' },
+          ].map((f) => (
+            <StaggerItem key={f.title}>
+              <GlassFeatureCard>
+                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${f.bg} text-white shadow-lg`}>
+                  <f.icon className="h-6 w-6" />
+                </div>
+                <h3 className="mb-3 text-xl font-bold">{f.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400">{f.desc}</p>
+              </GlassFeatureCard>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </div>
+    </section>
+  </div>
+);
+
 export const SolutionsPage: React.FC = () => {
+  const industries = ['Công nghệ', 'Marketing', 'Tài chính', 'Nhân sự'] as const;
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Giải pháp theo ngành</h1>
-          <p className="text-xl text-blue-100">
-            Tá»‘i Æ°u hÃ³a cho tá»«ng lÄ©nh vá»±c cá»¥ thá»ƒ
-          </p>
-        </div>
-      </section>
-
+      <PublicPageHero title="Giải pháp theo ngành" subtitle="Tối ưu hóa cho từng lĩnh vực cụ thể" />
       <section className="py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            {['CÃ´ng nghá»‡', 'Marketing', 'Tài chính', 'Nhân sự'].map(industry => (
-              <Card key={industry} className="p-8">
-                <h3 className="text-2xl font-bold mb-4">{industry}</h3>
-                <p className="text-gray-600 mb-4">
-                  Giáº£i phÃ¡p chuyÃªn biá»‡t cho ngÃ nh {industry.toLowerCase()}
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={16} className="text-green-600" />
-                    <span className="text-sm">Câu hỏi phỏng vấn chuyên ngành</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={16} className="text-green-600" />
-                    <span className="text-sm">Template CV theo ngành</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={16} className="text-green-600" />
-                    <span className="text-sm">Benchmark ngành cập nhật</span>
-                  </li>
-                </ul>
-              </Card>
+        <div className="mx-auto max-w-7xl px-6">
+          <Stagger className="grid gap-8 md:grid-cols-2">
+            {industries.map((industry) => (
+              <StaggerItem key={industry}>
+                <GlassFeatureCard>
+                  <h3 className="mb-4 text-2xl font-bold">{industry}</h3>
+                  <p className="mb-4 text-slate-600">Giải pháp chuyên biệt cho ngành {industry.toLowerCase()}</p>
+                  <ul className="space-y-2">
+                    {['Câu hỏi phỏng vấn chuyên ngành', 'Template CV theo ngành', 'Benchmark ngành cập nhật'].map((t) => (
+                      <li key={t} className="flex items-center gap-2 text-sm">
+                        <CheckCircle size={16} className="text-emerald-500" />
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </GlassFeatureCard>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       </section>
     </div>
   );
 };
 
-// Blog Page
 export const BlogPage: React.FC = () => {
   const navigate = useNavigate();
   const posts = [
-    { id: 1, title: '10 mẹo viết CV thu hút nhà tuyỒn dụng', date: '2026-02-20', category: 'CV Tips' },
-    { id: 2, title: 'CÃ¡ch tráº£ lá»i cÃ¢u há»i "Táº¡i sao báº¡n muá»‘n lÃ m viá»‡c á»Ÿ Ä‘Ã¢y?"', date: '2026-02-18', category: 'Phỏng vấn' },
-    { id: 3, title: 'Xu hÆ°á»›ng tuyá»ƒn dá»¥ng IT 2026', date: '2026-02-15', category: 'Thá»‹ trÆ°á»ng' },
+    { id: 1, title: '10 mẹo viết CV thu hút nhà tuyển dụng', date: '2026-02-20', category: 'CV Tips' },
+    { id: 2, title: 'Cách trả lời câu hỏi "Tại sao bạn muốn làm việc ở đây?"', date: '2026-02-18', category: 'Phỏng vấn' },
+    { id: 3, title: 'Xu hướng tuyển dụng IT 2026', date: '2026-02-15', category: 'Thị trường' },
   ];
-
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <h1 className="text-5xl font-bold mb-4">Blog</h1>
-          <p className="text-xl text-blue-100">
-            Kiáº¿n thá»©c vÃ  xu hÆ°á»›ng nghá» nghiá»‡p
-          </p>
-        </div>
-      </section>
-
+      <PublicPageHero title="Blog" subtitle="Kiến thức và xu hướng nghề nghiệp" />
       <section className="py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            {posts.map(post => (
-              <Card key={post.id} className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/blog/${post.id}`)}>
-                <Badge className="mb-4">{post.category}</Badge>
-                <h3 className="text-xl font-bold mb-2">{post.title}</h3>
-                <p className="text-sm text-gray-600">{new Date(post.date).toLocaleDateString('vi-VN')}</p>
-              </Card>
+        <div className="mx-auto max-w-7xl px-6">
+          <Stagger className="grid gap-8 md:grid-cols-3">
+            {posts.map((post) => (
+              <StaggerItem key={post.id}>
+                <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400 }}>
+                  <Card className="glass-card hover-lift cursor-pointer rounded-2xl p-6" onClick={() => navigate(`/blog/${post.id}`)}>
+                    <Badge className="mb-4">{post.category}</Badge>
+                    <h3 className="mb-2 text-xl font-bold">{post.title}</h3>
+                    <p className="text-sm text-muted-foreground">{new Date(post.date).toLocaleDateString('vi-VN')}</p>
+                  </Card>
+                </motion.div>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       </section>
     </div>
   );
 };
 
-// Blog Post Page
 export const BlogPostPage: React.FC = () => {
-  const { slug } = useParams();
+  useParams();
   return (
     <div className="py-20">
-      <div className="max-w-4xl mx-auto px-6">
-        <article>
+      <div className="mx-auto max-w-4xl px-6">
+        <article className="glass-card rounded-2xl p-8 lg:p-10">
           <Badge className="mb-4">CV Tips</Badge>
-          <h1 className="text-4xl font-bold mb-4">10 mẹo viết CV thu hút nhà tuyỒn dụng</h1>
-          <p className="text-gray-600 mb-8">Ngày 20 tháng 2, 2026</p>
-          <div className="prose max-w-none">
-            <p>
-              Má»™t CV tá»‘t lÃ  chÃ¬a khÃ³a má»Ÿ ra cÆ¡ há»™i nghá» nghiá»‡p. DÆ°á»›i Ä‘Ã¢y lÃ  10 máº¹o giÃºp CV cá»§a báº¡n ná»•i báº­t...
-            </p>
-          </div>
+          <h1 className="mb-4 text-4xl font-bold">10 mẹo viết CV thu hút nhà tuyển dụng</h1>
+          <p className="mb-8 text-muted-foreground">Ngày 20 tháng 2, 2026</p>
+          <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+            Một CV tốt là chìa khóa mở ra cơ hội nghề nghiệp. Dưới đây là 10 mẹo giúp CV của bạn nổi bật trước nhà tuyển dụng...
+          </p>
         </article>
       </div>
     </div>
   );
 };
 
-// FAQ Page
 export const FAQPage: React.FC = () => {
   const faqs = [
-    { q: 'INTER-VIET là gì?', a: 'INTER-VIET lÃ  ná»n táº£ng AI giÃºp báº¡n tá»‘i Æ°u CV vÃ  luyá»‡n phá»ng váº¥n.' },
-    { q: 'GÃ³i miá»…n phÃ­ cÃ³ nhá»¯ng gÃ¬?', a: 'GÃ³i miá»…n phÃ­ bao gá»“m 3 láº§n/tÃ i khoáº£n tá»‘i Æ°u CV vÃ  1 phiÃªn/tÃ i khoáº£n phá»ng váº¥n AI.' },
-    { q: 'LÃ m sao Ä‘á»ƒ nÃ¢ng cáº¥p gÃ³i?', a: 'Báº¡n cÃ³ thá»ƒ nÃ¢ng cáº¥p báº¥t cá»© lÃºc nÃ o tá»« trang GÃ³i dá»‹ch vá»¥.' },
+    { q: 'INTER-VIET là gì?', a: 'INTER-VIET là nền tảng AI giúp bạn tối ưu CV và luyện phỏng vấn.' },
+    { q: 'Gói miễn phí có những gì?', a: 'Gói miễn phí bao gồm 3 lần/tài khoản tối ưu CV và 1 phiên/tài khoản phỏng vấn AI.' },
+    { q: 'Làm sao để nâng cấp gói?', a: 'Bạn có thể nâng cấp bất cứ lúc nào từ trang Gói dịch vụ.' },
   ];
-
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Câu hỏi thường gặp</h1>
-          <p className="text-xl text-blue-100">
-            Tìm câu trả lời cho các thắc mắc của bạn
-          </p>
-        </div>
-      </section>
-
+      <PublicPageHero title="Câu hỏi thường gặp" subtitle="Tìm câu trả lời cho các thắc mắc của bạn" />
       <section className="py-20">
-        <div className="max-w-4xl mx-auto px-6 space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4 px-6">
           {faqs.map((faq, i) => (
-            <Card key={i} className="p-6">
-              <h3 className="font-bold mb-2">{faq.q}</h3>
-              <p className="text-gray-600">{faq.a}</p>
-            </Card>
+            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+              <Card className="glass-card rounded-2xl p-6">
+                <h3 className="mb-2 font-bold">{faq.q}</h3>
+                <p className="text-slate-600 dark:text-slate-400">{faq.a}</p>
+              </Card>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -195,98 +177,69 @@ export const FAQPage: React.FC = () => {
   );
 };
 
-// About Page
-export const AboutPage: React.FC = () => {
-  return (
-    <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Về chúng tôi</h1>
-          <p className="text-xl text-blue-100">
-            Sá»© má»‡nh giÃºp ngÆ°á»i Viá»‡t thÃ nh cÃ´ng trong sá»± nghiá»‡p
+export const AboutPage: React.FC = () => (
+  <div>
+    <PublicPageHero title="Về chúng tôi" subtitle="Sứ mệnh giúp người Việt thành công trong sự nghiệp" />
+    <section className="py-20">
+      <div className="mx-auto max-w-4xl px-6">
+        <Card className="glass-card rounded-2xl p-8 lg:p-10">
+          <h2 className="mb-4 text-3xl font-bold">Câu chuyện của chúng tôi</h2>
+          <p className="mb-4 text-slate-600 dark:text-slate-400">
+            INTER-VIET được thành lập với mục tiêu giúp người Việt Nam tiếp cận công nghệ AI để phát triển sự nghiệp một cách hiệu quả nhất.
           </p>
-        </div>
-      </section>
+          <p className="text-slate-600 dark:text-slate-400">
+            Với đội ngũ chuyên gia AI và HR giàu kinh nghiệm, chúng tôi xây dựng giải pháp toàn diện giúp bạn tự tin hơn trong hành trình tìm việc và phát triển nghề nghiệp.
+          </p>
+        </Card>
+      </div>
+    </section>
+  </div>
+);
 
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-6">
-          <Card className="p-8">
-            <h2 className="text-3xl font-bold mb-4">CÃ¢u chuyá»‡n cá»§a chÃºng tÃ´i</h2>
-            <p className="text-gray-600 mb-4">
-              INTER-VIET Ä‘Æ°á»£c thÃ nh láº­p vá»›i má»¥c tiÃªu giÃºp ngÆ°á»i Viá»‡t Nam tiáº¿p cáº­n cÃ´ng nghá»‡ AI 
-              Ä‘á»ƒ phÃ¡t triá»ƒn sá»± nghiá»‡p má»™t cÃ¡ch hiá»‡u quáº£ nháº¥t.
-            </p>
-            <p className="text-gray-600">
-              Vá»›i Ä‘á»™i ngÅ© chuyÃªn gia AI vÃ  HR giÃ u kinh nghiá»‡m, chÃºng tÃ´i xÃ¢y dá»±ng giáº£i phÃ¡p 
-              toÃ n diá»‡n giÃºp báº¡n tá»± tin hÆ¡n trong hÃ nh trÃ¬nh tÃ¬m viá»‡c vÃ  phÃ¡t triá»ƒn nghá» nghiá»‡p.
-            </p>
-          </Card>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// Contact Page
 export const ContactPage: React.FC = () => {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [message, setMessage] = React.useState('');
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Cáº£m Æ¡n báº¡n Ä‘Ã£ liÃªn há»‡! ChÃºng tÃ´i sáº½ pháº£n há»“i sá»›m.');
+    alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.');
   };
-
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">LiÃªn há»‡</h1>
-          <p className="text-xl text-blue-100">
-            ChÃºng tÃ´i luÃ´n sáºµn sÃ ng há»— trá»£ báº¡n
-          </p>
-        </div>
-      </section>
-
+      <PublicPageHero title="Liên hệ" subtitle="Chúng tôi luôn sẵn sàng hỗ trợ bạn" />
       <section className="py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Gửi tin nhắn</h2>
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-12 md:grid-cols-2">
+            <Card className="glass-card rounded-2xl p-8">
+              <h2 className="mb-6 text-3xl font-bold">Gửi tin nhắn</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="name">Họ tên</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input id="name" className="input-premium mt-1" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input id="email" type="email" className="input-premium mt-1" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div>
                   <Label htmlFor="message">Tin nhắn</Label>
-                  <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
+                  <Textarea id="message" className="input-premium mt-1" value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
                 </div>
-                <Button type="submit" className="w-full">Gửi tin nhắn</Button>
+                <Button type="submit" className="btn-glow h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600">Gửi tin nhắn</Button>
               </form>
-            </div>
-
+            </Card>
             <div className="space-y-6">
-              <Card className="p-6">
-                <Mail className="w-8 h-8 text-blue-600 mb-3" />
-                <h3 className="font-bold mb-2">Email</h3>
-                <p className="text-gray-600">support@inter-viet.com</p>
-              </Card>
-              <Card className="p-6">
-                <Phone className="w-8 h-8 text-blue-600 mb-3" />
-                <h3 className="font-bold mb-2">Äiá»‡n thoáº¡i</h3>
-                <p className="text-gray-600">+84 (28) 1234 5678</p>
-              </Card>
-              <Card className="p-6">
-                <MapPin className="w-8 h-8 text-blue-600 mb-3" />
-                <h3 className="font-bold mb-2">Äá»‹a chá»‰</h3>
-                <p className="text-gray-600">123 Nguyá»…n Huá»‡, Q.1, TP.HCM</p>
-              </Card>
+              {[
+                { icon: Mail, title: 'Email', value: 'support@inter-viet.com' },
+                { icon: Phone, title: 'Điện thoại', value: '+84 (28) 1234 5678' },
+                { icon: MapPin, title: 'Địa chỉ', value: '123 Nguyễn Huệ, Q.1, TP.HCM' },
+              ].map((c) => (
+                <Card key={c.title} className="glass-card hover-lift rounded-2xl p-6">
+                  <c.icon className="mb-3 h-8 w-8 text-violet-600" />
+                  <h3 className="mb-2 font-bold">{c.title}</h3>
+                  <p className="text-slate-600">{c.value}</p>
+                </Card>
+              ))}
             </div>
           </div>
         </div>
@@ -295,177 +248,123 @@ export const ContactPage: React.FC = () => {
   );
 };
 
-// Support Page
-export const SupportPage: React.FC = () => {
-  return (
-    <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Trung tÃ¢m há»— trá»£</h1>
-          <p className="text-xl text-blue-100">
-            TÃ¬m cÃ¢u tráº£ lá»i vÃ  hÆ°á»›ng dáº«n sá»­ dá»¥ng
-          </p>
-        </div>
-      </section>
-
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6">
-              <Book className="w-12 h-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">HÆ°á»›ng dáº«n sá»­ dá»¥ng</h3>
-              <p className="text-gray-600 mb-4">TÃ i liá»‡u chi tiáº¿t vá» cÃ¡c tÃ­nh nÄƒng</p>
-              <Button variant="outline">Xem hÆ°á»›ng dáº«n</Button>
-            </Card>
-            <Card className="p-6">
-              <HelpCircle className="w-12 h-12 text-purple-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">FAQ</h3>
-              <p className="text-gray-600 mb-4">Câu hỏi thường gặp</p>
-              <Button variant="outline">Xem FAQ</Button>
-            </Card>
-            <Card className="p-6">
-              <Mail className="w-12 h-12 text-green-600 mb-4" />
-              <h3 className="text-xl font-bold mb-3">LiÃªn há»‡</h3>
-              <p className="text-gray-600 mb-4">Há»— trá»£ trá»±c tiáº¿p tá»« team</p>
-              <Button variant="outline">LiÃªn há»‡ ngay</Button>
-            </Card>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// Security Page
-export const SecurityPage: React.FC = () => {
-  return (
-    <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Báº£o máº­t & An toÃ n dá»¯ liá»‡u</h1>
-          <p className="text-xl text-blue-100">
-            Cam káº¿t báº£o vá»‡ thÃ´ng tin cá»§a báº¡n
-          </p>
-        </div>
-      </section>
-
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-6">
-          <Card className="p-8 mb-8">
-            <h2 className="text-2xl font-bold mb-4">Tiêu chuẩn bảo mật</h2>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <Shield className="text-green-600 flex-shrink-0 mt-1" size={20} />
-                <div>
-                  <h3 className="font-semibold">Mã hóa SSL 256-bit</h3>
-                  <p className="text-sm text-gray-600">Táº¥t cáº£ dá»¯ liá»‡u Ä‘Æ°á»£c mÃ£ hÃ³a khi truyá»n táº£i</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Shield className="text-green-600 flex-shrink-0 mt-1" size={20} />
-                <div>
-                  <h3 className="font-semibold">Tuân thủ GDPR</h3>
-                  <p className="text-sm text-gray-600">Quyá»n riÃªng tÆ° dá»¯ liá»‡u Ä‘Æ°á»£c báº£o vá»‡</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Shield className="text-green-600 flex-shrink-0 mt-1" size={20} />
-                <div>
-                  <h3 className="font-semibold">Sao lÆ°u Ä‘á»‹nh ká»³</h3>
-                  <p className="text-sm text-gray-600">Dá»¯ liá»‡u Ä‘Æ°á»£c backup tá»± Ä‘á»™ng hÃ ng ngÃ y</p>
-                </div>
-              </li>
-            </ul>
-          </Card>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// Terms Page
-export const TermsPage: React.FC = () => {
-  return (
-    <div className="py-20">
-      <div className="max-w-4xl mx-auto px-6">
-        <h1 className="text-4xl font-bold mb-8">Điều khoản sử dụng</h1>
-        <div className="prose max-w-none">
-          <h2>1. Cháº¥p nháº­n Ä‘iá»u khoáº£n</h2>
-          <p>Báº±ng cÃ¡ch sá»­ dá»¥ng dá»‹ch vá»¥ INTER-VIET, báº¡n Ä‘á»“ng Ã½ vá»›i cÃ¡c Ä‘iá»u khoáº£n nÃ y.</p>
-          
-          <h2>2. Sá»­ dá»¥ng dá»‹ch vá»¥</h2>
-          <p>Báº¡n cam káº¿t sá»­ dá»¥ng dá»‹ch vá»¥ cho má»¥c Ä‘Ã­ch há»£p phÃ¡p vÃ  khÃ´ng vi pháº¡m quyá»n cá»§a ngÆ°á»i khÃ¡c.</p>
-          
-          <h2>3. Tài khoản người dùng</h2>
-          <p>Báº¡n chá»‹u trÃ¡ch nhiá»‡m báº£o máº­t thÃ´ng tin tÃ i khoáº£n cá»§a mÃ¬nh.</p>
-          
-          <h2>4. Thanh toán và hoàn tiền</h2>
-          <p>Chính sách hoàn tiền trong vòng 14 ngày nếu không hài lòng.</p>
-        </div>
+export const SupportPage: React.FC = () => (
+  <div>
+    <PublicPageHero title="Trung tâm hỗ trợ" subtitle="Tìm câu trả lời và hướng dẫn sử dụng" />
+    <section className="py-20">
+      <div className="mx-auto max-w-7xl px-6">
+        <Stagger className="grid gap-8 md:grid-cols-3">
+          {[
+            { icon: Book, title: 'Hướng dẫn sử dụng', desc: 'Tài liệu chi tiết về các tính năng', btn: 'Xem hướng dẫn' },
+            { icon: HelpCircle, title: 'FAQ', desc: 'Câu hỏi thường gặp', btn: 'Xem FAQ' },
+            { icon: Mail, title: 'Liên hệ', desc: 'Hỗ trợ trực tiếp từ team', btn: 'Liên hệ ngay' },
+          ].map((item) => (
+            <StaggerItem key={item.title}>
+              <GlassFeatureCard>
+                <item.icon className="mb-4 h-12 w-12 text-violet-600" />
+                <h3 className="mb-3 text-xl font-bold">{item.title}</h3>
+                <p className="mb-4 text-slate-600">{item.desc}</p>
+                <Button variant="outline" className="rounded-xl">{item.btn}</Button>
+              </GlassFeatureCard>
+            </StaggerItem>
+          ))}
+        </Stagger>
       </div>
-    </div>
-  );
-};
+    </section>
+  </div>
+);
 
-// Privacy Page
-export const PrivacyPage: React.FC = () => {
-  return (
-    <div className="py-20">
-      <div className="max-w-4xl mx-auto px-6">
-        <h1 className="text-4xl font-bold mb-8">Chính sách bảo mật</h1>
-        <div className="prose max-w-none">
-          <h2>1. Thu thập thông tin</h2>
-          <p>ChÃºng tÃ´i thu tháº­p thÃ´ng tin cáº§n thiáº¿t Ä‘á»ƒ cung cáº¥p dá»‹ch vá»¥ tá»‘t nháº¥t.</p>
-          
-          <h2>2. Sử dụng thông tin</h2>
-          <p>ThÃ´ng tin Ä‘Æ°á»£c sá»­ dá»¥ng Ä‘á»ƒ cáº£i thiá»‡n dá»‹ch vá»¥ vÃ  tráº£i nghiá»‡m ngÆ°á»i dÃ¹ng.</p>
-          
-          <h2>3. Báº£o vá»‡ thÃ´ng tin</h2>
-          <p>ChÃºng tÃ´i Ã¡p dá»¥ng cÃ¡c biá»‡n phÃ¡p báº£o máº­t tiÃªn tiáº¿n Ä‘á»ƒ báº£o vá»‡ dá»¯ liá»‡u cá»§a báº¡n.</p>
-          
-          <h2>4. Chia sẻ thông tin</h2>
-          <p>ChÃºng tÃ´i khÃ´ng chia sáº» thÃ´ng tin cÃ¡ nhÃ¢n cá»§a báº¡n vá»›i bÃªn thá»© ba.</p>
-        </div>
+export const SecurityPage: React.FC = () => (
+  <div>
+    <PublicPageHero title="Bảo mật & An toàn dữ liệu" subtitle="Cam kết bảo vệ thông tin của bạn" />
+    <section className="py-20">
+      <div className="mx-auto max-w-4xl px-6">
+        <Card className="glass-card rounded-2xl p-8">
+          <h2 className="mb-6 text-2xl font-bold">Tiêu chuẩn bảo mật</h2>
+          <ul className="space-y-4">
+            {[
+              { t: 'Mã hóa SSL 256-bit', d: 'Tất cả dữ liệu được mã hóa khi truyền tải' },
+              { t: 'Tuân thủ GDPR', d: 'Quyền riêng tư dữ liệu được bảo vệ' },
+              { t: 'Sao lưu định kỳ', d: 'Dữ liệu được backup tự động hàng ngày' },
+            ].map((item) => (
+              <li key={item.t} className="flex items-start gap-3">
+                <Shield className="mt-1 shrink-0 text-emerald-500" size={20} />
+                <div>
+                  <h3 className="font-semibold">{item.t}</h3>
+                  <p className="text-sm text-slate-600">{item.d}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
-    </div>
-  );
-};
+    </section>
+  </div>
+);
 
-// Status Page
+export const TermsPage: React.FC = () => (
+  <div className="py-20">
+    <div className="mx-auto max-w-4xl px-6">
+      <Card className="glass-card rounded-2xl p-8 lg:p-10">
+        <h1 className="mb-8 text-4xl font-bold">Điều khoản sử dụng</h1>
+        <div className="space-y-6 text-slate-700 dark:text-slate-300">
+          <section><h2 className="text-xl font-bold">1. Chấp nhận điều khoản</h2><p className="mt-2">Bằng cách sử dụng dịch vụ INTER-VIET, bạn đồng ý với các điều khoản này.</p></section>
+          <section><h2 className="text-xl font-bold">2. Sử dụng dịch vụ</h2><p className="mt-2">Bạn cam kết sử dụng dịch vụ cho mục đích hợp pháp và không vi phạm quyền của người khác.</p></section>
+          <section><h2 className="text-xl font-bold">3. Tài khoản người dùng</h2><p className="mt-2">Bạn chịu trách nhiệm bảo mật thông tin tài khoản của mình.</p></section>
+          <section><h2 className="text-xl font-bold">4. Thanh toán và hoàn tiền</h2><p className="mt-2">Chính sách hoàn tiền trong vòng 14 ngày nếu không hài lòng.</p></section>
+        </div>
+      </Card>
+    </div>
+  </div>
+);
+
+export const PrivacyPage: React.FC = () => (
+  <div className="py-20">
+    <div className="mx-auto max-w-4xl px-6">
+      <Card className="glass-card rounded-2xl p-8 lg:p-10">
+        <h1 className="mb-8 text-4xl font-bold">Chính sách bảo mật</h1>
+        <div className="space-y-6 text-slate-700 dark:text-slate-300">
+          {[
+            ['1. Thu thập thông tin', 'Chúng tôi thu thập thông tin cần thiết để cung cấp dịch vụ tốt nhất.'],
+            ['2. Sử dụng thông tin', 'Thông tin được sử dụng để cải thiện dịch vụ và trải nghiệm người dùng.'],
+            ['3. Bảo vệ thông tin', 'Chúng tôi áp dụng các biện pháp bảo mật tiên tiến để bảo vệ dữ liệu của bạn.'],
+            ['4. Chia sẻ thông tin', 'Chúng tôi không chia sẻ thông tin cá nhân của bạn với bên thứ ba.'],
+          ].map(([h, p]) => (
+            <section key={h}><h2 className="text-xl font-bold">{h}</h2><p className="mt-2">{p}</p></section>
+          ))}
+        </div>
+      </Card>
+    </div>
+  </div>
+);
+
 export const StatusPage: React.FC = () => {
   const services = [
-    { name: 'Website', status: 'operational', uptime: 99.9 },
-    { name: 'API', status: 'operational', uptime: 99.8 },
-    { name: 'AI Engine', status: 'operational', uptime: 99.7 },
-    { name: 'Database', status: 'operational', uptime: 99.9 },
+    { name: 'Website', uptime: 99.9 },
+    { name: 'API', uptime: 99.8 },
+    { name: 'AI Engine', uptime: 99.7 },
+    { name: 'Database', uptime: 99.9 },
   ];
-
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-600 to-purple-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4">Tráº¡ng thÃ¡i há»‡ thá»‘ng</h1>
-          <p className="text-xl text-blue-100">
-            Táº¥t cáº£ dá»‹ch vá»¥ Ä‘ang hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng
-          </p>
-        </div>
-      </section>
-
+      <PublicPageHero title="Trạng thái hệ thống" subtitle="Tất cả dịch vụ đang hoạt động bình thường" />
       <section className="py-20">
-        <div className="max-w-4xl mx-auto px-6 space-y-4">
-          {services.map(service => (
-            <Card key={service.name} className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <h3 className="font-bold">{service.name}</h3>
+        <div className="mx-auto max-w-4xl space-y-4 px-6">
+          {services.map((service, i) => (
+            <motion.div key={service.name} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}>
+              <Card className="glass-card rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                    <h3 className="font-bold">{service.name}</h3>
+                  </div>
+                  <div className="text-right">
+                    <Badge className="bg-emerald-500/10 text-emerald-700">Hoạt động</Badge>
+                    <p className="mt-1 text-sm text-slate-500">{service.uptime}% uptime</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <Badge variant="secondary">Hoáº¡t Ä‘á»™ng</Badge>
-                  <p className="text-sm text-gray-600 mt-1">{service.uptime}% uptime</p>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -473,58 +372,39 @@ export const StatusPage: React.FC = () => {
   );
 };
 
-// 404 Page
 export const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6">
-      <Card className="p-12 text-center max-w-md">
-        <div className="text-8xl font-bold text-gray-300 mb-4">404</div>
-        <h1 className="text-3xl font-bold mb-4">Trang khÃ´ng tá»“n táº¡i</h1>
-        <p className="text-gray-600 mb-8">
-          Trang báº¡n Ä‘ang tÃ¬m kiáº¿m khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ Ä‘Æ°á»£c di chuyá»ƒn.
-        </p>
-        <Button onClick={() => navigate('/')}>
-          Về trang chủ
-        </Button>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
+      <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
+        <p className="text-8xl font-bold text-gradient-brand">404</p>
+        <h1 className="mb-4 mt-4 text-3xl font-bold">Trang không tồn tại</h1>
+        <p className="mb-8 text-slate-600">Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển.</p>
+        <Button className="btn-glow rounded-xl bg-gradient-to-r from-blue-600 to-violet-600" onClick={() => navigate('/')}>Về trang chủ</Button>
       </Card>
     </div>
   );
 };
 
-// Maintenance Page
-export const MaintenancePage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6">
-      <Card className="p-12 text-center max-w-md">
-        <Settings className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-spin" style={{ animationDuration: '3s' }} />
-        <h1 className="text-3xl font-bold mb-4">Đang bảo trì</h1>
-        <p className="text-gray-600 mb-4">
-          ChÃºng tÃ´i Ä‘ang nÃ¢ng cáº¥p há»‡ thá»‘ng Ä‘á»ƒ mang Ä‘áº¿n tráº£i nghiá»‡m tá»‘t hÆ¡n.
-        </p>
-        <p className="text-sm text-gray-500">
-          Dự kiến hoàn thành: 2 giờ nữa
-        </p>
-      </Card>
-    </div>
-  );
-};
+export const MaintenancePage: React.FC = () => (
+  <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
+    <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
+      <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600" style={{ animationDuration: '3s' }} />
+      <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
+      <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
+      <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>
+    </Card>
+  </div>
+);
 
-// Account Locked Page
 export const AccountLockedPage: React.FC = () => {
   const navigate = useNavigate();
-  
   return (
-    <Card className="w-full max-w-md p-8 text-center">
-      <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
-      <h1 className="text-3xl font-bold mb-2">TÃ i khoáº£n bá»‹ khÃ³a</h1>
-      <p className="text-gray-600 mb-6">
-        TÃ i khoáº£n cá»§a báº¡n Ä‘Ã£ bá»‹ khÃ³a do vi pháº¡m Ä‘iá»u khoáº£n sá»­ dá»¥ng.
-        Vui lÃ²ng liÃªn há»‡ bá»™ pháº­n há»— trá»£ Ä‘á»ƒ biáº¿t thÃªm chi tiáº¿t.
-      </p>
-      <Button onClick={() => navigate('/lien-he')}>
-        LiÃªn há»‡ há»— trá»£
-      </Button>
+    <Card className="glass-card w-full max-w-md rounded-2xl p-8 text-center">
+      <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
+      <h1 className="mb-2 text-3xl font-bold">Tài khoản bị khóa</h1>
+      <p className="mb-6 text-slate-600">Tài khoản của bạn đã bị khóa do vi phạm điều khoản sử dụng. Vui lòng liên hệ bộ phận hỗ trợ.</p>
+      <Button className="rounded-xl" onClick={() => navigate('/lien-he')}>Liên hệ hỗ trợ</Button>
     </Card>
   );
 };

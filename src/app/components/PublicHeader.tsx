@@ -27,7 +27,7 @@ export const PublicHeader: React.FC = () => {
           : 'border-b border-transparent bg-white/60 backdrop-blur-md'
       }`}
     >
-      <section className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5 lg:px-8">
+      <section className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-4 lg:px-8 lg:py-4.5">
         <BrandLogo href="/" size="md" />
 
         <nav className="hidden items-center gap-8 md:flex">

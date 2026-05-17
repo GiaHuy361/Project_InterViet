@@ -25,7 +25,8 @@ export type ApiEnvelope<T> = {
 export type ProblemDetails = {
   type?: string;
   title?: string;
-  status: number;
+  detail?: string;
+  status?: number;
   errors?: Record<string, string[]>;
   traceId?: string;
 };

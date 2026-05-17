@@ -61,7 +61,7 @@ export const OnboardingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-6">
-      <Card className="w-full max-w-2xl p-8">
+      <Card className="glass-card card-aurora w-full max-w-2xl rounded-2xl p-8 shadow-2xl">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Chào mừng đến INTER-VIET!</h2>

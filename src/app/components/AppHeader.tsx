@@ -29,27 +29,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
   };
 
   return (
-    <header className="sticky top-0 bg-white border-b border-gray-200 z-50" style={{ zIndex: 10000 }}>
-      <div className="px-6 py-3">
-        <div className="flex items-center justify-between gap-4">
+    <header
+      className="sticky top-0 z-50 min-h-[80px] shrink-0 border-b border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+      style={{ zIndex: 10000 }}
+    >
+      <div className="flex min-h-[80px] items-center justify-between gap-6 px-8 py-4">
           {/* Search */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-md">
+          <form onSubmit={handleSearch} className="min-w-0 flex-1 max-w-2xl">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 type="text"
                 placeholder="Tìm kiếm báo cáo, CV..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2"
+                className="h-12 rounded-xl pl-10 pr-[4.5rem]"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-gray-100 rounded border border-gray-300 text-gray-600">
+              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                 Ctrl+K
               </kbd>
             </div>
           </form>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -74,7 +76,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
             {/* Account Dropdown - Portal based */}
             <AccountDropdown />
           </div>
-        </div>
       </div>
 
       {/* Trial/Cancelled/Expired Banners */}

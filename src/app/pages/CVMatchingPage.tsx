@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 export const CVMatchingPage: React.FC = () => {
   const { state, useCVOptimization, addCVVersion } = useApp();
@@ -164,22 +165,22 @@ export const CVMatchingPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">CV & So khớp JD</h1>
-          <p className="text-gray-600">
-            Tối ưu CV của bạn để phù hợp với mô tả công việc
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => navigate('/cv-history')}>
-          <History className="mr-2" size={16} />
-          Lịch sử
-        </Button>
-      </div>
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="CV & So khớp JD"
+        subtitle="Tối ưu CV của bạn để phù hợp với mô tả công việc"
+        icon={FileText}
+        iconGradient="from-blue-500 to-cyan-500"
+        actions={
+          <Button variant="outline" className="hover-lift" onClick={() => navigate('/cv-history')}>
+            <History className="mr-2" size={16} />
+            Lịch sử
+          </Button>
+        }
+      />
 
       {!isPremium && (
-        <Card className="p-4 bg-blue-50 border-blue-200">
+        <Card className="glass-card p-4 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/20">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
             <div className="flex-1">
@@ -198,7 +199,7 @@ export const CVMatchingPage: React.FC = () => {
 
       {step === 'upload' && (
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="p-6">
+          <Card className="glass-card hover-lift p-6">
             <Label className="flex items-center gap-2 mb-3">
               <FileText size={18} />
               <span className="font-semibold">CV của bạn</span>
@@ -217,7 +218,7 @@ export const CVMatchingPage: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="glass-card hover-lift p-6">
             <Label className="flex items-center gap-2 mb-3">
               <Sparkles size={18} />
               <span className="font-semibold">Job Description</span>

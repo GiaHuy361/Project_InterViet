@@ -66,19 +66,19 @@ export const AppSidebar: React.FC = () => {
       <Link
         to={item.path}
         className={cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-          active 
-            ? 'bg-blue-50 text-blue-600' 
+          'flex items-center gap-4 rounded-2xl px-5 py-3.5 text-[15px] transition-colors',
+          active
+            ? 'bg-blue-50 text-blue-600 shadow-sm shadow-blue-100'
             : 'text-gray-700 hover:bg-gray-100'
         )}
       >
-        <Icon className={cn('w-5 h-5 flex-shrink-0', active && 'text-blue-600')} />
-        {!collapsed && <span className="font-medium">{item.label}</span>}
+        <Icon className={cn('h-6 w-6 flex-shrink-0', active && 'text-blue-600')} />
+        {!collapsed && <span className="font-semibold">{item.label}</span>}
         {active && !collapsed && (
-          <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full" />
+          <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
         )}
         {item.badge && !collapsed && (
-          <div className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+          <div className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
             {item.badge}
           </div>
         )}
@@ -106,12 +106,12 @@ export const AppSidebar: React.FC = () => {
   return (
     <aside 
       className={cn(
-        'bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        'sticky top-0 flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300',
+        collapsed ? 'w-20' : 'w-80'
       )}
     >
       {/* Logo */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="flex h-20 shrink-0 items-center border-b border-gray-200 px-6">
         {collapsed ? (
           <BrandLogo href="/dashboard" size="sm" showWordmark={false} className="mx-auto" />
         ) : (
@@ -120,14 +120,14 @@ export const AppSidebar: React.FC = () => {
       </div>
 
       {/* Main navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-5">
         {navItems.map((item) => (
           <NavLink key={item.path} item={item} />
         ))}
       </nav>
 
       {/* Bottom navigation */}
-      <div className="p-3 border-t border-gray-200 space-y-1">
+      <div className="space-y-1 border-t border-gray-200 p-5">
         {bottomNavItems.map((item) => (
           <NavLink key={item.path} item={item} />
         ))}
@@ -136,7 +136,7 @@ export const AppSidebar: React.FC = () => {
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="p-3 border-t border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center"
+        className="flex items-center justify-center border-t border-gray-200 p-5 transition-colors hover:bg-gray-50"
         aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
       >
         {collapsed ? (

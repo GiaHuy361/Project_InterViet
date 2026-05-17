@@ -115,7 +115,11 @@ export const AccountDropdown: React.FC = () => {
         >
           <div className="border-b border-slate-100 p-3">
             <div className="flex items-center gap-3">
-              <AvatarInitials name={state.user?.name || 'User'} size="md" />
+              <AvatarInitials
+                name={state.user?.name || 'User'}
+                size="md"
+                plan={state.user?.subscriptionPlan}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-slate-900">
                   {state.user?.name || 'User'}
@@ -185,7 +189,11 @@ export const AccountDropdown: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="menu"
       >
-        <AvatarInitials name={state.user?.name || 'User'} size="sm" />
+        <AvatarInitials
+          name={state.user?.name || 'User'}
+          size="sm"
+          plan={state.user?.subscriptionPlan}
+        />
         <div className="hidden text-left lg:block">
           <p className="text-sm font-medium">{state.user?.name || 'User'}</p>
           <div className="text-xs">

@@ -14,6 +14,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 interface NetworkProfile {
   id: string;
@@ -177,18 +178,16 @@ export const NetworkPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Kết nối với chuyên gia</h1>
-        <p className="text-gray-600">
-          Luyện phỏng vấn với người thật, kết nối với mentor và chuyên gia trong ngành
-        </p>
-      </div>
+    <div className="space-y-6 pb-12">
+      <AppPageHeader
+        title="Kết nối với chuyên gia"
+        subtitle="Luyện phỏng vấn với người thật, kết nối với mentor và chuyên gia trong ngành"
+        icon={Users}
+        iconGradient="from-blue-500 to-violet-600"
+      />
 
-      {/* Premium Banner */}
       {!isPremium && (
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <Card className="glass-card hover-lift p-6 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-violet-50/60 dark:from-blue-950/30 dark:to-violet-950/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -208,8 +207,7 @@ export const NetworkPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Search & Filter */}
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <div className="grid md:grid-cols-2 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

@@ -6,6 +6,8 @@ export * from './VerifyEmailPage';
 export * from './ForgotPasswordPage';
 export * from './ResetPasswordPage';
 export * from './DashboardPage';
+export * from './ProfilePage';
+export * from './CandidateSubscriptionPage';
 export * from './CVMatchingPage';
 export * from './InterviewSetupPage';
 export * from './InterviewPreCallPage';

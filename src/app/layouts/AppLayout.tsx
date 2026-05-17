@@ -99,14 +99,14 @@ export const AppLayout: React.FC = () => {
   }, [navigate, startTrial]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <AppSidebar />
       
-      <div className="flex-1 flex flex-col">
+      <div className="relative flex flex-1 flex-col">
         <AppHeader onOpenFeedback={() => setFeedbackOpen(true)} />
         
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl">
             <EmailVerificationBanner />
             <Outlet />
           </div>

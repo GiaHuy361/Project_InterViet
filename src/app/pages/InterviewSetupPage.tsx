@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { AIModelDropdown } from '../components/AIModelDropdown';
 import { AlertCircle, Mic, Lock, Sparkles, Clock, Target, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 export const InterviewSetupPage: React.FC = () => {
   const { state, useInterview, startTrial } = useApp();
@@ -182,16 +183,16 @@ export const InterviewSetupPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Thiết lập phỏng vấn AI</h1>
-        <p className="text-gray-600">
-          Trải nghiệm phỏng vấn giống thật với AI interviewer
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="Thiết lập phỏng vấn AI"
+        subtitle="Trải nghiệm phỏng vấn giống thật với AI interviewer"
+        icon={Mic}
+        iconGradient="from-fuchsia-500 to-pink-600"
+      />
 
       {!isPremium && (
-        <Card className="p-4 bg-blue-50 border-blue-200">
+        <Card className="glass-card p-4 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-fuchsia-50/50">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
             <div className="flex-1">
@@ -208,7 +209,7 @@ export const InterviewSetupPage: React.FC = () => {
         </Card>
       )}
 
-      <Card className="p-8">
+      <Card className="glass-card rounded-2xl p-8">
         <div className="space-y-8">
           {/* Position */}
           <div>

@@ -28,6 +28,7 @@ import {
   type PlanActionType 
 } from '../config/pricing';
 import { toast } from 'sonner';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 // CV History Page
 export const CVHistoryPage: React.FC = () => {
@@ -35,19 +36,19 @@ export const CVHistoryPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Lịch sử CV</h1>
-          <p className="text-gray-600">Tất cả các phiên bản CV đã tối ưu</p>
-        </div>
-        <Button onClick={() => navigate('/cv-matching')}>
-          Tối ưu CV mới
-        </Button>
-      </div>
+    <div className="space-y-6 pb-12">
+      <AppPageHeader
+        title="Lịch sử CV"
+        subtitle="Tất cả các phiên bản CV đã tối ưu"
+        icon={FileText}
+        iconGradient="from-blue-500 to-cyan-500"
+        actions={
+          <Button onClick={() => navigate('/cv-matching')}>Tối ưu CV mới</Button>
+        }
+      />
 
       {state.cvVersions.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="glass-card p-12 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Chưa có CV nào</h3>
           <p className="text-gray-600 mb-6">Bắt đầu tối ưu CV đầu tiên của bạn</p>
@@ -58,7 +59,7 @@ export const CVHistoryPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {state.cvVersions.map(cv => (
-            <Card key={cv.id} className="p-6">
+            <Card key={cv.id} className="glass-card hover-lift p-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="font-bold mb-1">{cv.name}</h3>
@@ -107,30 +108,29 @@ export const InterviewReportPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Báo cáo phỏng vấn</h1>
-          <p className="text-gray-600">{report.position} - {report.type}</p>
-        </div>
-        <div className="flex gap-2">
-          {isPremium && (
-            <>
-              <Button variant="outline">
+    <div className="space-y-6 pb-12">
+      <AppPageHeader
+        title="Báo cáo phỏng vấn"
+        subtitle={`${report.position} — ${report.type}`}
+        icon={BarChart3}
+        iconGradient="from-violet-500 to-purple-600"
+        actions={
+          isPremium ? (
+            <div className="flex gap-2">
+              <Button variant="outline" className="hover-lift">
                 <Download className="mr-2" size={16} />
                 Tải PDF
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" className="hover-lift">
                 <Share2 className="mr-2" size={16} />
                 Chia sẻ
               </Button>
-            </>
-          )}
-        </div>
-      </div>
+            </div>
+          ) : undefined
+        }
+      />
 
-      {/* Overall Score */}
-      <Card className="p-8">
+      <Card className="glass-card rounded-2xl p-8">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-4">Điểm tổng thể</h3>
           <div className="text-6xl font-bold text-blue-600 mb-4">{report.score}/100</div>
@@ -230,19 +230,19 @@ export const ReportsPage: React.FC = () => {
   }, [state.interviewReports.length]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Lịch sử báo cáo</h1>
-          <p className="text-gray-600">Tất cả các phiên phỏng vấn của bạn</p>
-        </div>
-        <Button onClick={() => navigate('/phong-van-setup')}>
-          Phỏng vấn mới
-        </Button>
-      </div>
+    <div className="space-y-6 pb-12">
+      <AppPageHeader
+        title="Lịch sử báo cáo"
+        subtitle="Tất cả các phiên phỏng vấn của bạn"
+        icon={BarChart3}
+        iconGradient="from-violet-500 to-purple-600"
+        actions={
+          <Button onClick={() => navigate('/phong-van-setup')}>Phỏng vấn mới</Button>
+        }
+      />
 
       {state.interviewReports.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="glass-card p-12 text-center">
           <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Chưa có báo cáo nào</h3>
           <p className="text-gray-600 mb-6">Bắt đầu phỏng vấn đầu tiên của bạn</p>
@@ -253,7 +253,7 @@ export const ReportsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {state.interviewReports.map(report => (
-            <Card key={report.id} className="p-6 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/phong-van-report/${report.id}`)}>
+            <Card key={report.id} className="glass-card hover-lift p-6 cursor-pointer" onClick={() => navigate(`/phong-van-report/${report.id}`)}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="font-bold mb-1">{report.position}</h3>
@@ -288,11 +288,16 @@ export const NotificationsPage: React.FC = () => {
   const { state, markNotificationRead } = useApp();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Thông báo</h1>
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="Thông báo"
+        subtitle="Cập nhật hoạt động và nhắc nhở từ hệ thống"
+        icon={Bell}
+        iconGradient="from-sky-500 to-blue-600"
+      />
 
       {state.notifications.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="glass-card p-12 text-center">
           <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Không có thông báo</h3>
           <p className="text-gray-600">Bạn đã xem hết thông báo</p>
@@ -340,10 +345,15 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Cài đặt tài khoản</h1>
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="Cài đặt tài khoản"
+        subtitle="Thông tin cá nhân, thông báo và bảo mật"
+        icon={Activity}
+        iconGradient="from-slate-600 to-slate-800"
+      />
 
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <h3 className="font-bold mb-4">Thông tin cá nhân</h3>
         <div className="space-y-4">
           <div>
@@ -358,7 +368,7 @@ export const SettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <h3 className="font-bold mb-4">Thông báo</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -367,22 +377,6 @@ export const SettingsPage: React.FC = () => {
               <p className="text-sm text-gray-600">Nhận thông báo qua email</p>
             </div>
             <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-6">
-        <h3 className="font-bold mb-4 text-red-600">Vùng nguy hiểm</h3>
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Xóa tài khoản</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Hành động này không thể hoàn tác. Tất cả dữ liệu sẽ bị xóa vĩnh viễn.
-            </p>
-            <Button variant="destructive" onClick={() => navigate('/xoa-tai-khoan')}>
-              <Trash2 className="mr-2" size={16} />
-              Xóa tài khoản
-            </Button>
           </div>
         </div>
       </Card>
@@ -862,15 +856,25 @@ export const SubscriptionPage: React.FC = () => {
 
 // Invoices Page
 export const InvoicesPage: React.FC = () => {
-  const invoices = [
-    { id: 1, date: '2026-02-01', amount: 149000, status: 'Đã thanh toán' },
-    { id: 2, date: '2026-01-01', amount: 149000, status: 'Đã thanh toán' },
-  ];
+  const invoices: never[] = [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Hóa đơn</h1>
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="Hóa đơn"
+        subtitle="Lịch sử thanh toán và hóa đơn điện tử"
+        icon={Download}
+        iconGradient="from-amber-500 to-orange-600"
+      />
 
+      {invoices.length === 0 ? (
+        <Card className="glass-card p-8 text-center text-slate-600">
+          <p className="font-medium text-gray-800 mb-2">Chưa có lịch sử thanh toán</p>
+          <p className="text-sm">
+            Lịch sử thanh toán sẽ được cập nhật sau khi tích hợp cổng thanh toán.
+          </p>
+        </Card>
+      ) : (
       <div className="space-y-4">
         {invoices.map(invoice => (
           <Card key={invoice.id} className="p-6">
@@ -895,6 +899,7 @@ export const InvoicesPage: React.FC = () => {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 };
@@ -924,14 +929,15 @@ export const ActivityLogPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Nhật ký tương tác</h1>
-        <p className="text-gray-600">Lịch sử hoạt động và góp ý của bạn</p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <AppPageHeader
+        title="Nhật ký tương tác"
+        subtitle="Lịch sử hoạt động và góp ý của bạn"
+        icon={Activity}
+        iconGradient="from-indigo-500 to-violet-600"
+      />
 
-      {/* Events */}
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <h3 className="font-bold mb-4">Sự kiện gần đây (20 sự kiện)</h3>
         {events.length === 0 ? (
           <p className="text-center text-gray-500 py-8">Chưa có sự kiện nào</p>
@@ -962,7 +968,7 @@ export const ActivityLogPage: React.FC = () => {
       </Card>
 
       {/* Feedback */}
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <h3 className="font-bold mb-4 flex items-center gap-2">
           <MessageSquare size={20} />
           Góp ý của bạn
@@ -1005,17 +1011,31 @@ export const SubscriptionExpiredPage: React.FC = () => {
 };
 
 export const CancelSubscriptionPage: React.FC = () => {
-  const { cancelSubscription, state } = useApp();
   const navigate = useNavigate();
-  const currentPlan = state.user?.subscriptionPlan || 'free';
-  const planName = currentPlan === 'monthly' ? 'Gói Tháng' : 
-                   currentPlan === 'quarterly' ? 'Gói Quý' : 
-                   currentPlan === 'yearly' ? 'Gói Năm' : 'Gói Miễn phí';
-  
-  const handleCancel = () => {
-    if (confirm(`Bạn có chắc chắn muốn hủy ${planName}?`)) {
-      cancelSubscription();
-      navigate('/dashboard');
+  const [planName, setPlanName] = useState('gói hiện tại');
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    import('../../services/subscriptionService').then(({ getCurrentSubscription }) => {
+      getCurrentSubscription().then((sub) => {
+        if (sub?.planName) setPlanName(sub.planName);
+      });
+    });
+  }, []);
+
+  const handleCancel = async () => {
+    if (!confirm(`Bạn có chắc chắn muốn hủy ${planName}?`)) return;
+    setLoading(true);
+    try {
+      const { cancelSubscription } = await import('../../services/subscriptionService');
+      await cancelSubscription();
+      toast.success('Đã gửi yêu cầu hủy gói');
+      navigate('/goi-dich-vu');
+    } catch (err) {
+      const { createApiError } = await import('../../lib/api/apiError');
+      toast.error(createApiError(err).getUserMessage());
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1027,58 +1047,12 @@ export const CancelSubscriptionPage: React.FC = () => {
         Sau đó tài khoản sẽ chuyển về gói Miễn phí.
       </p>
       <div className="flex gap-3">
-        <Button variant="destructive" onClick={handleCancel}>
-          Xác nhận hủy
+        <Button variant="destructive" onClick={() => void handleCancel()} disabled={loading}>
+          {loading ? 'Đang xử lý...' : 'Xác nhận hủy'}
         </Button>
         <Button variant="outline" onClick={() => navigate('/goi-dich-vu')}>
           Quay lại
         </Button>
-      </div>
-    </Card>
-  );
-};
-
-export const DeleteAccountPage: React.FC = () => {
-  const { logout } = useApp();
-  const navigate = useNavigate();
-  const [confirmText, setConfirmText] = useState('');
-
-  const handleDelete = () => {
-    if (confirmText === 'XOA TAI KHOAN') {
-      alert('Tài khoản đã được xóa');
-      logout();
-      navigate('/');
-    }
-  };
-
-  return (
-    <Card className="p-8 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-red-600">Xóa tài khoản</h1>
-      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded">
-        <p className="text-sm text-red-900 font-semibold">⚠️ Cảnh báo:</p>
-        <ul className="text-sm text-red-800 mt-2 space-y-1">
-          <li>• Tất cả dữ liệu sẽ bị xóa vĩnh viễn</li>
-          <li>• Không thể khôi phục</li>
-          <li>• Gói trả phí sẽ bị hủy ngay lập tức</li>
-        </ul>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <Label>Nhập "XOA TAI KHOAN" để xác nhận</Label>
-          <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
-        </div>
-        <div className="flex gap-3">
-          <Button 
-            variant="destructive" 
-            disabled={confirmText !== 'XOA TAI KHOAN'}
-            onClick={handleDelete}
-          >
-            Xóa vĩnh viễn
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/cai-dat')}>
-            Hủy
-          </Button>
-        </div>
       </div>
     </Card>
   );
@@ -1134,21 +1108,20 @@ export const HelpCenterPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Trung tâm trợ giúp</h1>
-          <p className="text-gray-600">
-            Tìm câu trả lời cho các thắc mắc thường gặp
-          </p>
-        </div>
-        <Button onClick={() => navigate('/dashboard')}>
-          Quay lại Dashboard
-        </Button>
-      </div>
+    <div className="space-y-8 pb-12">
+      <AppPageHeader
+        title="Trung tâm trợ giúp"
+        subtitle="Tìm câu trả lời cho các thắc mắc thường gặp"
+        icon={HelpCircle}
+        iconGradient="from-blue-500 to-cyan-500"
+        actions={
+          <Button variant="outline" className="hover-lift" onClick={() => navigate('/dashboard')}>
+            Quay lại Dashboard
+          </Button>
+        }
+      />
 
-      {/* Search */}
-      <Card className="p-6">
+      <Card className="glass-card p-6">
         <div className="relative">
           <Input 
             placeholder="Tìm kiếm bài viết hỗ trợ..." 
@@ -1163,7 +1136,7 @@ export const HelpCenterPage: React.FC = () => {
         {helpCategories.map((category, idx) => {
           const Icon = category.icon;
           return (
-            <Card key={idx} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={idx} className="glass-card hover-lift p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <Icon className="w-6 h-6 text-white" />

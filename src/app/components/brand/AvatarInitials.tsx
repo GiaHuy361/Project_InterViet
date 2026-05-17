@@ -1,18 +1,6 @@
 import React from 'react';
 import { cn } from '../ui/utils';
-
-const PALETTES = [
-  'from-blue-500 to-indigo-600',
-  'from-violet-500 to-purple-600',
-  'from-cyan-500 to-blue-600',
-  'from-indigo-500 to-violet-600',
-] as const;
-
-function hashName(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
+import { getPlanAvatarClass } from '../../../utils/planAvatar';
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -25,6 +13,8 @@ type AvatarInitialsProps = {
   name: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** Gói đăng ký — đổi gradient giống khung “Gói hiện tại”. */
+  plan?: string | null;
 };
 
 const sizeClasses = {
@@ -37,19 +27,17 @@ export const AvatarInitials: React.FC<AvatarInitialsProps> = ({
   name,
   className,
   size = 'md',
-}) => {
-  const palette = PALETTES[hashName(name) % PALETTES.length];
-  return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-bold text-white shadow-md ring-2 ring-white',
-        palette,
-        sizeClasses[size],
-        className,
-      )}
-      aria-hidden
-    >
-      {getInitials(name)}
-    </div>
-  );
-};
+  plan,
+}) => (
+  <div
+    className={cn(
+      'flex shrink-0 items-center justify-center rounded-2xl font-bold ring-2 ring-white dark:ring-slate-800',
+      getPlanAvatarClass(plan),
+      sizeClasses[size],
+      className,
+    )}
+    aria-hidden
+  >
+    {getInitials(name)}
+  </div>
+);

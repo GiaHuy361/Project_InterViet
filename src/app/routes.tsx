@@ -107,16 +107,15 @@ export const router = createBrowserRouter([
           { path: 'bao-cao', Component: Pages.ReportsPage },
           { path: 'thong-bao', Component: Pages.NotificationsPage },
           { path: 'tro-giup', Component: Pages.HelpCenterPage },
-          { path: 'cai-dat', Component: Pages.SettingsPage },
-          { path: 'goi-dich-vu', Component: Pages.SubscriptionPage },
+          { path: 'cai-dat', Component: Pages.ProfilePage },
+          { path: 'goi-dich-vu', Component: Pages.CandidateSubscriptionPage },
           { path: 'thanh-toan', Component: Pages.BillingPage },
           { path: 'hoa-don', Component: Pages.InvoicesPage },
           { path: 'email', Component: Pages.EmailCenterPage },
           { path: 'hoat-dong', Component: Pages.ActivityLogPage },
           { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
           { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
-          { path: 'xoa-tai-khoan', Component: Pages.DeleteAccountPage },
-          
+
           // System management
           { path: 'system/data', Component: Pages.DataManagementPage },
         ],

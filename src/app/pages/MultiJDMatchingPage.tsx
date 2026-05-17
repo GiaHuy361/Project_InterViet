@@ -10,6 +10,7 @@ import {
   BookmarkCheck, ExternalLink, Filter, Download, Briefcase, MapPin, DollarSign
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 interface JobListing {
   id: string;
@@ -213,15 +214,15 @@ export const MultiJDMatchingPage: React.FC = () => {
 
   if (!cvUploaded) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">So khớp đa công việc</h1>
-          <p className="text-gray-600">
-            Tải CV lên một lần, so khớp với hàng trăm công việc phù hợp
-          </p>
-        </div>
+      <div className="max-w-3xl mx-auto pb-12">
+        <AppPageHeader
+          title="So khớp đa công việc"
+          subtitle="Tải CV lên một lần, so khớp với hàng trăm công việc phù hợp"
+          icon={Target}
+          iconGradient="from-emerald-500 to-teal-600"
+        />
 
-        <Card className="p-12 text-center">
+        <Card className="glass-card rounded-2xl p-12 text-center">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <Upload className="w-10 h-10 text-white" />
           </div>
@@ -266,16 +267,14 @@ export const MultiJDMatchingPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Kết quả so khớp</h1>
-          <p className="text-gray-600">
-            CV của bạn đã được so khớp với {jobs.length} công việc
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="space-y-6 pb-12">
+      <AppPageHeader
+        title="Kết quả so khớp"
+        subtitle={`CV của bạn đã được so khớp với ${jobs.length} công việc`}
+        icon={Target}
+        iconGradient="from-emerald-500 to-teal-600"
+        actions={
+          <div className="flex gap-2">
           {isPremium && (
             <Button variant="outline">
               <Download className="mr-2" size={16} />
@@ -287,29 +286,30 @@ export const MultiJDMatchingPage: React.FC = () => {
             Tải CV khác
           </Button>
         </div>
-      </div>
+        }
+      />
 
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-6">
-        <Card className="p-6">
+        <Card className="glass-card hover-lift p-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-blue-600 mb-1">{matchStats.avgScore}%</div>
             <div className="text-sm text-gray-600">Điểm TB</div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="glass-card hover-lift p-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-green-600 mb-1">{matchStats.high}</div>
             <div className="text-sm text-gray-600">Rất phù hợp</div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="glass-card hover-lift p-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-yellow-600 mb-1">{matchStats.medium}</div>
             <div className="text-sm text-gray-600">Phù hợp</div>
           </div>
         </Card>
-        <Card className="p-6">
+        <Card className="glass-card hover-lift p-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-red-600 mb-1">{matchStats.low}</div>
             <div className="text-sm text-gray-600">Ít phù hợp</div>
