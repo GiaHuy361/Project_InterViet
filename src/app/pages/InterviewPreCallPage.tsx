@@ -1,31 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useApp } from '../contexts/AppContext';
+import { useNavigate, useLocation } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { Mic, Volume2, Check, X, AlertCircle, Headphones, Wifi } from 'lucide-react';
+import { AlertCircle, Mic, Wifi, Check, X, Headphones } from 'lucide-react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 
 export const InterviewPreCallPage: React.FC = () => {
   const navigate = useNavigate();
-  const { useInterview } = useApp();
+  const location = useLocation();
+  const sessionId = location.state?.sessionId;
+  
   const [micPermission, setMicPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
-  const [audioLevel, setAudioLevel] = useState(0);
   const [isTesting, setIsTesting] = useState(false);
-  const [config, setConfig] = useState<any>(null);
+  const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
-    // Load config from sessionStorage
-    const storedConfig = sessionStorage.getItem('interviewConfig');
-    if (storedConfig) {
-      setConfig(JSON.parse(storedConfig));
-    } else {
+    if (!sessionId) {
       navigate('/phong-van-setup');
     }
-  }, [navigate]);
+  }, [sessionId, navigate]);
 
   useEffect(() => {
-    // Simulate audio level animation when testing
     if (isTesting) {
       const interval = setInterval(() => {
         setAudioLevel(Math.random() * 100);
@@ -38,13 +33,19 @@ export const InterviewPreCallPage: React.FC = () => {
 
   const handleTestMic = async () => {
     setIsTesting(true);
-    // Simulate microphone permission request
-    setTimeout(() => {
-      setMicPermission('granted');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
       setTimeout(() => {
-        setIsTesting(false);
-      }, 2000);
-    }, 500);
+        setMicPermission('granted');
+        setTimeout(() => {
+          setIsTesting(false);
+        }, 2000);
+      }, 500);
+    } catch (err) {
+      setMicPermission('denied');
+      setIsTesting(false);
+    }
   };
 
   const handleStart = () => {
@@ -53,61 +54,19 @@ export const InterviewPreCallPage: React.FC = () => {
       return;
     }
 
-    const success = useInterview();
-    if (!success) {
-      navigate('/goi-dich-vu'); // Changed from '/bang-gia' to '/goi-dich-vu'
-      return;
-    }
-
-    // Store config for the live interview page
-    sessionStorage.setItem('liveInterviewConfig', JSON.stringify(config));
-    navigate('/phong-van-live');
+    // In a full implementation, we might navigate to InterviewVoiceLivePage
+    // For now, we fallback to InterviewLivePage or a placeholder
+    navigate(`/phong-van-live/${sessionId}`);
   };
-
-  if (!config) {
-    return null;
-  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <div className="text-center text-6xl mb-2">{config.interviewerIcon}</div>
       <AppPageHeader
-        title="Chuẩn bị phỏng vấn"
-        subtitle="Kiểm tra thiết bị trước khi bắt đầu"
+        title="Chuẩn bị phỏng vấn Voice"
+        subtitle="Kiểm tra thiết bị trước khi bắt đầu phỏng vấn bằng giọng nói"
         icon={Mic}
         iconGradient="from-fuchsia-500 to-pink-600"
       />
-
-      <Card className="glass-card rounded-2xl p-6 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-violet-50/60">
-        <h3 className="font-semibold mb-3">Thông tin phỏng vấn</h3>
-        <div className="grid md:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-            <span className="text-gray-600">Vị trí:</span>
-            <strong>{config.position}</strong>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-            <span className="text-gray-600">Cấp độ:</span>
-            <strong>{config.level}</strong>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-            <span className="text-gray-600">Mục tiêu:</span>
-            <strong>{config.goal}</strong>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-            <span className="text-gray-600">Thời lượng:</span>
-            <strong>{config.duration}</strong>
-          </div>
-          <div className="md:col-span-2 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-            <span className="text-gray-600">Phong cách phỏng vấn:</span>
-            <strong>{config.interviewerMode}</strong>
-          </div>
-        </div>
-      </Card>
 
       {/* System Check */}
       <Card className="p-6">
@@ -198,14 +157,6 @@ export const InterviewPreCallPage: React.FC = () => {
           <li className="flex items-start gap-2">
             <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-1.5"></div>
             <span>Nói rõ ràng và tự nhiên như đang trò chuyện thật</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-1.5"></div>
-            <span>Thư giãn và tự tin - đây là cơ hội để bạn luyện tập</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-1.5"></div>
-            <span>AI sẽ lắng nghe và tương tác như một cuộc phỏng vấn thật</span>
           </li>
         </ul>
       </Card>

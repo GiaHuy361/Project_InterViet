@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp } from '../contexts/AppContext';
 import { Button } from '../components/ui/button';
@@ -12,12 +12,11 @@ import { eventTracker } from '../utils/eventTracker';
 import { getFeedback } from '../components/FeedbackModal';
 import { ContactSupportModal } from '../components/ContactSupportModal';
 import { DowngradeConfirmModal } from '../components/DowngradeConfirmModal';
-import { 
-  Download, Share2, Target, TrendingUp, Award, Clock,
+import {
+  Download, Share2, Target,
   Bell, Mail, Activity, Trash2, AlertCircle, CheckCircle,
   FileText, BarChart3, MessageSquare, HelpCircle, Check, X
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Progress } from '../components/ui/progress';
 import { 
   CANDIDATE_PLANS, 
@@ -29,6 +28,16 @@ import {
 } from '../config/pricing';
 import { toast } from 'sonner';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
+import { ApiError } from '../../lib/api/apiError';
+import {
+  deleteInterview,
+  getInterview,
+  getInterviews,
+  getStats,
+  type InterviewReport,
+  type InterviewSession,
+  type InterviewStatsResponse,
+} from '../../services/interviewService';
 
 // CV History Page
 export const CVHistoryPage: React.FC = () => {
@@ -88,146 +97,309 @@ export const CVHistoryPage: React.FC = () => {
 // Interview Report Page
 export const InterviewReportPage: React.FC = () => {
   const { id } = useParams();
-  const { state } = useApp();
   const navigate = useNavigate();
-  const isPremium = state.user?.role === 'premium' || state.user?.role === 'trial';
+  const [session, setSession] = useState<InterviewSession | null>(null);
+  const [report, setReport] = useState<InterviewReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const report = state.interviewReports[0] || {
-    position: 'Software Engineer',
-    level: 'Junior',
-    type: 'Behavioral',
-    score: 78,
-    duration: 18
-  };
+  useEffect(() => {
+    if (!id) {
+      navigate('/bao-cao');
+      return;
+    }
 
-  const metrics = [
-    { name: 'Nội dung', score: 82 },
-    { name: 'Tốc độ nói', score: 75 },
-    { name: 'Confidence', score: 80 },
-    { name: 'Cấu trúc', score: 70 },
-  ];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const detail = await getInterview(id);
+        setSession(detail);
+        setReport(detail.report || null);
+      } catch (err) {
+        const apiErr = err instanceof ApiError ? err : null;
+        setError(apiErr?.getUserMessage() || 'Không thể tải báo cáo.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [id, navigate]);
+
+  const overallScore = report?.overallScore ?? null;
+  const normalizedScore =
+    overallScore == null ? null : overallScore > 10 ? overallScore / 10 : overallScore;
+  const scoreLabel =
+    normalizedScore == null
+      ? 'Chưa có dữ liệu'
+      : normalizedScore >= 8
+        ? 'Xuất sắc'
+        : normalizedScore >= 7
+          ? 'Tốt'
+          : 'Cần cải thiện';
 
   return (
     <div className="space-y-6 pb-12">
       <AppPageHeader
         title="Báo cáo phỏng vấn"
-        subtitle={`${report.position} — ${report.type}`}
+        subtitle={session ? `${session.position} — ${session.interviewType}` : 'Đang tải'}
         icon={BarChart3}
         iconGradient="from-violet-500 to-purple-600"
         actions={
-          isPremium ? (
-            <div className="flex gap-2">
-              <Button variant="outline" className="hover-lift">
-                <Download className="mr-2" size={16} />
-                Tải PDF
-              </Button>
-              <Button variant="outline" className="hover-lift">
+          <div className="flex gap-2">
+            <Button variant="outline" className="hover-lift" onClick={() => navigate('/bao-cao')}>
+              <Download className="mr-2" size={16} />
+              Lịch sử
+            </Button>
+            {id && (
+              <Button variant="outline" className="hover-lift" onClick={() => navigate(`/phong-van-chi-tiet/${id}`)}>
                 <Share2 className="mr-2" size={16} />
-                Chia sẻ
+                Chi tiết
               </Button>
-            </div>
-          ) : undefined
+            )}
+          </div>
         }
       />
 
-      <Card className="glass-card rounded-2xl p-8">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold mb-4">Điểm tổng thể</h3>
-          <div className="text-6xl font-bold text-blue-600 mb-4">{report.score}/100</div>
-          <Badge variant={report.score >= 80 ? 'default' : 'secondary'} className="text-lg px-4 py-1">
-            {report.score >= 80 ? 'Xuất sắc' : report.score >= 70 ? 'Tốt' : 'Cần cải thiện'}
-          </Badge>
-        </div>
-      </Card>
+      {loading && <Card className="glass-card p-6">Đang tải báo cáo...</Card>}
 
-      {/* Metrics Breakdown */}
-      <Card className="p-6">
-        <h3 className="font-bold mb-4">Phân tích chi tiết</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metrics}>
-              <CartesianGrid key="cartesian-grid" strokeDasharray="3 3" />
-              <XAxis key="x-axis" dataKey="name" />
-              <YAxis key="y-axis" domain={[0, 100]} />
-              <Tooltip key="tooltip" />
-              <Bar key="bar-score" dataKey="score" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      {/* Comparison */}
-      {isPremium && (
-        <Card className="p-6">
-          <h3 className="font-bold mb-4">So sánh với trung bình ngành</h3>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">{report.score}</div>
-              <p className="text-sm text-gray-600">Điểm của bạn</p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-400">72</div>
-              <p className="text-sm text-gray-600">Trung bình ngành</p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">+{report.score - 72}</div>
-              <p className="text-sm text-gray-600">Cao hơn</p>
-            </div>
+      {error && (
+        <Card className="border-red-200 bg-red-50 text-red-700 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <span>{error}</span>
+            <Button variant="outline" onClick={() => id && navigate(0)}>
+              Thử lại
+            </Button>
           </div>
         </Card>
       )}
 
-      {/* Suggestions */}
-      <Card className="p-6">
-        <h3 className="font-bold mb-4">Gợi ý cải thiện</h3>
-        <ul className="space-y-3">
-          <li className="flex items-start gap-3">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-1" size={20} />
-            <div>
-              <h4 className="font-semibold">Giảm tốc độ nói</h4>
-              <p className="text-sm text-gray-600">Bạn nói hơi nhanh. Hãy thở sâu và nói chậm hơn 10-15%</p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-1" size={20} />
-            <div>
-              <h4 className="font-semibold">Sử dụng phương pháp STAR</h4>
-              <p className="text-sm text-gray-600">Cấu trúc câu trả lời theo Situation, Task, Action, Result</p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-1" size={20} />
-            <div>
-              <h4 className="font-semibold">Thêm số liệu cụ thể</h4>
-              <p className="text-sm text-gray-600">Sử dụng metrics và con số để làm rõ thành tích</p>
-            </div>
-          </li>
-        </ul>
-      </Card>
+      {!loading && !error && !report && (
+        <Card className="glass-card p-6">
+          <p className="text-gray-700">Báo cáo chưa sẵn sàng. Vui lòng thử lại sau.</p>
+          <div className="mt-4 flex gap-3">
+            <Button variant="outline" onClick={() => id && navigate(`/phong-van-chi-tiet/${id}`)}>
+              Xem chi tiết
+            </Button>
+            <Button onClick={() => navigate('/bao-cao')}>Quay lại lịch sử</Button>
+          </div>
+        </Card>
+      )}
 
-      <div className="flex gap-3">
-        <Button onClick={() => navigate('/phong-van-setup')}>
-          Luyện lại
-        </Button>
-        <Button variant="outline" onClick={() => navigate('/bao-cao')}>
-          Xem tất cả báo cáo
-        </Button>
-      </div>
+      {report && (
+        <>
+          <Card className="glass-card rounded-2xl p-8">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">Điểm tổng thể</h3>
+              <div className="text-6xl font-bold text-blue-600 mb-4">
+                {overallScore ?? '—'}
+              </div>
+              <Badge variant={normalizedScore != null && normalizedScore >= 8 ? 'default' : 'secondary'} className="text-lg px-4 py-1">
+                {scoreLabel}
+              </Badge>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="font-bold mb-4">Điểm chi tiết</h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span>Confidence</span>
+                <strong>{report.confidenceScore ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Clarity</span>
+                <strong>{report.clarityScore ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Relevance</span>
+                <strong>{report.relevanceScore ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+            </div>
+          </Card>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <h3 className="font-bold mb-3">Strengths</h3>
+              {report.strengths && report.strengths.length > 0 ? (
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {report.strengths.map((item, index) => (
+                    <li key={`strength-${index}`}>• {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+              )}
+            </Card>
+            <Card className="p-6">
+              <h3 className="font-bold mb-3">Weaknesses</h3>
+              {report.weaknesses && report.weaknesses.length > 0 ? (
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {report.weaknesses.map((item, index) => (
+                    <li key={`weakness-${index}`}>• {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+              )}
+            </Card>
+            <Card className="p-6">
+              <h3 className="font-bold mb-3">Recommendations</h3>
+              {report.recommendations && report.recommendations.length > 0 ? (
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {report.recommendations.map((item, index) => (
+                    <li key={`recommend-${index}`}>• {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+              )}
+            </Card>
+          </div>
+
+          <Card className="p-6">
+            <h3 className="font-bold mb-4">Score breakdowns</h3>
+            {report.scoreBreakdowns && report.scoreBreakdowns.length > 0 ? (
+              <div className="space-y-3">
+                {report.scoreBreakdowns.map((item, index) => (
+                  <div key={`breakdown-${index}`} className="flex flex-col gap-1 text-sm">
+                    <div className="flex items-center justify-between">
+                      <strong>{item.dimension}</strong>
+                      <span>
+                        {item.score ?? '—'} / {item.maxScore ?? '—'}
+                      </span>
+                    </div>
+                    {item.comment && <span className="text-gray-600">{item.comment}</span>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="font-bold mb-4">Feedback</h3>
+            {report.feedbackItems && report.feedbackItems.length > 0 ? (
+              <div className="space-y-3">
+                {report.feedbackItems.map((item, index) => (
+                  <div key={`feedback-${index}`} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <strong>{item.title}</strong>
+                      <span className="text-gray-500">{item.category}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="font-bold mb-4">Thông tin mô hình</h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span>Model version</span>
+                <strong>{report.modelVersion ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Schema version</span>
+                <strong>{report.schemaVersion ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="font-bold mb-4">Tổng hợp câu hỏi & trả lời</h3>
+            {session?.questions && session.questions.length > 0 ? (
+              <div className="space-y-4">
+                {session.questions.map((q) => {
+                  const answer = session.answers?.find((a) => a.questionId === q.questionId);
+                  return (
+                    <div key={q.questionId} className="border rounded-lg p-3">
+                      <p className="font-semibold">{q.questionNumber}. {q.questionText}</p>
+                      <p className="text-sm text-gray-600 mt-2">
+                        {answer?.answerText || 'Chưa có câu trả lời'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+            )}
+          </Card>
+
+          <div className="flex gap-3">
+            <Button onClick={() => navigate('/phong-van-setup')}>
+              Luyện lại
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/bao-cao')}>
+              Xem lịch sử
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
 // Reports Page
 export const ReportsPage: React.FC = () => {
-  const { state } = useApp();
   const navigate = useNavigate();
+  const [interviews, setInterviews] = useState<InterviewSession[]>([]);
+  const [stats, setStats] = useState<InterviewStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Track report view when page loads
-  React.useEffect(() => {
-    if (state.interviewReports.length > 0) {
-      eventTracker.track('report_view');
+  const formatLabel = (value?: string) =>
+    value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : '';
+
+  const statusLabelMap: Record<string, string> = {
+    completed: 'Hoàn thành',
+    processing: 'Đang xử lý',
+    live: 'Đang diễn ra',
+    failed: 'Thất bại',
+    cancelled: 'Đã hủy',
+    abandoned: 'Bỏ dở',
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [list, listStats] = await Promise.all([getInterviews(), getStats()]);
+        setInterviews(list);
+        setStats(listStats);
+        if (list.length > 0) {
+          eventTracker.track('report_view');
+        }
+      } catch (err) {
+        const apiErr = err instanceof ApiError ? err : null;
+        setError(apiErr?.getUserMessage() || 'Không thể tải lịch sử báo cáo.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
+
+  const handleDelete = async (interviewId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa phiên phỏng vấn này?')) return;
+    try {
+      await deleteInterview(interviewId);
+      setInterviews((prev) => prev.filter((item) => item.id !== interviewId));
+      toast.success('Đã xóa phiên phỏng vấn.');
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      toast.error(apiErr?.getUserMessage() || 'Không thể xóa phiên phỏng vấn.');
     }
-  }, [state.interviewReports.length]);
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -241,7 +413,44 @@ export const ReportsPage: React.FC = () => {
         }
       />
 
-      {state.interviewReports.length === 0 ? (
+      {loading && <Card className="glass-card p-6">Đang tải báo cáo...</Card>}
+
+      {error && (
+        <Card className="border-red-200 bg-red-50 text-red-700 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <span>{error}</span>
+            <Button variant="outline" onClick={() => navigate(0)}>
+              Thử lại
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!loading && !error && stats && (
+        <Card className="p-6">
+          <h3 className="font-bold mb-4">Thống kê nhanh</h3>
+          <div className="grid md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center justify-between">
+              <span>Tổng phiên</span>
+              <strong>{stats.totalSessions}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Đã hoàn thành</span>
+              <strong>{stats.completedSessions}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Điểm trung bình</span>
+              <strong>{stats.averageScore ?? '—'}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Điểm cao nhất</span>
+              <strong>{stats.bestScore ?? '—'}</strong>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!loading && !error && interviews.length === 0 ? (
         <Card className="glass-card p-12 text-center">
           <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Chưa có báo cáo nào</h3>
@@ -252,27 +461,35 @@ export const ReportsPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {state.interviewReports.map(report => (
-            <Card key={report.id} className="glass-card hover-lift p-6 cursor-pointer" onClick={() => navigate(`/phong-van-report/${report.id}`)}>
-              <div className="flex items-center justify-between">
+          {interviews.map((interview) => (
+            <Card key={interview.id} className="glass-card hover-lift p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="font-bold mb-1">{report.position}</h3>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <span>{report.level}</span>
+                  <h3 className="font-bold mb-1">{interview.position}</h3>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                    <span>{formatLabel(interview.level)}</span>
                     <span>•</span>
-                    <span>{report.type}</span>
+                    <span>{formatLabel(interview.interviewType)}</span>
                     <span>•</span>
-                    <span>{report.createdAt.toLocaleDateString('vi-VN')}</span>
+                    <span>{new Date(interview.createdAt).toLocaleDateString('vi-VN')}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-2xl font-bold">{report.score}</div>
+                    <div className="text-2xl font-bold">{interview.report?.overallScore ?? '—'}</div>
                     <div className="text-xs text-gray-600">điểm</div>
                   </div>
-                  <Badge variant={report.score >= 80 ? 'default' : 'secondary'}>
-                    {report.score >= 80 ? 'Xuất sắc' : 'Tốt'}
+                  <Badge variant={interview.status === 'completed' ? 'default' : 'secondary'}>
+                    {statusLabelMap[interview.status] || interview.status}
                   </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/phong-van-report/${interview.id}`)}>
+                    Xem báo cáo
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(interview.id)}>
+                    <Trash2 size={16} />
+                  </Button>
                 </div>
               </div>
             </Card>
