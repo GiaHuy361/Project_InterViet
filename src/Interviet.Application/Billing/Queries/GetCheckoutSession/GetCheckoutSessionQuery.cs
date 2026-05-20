@@ -33,6 +33,8 @@ public sealed class GetCheckoutSessionQueryHandler
             Id            = session.Id,
             PlanKey       = session.PlanKey,
             Provider      = session.Provider,
+            Purpose       = session.Purpose,
+            Description   = session.Description,
             Amount        = session.Amount,
             CurrencyCode  = session.CurrencyCode,
             Status        = session.Status,

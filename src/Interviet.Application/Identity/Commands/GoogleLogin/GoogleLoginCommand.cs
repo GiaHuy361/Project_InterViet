@@ -70,7 +70,7 @@ public sealed class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginComma
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.Provider == "Google" && x.ProviderKey == providerKey, cancellationToken);
 
-        User user;
+        User? user;
 
         if (externalLogin != null)
         {

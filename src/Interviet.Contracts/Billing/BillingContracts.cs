@@ -28,8 +28,12 @@ public sealed class InvoiceResponse
 {
     public Guid Id { get; init; }
     public string InvoiceNumber { get; init; } = string.Empty;
-    public string PlanKey { get; init; } = string.Empty;
+    /// <summary>Null for non-subscription purposes (e.g. mentor_booking).</summary>
+    public string? PlanKey { get; init; }
     public string Provider { get; init; } = string.Empty;
+    /// <summary>e.g. "subscription_plan" or "mentor_booking".</summary>
+    public string? Purpose { get; init; }
+    public string? Description { get; init; }
     public decimal Amount { get; init; }
     public string CurrencyCode { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
@@ -42,8 +46,12 @@ public sealed class PaymentTransactionResponse
 {
     public Guid Id { get; init; }
     public string Provider { get; init; } = string.Empty;
-    public string PlanKey { get; init; } = string.Empty;
+    /// <summary>Null for non-subscription purposes (e.g. mentor_booking).</summary>
+    public string? PlanKey { get; init; }
     public Guid? CheckoutSessionId { get; init; }
+    /// <summary>e.g. "subscription_plan" or "mentor_booking".</summary>
+    public string? Purpose { get; init; }
+    public string? Description { get; init; }
     public decimal Amount { get; init; }
     public string CurrencyCode { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
@@ -77,8 +85,12 @@ public sealed class CheckoutResponse
 public sealed class CheckoutSessionResponse
 {
     public Guid Id { get; init; }
-    public string PlanKey { get; init; } = string.Empty;
+    /// <summary>Null for non-subscription purposes (e.g. mentor_booking).</summary>
+    public string? PlanKey { get; init; }
     public string Provider { get; init; } = string.Empty;
+    /// <summary>e.g. "subscription_plan" or "mentor_booking".</summary>
+    public string? Purpose { get; init; }
+    public string? Description { get; init; }
     public decimal Amount { get; init; }
     public string CurrencyCode { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
@@ -193,7 +205,11 @@ public static class MockProvider
 public sealed class PaymentInstructionsResponse
 {
     public Guid CheckoutSessionId { get; init; }
-    public string PlanKey { get; init; } = string.Empty;
+    /// <summary>Null for non-subscription purposes (e.g. mentor_booking).</summary>
+    public string? PlanKey { get; init; }
+    /// <summary>e.g. "subscription_plan" or "mentor_booking".</summary>
+    public string? Purpose { get; init; }
+    public string? Description { get; init; }
     public decimal Amount { get; init; }
     public string CurrencyCode { get; init; } = string.Empty;
     public MerchantResponse Merchant { get; init; } = new();

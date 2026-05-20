@@ -40,6 +40,8 @@ public sealed class GetMyInvoicesQueryHandler
                         .Select(cs => cs.Provider)
                         .FirstOrDefault() ?? string.Empty
                     : string.Empty,
+                Purpose      = i.Purpose,
+                Description  = i.Description,
                 Amount       = i.Amount,
                 CurrencyCode = i.CurrencyCode,
                 Status       = i.Status,

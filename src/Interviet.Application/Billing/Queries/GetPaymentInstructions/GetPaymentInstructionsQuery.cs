@@ -74,26 +74,28 @@ public sealed class GetPaymentInstructionsQueryHandler
         var response = new PaymentInstructionsResponse
         {
             CheckoutSessionId = session.Id,
-            PlanKey = session.PlanKey,
-            Amount = session.Amount,
+            PlanKey  = session.PlanKey,
+            Purpose  = session.Purpose,
+            Description = session.Description,
+            Amount   = session.Amount,
             CurrencyCode = session.CurrencyCode,
             Merchant = new MerchantResponse
             {
-                MerchantName = _billing.MockMerchant.MerchantName,
-                BankName = _billing.MockMerchant.BankName,
-                BankCode = _billing.MockMerchant.BankCode,
+                MerchantName  = _billing.MockMerchant.MerchantName,
+                BankName      = _billing.MockMerchant.BankName,
+                BankCode      = _billing.MockMerchant.BankCode,
                 AccountNumber = _billing.MockMerchant.AccountNumber,
-                AccountName = _billing.MockMerchant.AccountName
+                AccountName   = _billing.MockMerchant.AccountName
             },
             Transfer = new TransferResponse
             {
                 RequiredContent = requiredContent,
-                Amount = session.Amount,
-                CurrencyCode = session.CurrencyCode
+                Amount          = session.Amount,
+                CurrencyCode    = session.CurrencyCode
             },
             Qr = new QrResponse
             {
-                Payload = qrPayload,
+                Payload     = qrPayload,
                 ImageBase64 = imageBase64
             }
         };

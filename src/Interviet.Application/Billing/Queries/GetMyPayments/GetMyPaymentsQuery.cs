@@ -35,6 +35,8 @@ public sealed class GetMyPaymentsQueryHandler
                 Provider          = t.Provider,
                 PlanKey           = t.PlanKey,
                 CheckoutSessionId = t.CheckoutSessionId,
+                Purpose           = t.Purpose,
+                Description       = t.Description,
                 Amount            = t.Amount,
                 CurrencyCode      = t.CurrencyCode,
                 Status            = t.Status,
