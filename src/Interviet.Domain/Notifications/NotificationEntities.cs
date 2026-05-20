@@ -2,25 +2,69 @@ using Interviet.Domain.Common;
 
 namespace Interviet.Domain.Notifications;
 
+/// <summary>
+/// In-app notification for a user.
+/// Type examples: billing.payment_succeeded, resume.parsed, resume.failed,
+///                match.completed, match.failed, interview.report_ready, interview.failed, system.announcement
+/// Priority: low | normal | high | urgent
+/// </summary>
 public class Notification : BaseEntity
 {
     public Guid UserId { get; set; }
 
-    /// <summary>billing | subscription | mentor | system | product | feature</summary>
-    public string Category { get; set; } = string.Empty;
-
-    /// <summary>info | success | warning | error</summary>
+    /// <summary>Event type e.g. billing.payment_succeeded, resume.parsed</summary>
     public string Type { get; set; } = string.Empty;
-
-    /// <summary>in_app | email | system</summary>
-    public string Channel { get; set; } = "in_app";
 
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>low | normal | high | urgent</summary>
+    public string Priority { get; set; } = "normal";
+
     public string? ActionUrl { get; set; }
+
+    /// <summary>JSON payload for frontend (object). Stored as string.</summary>
+    public string? DataJson { get; set; }
+
     public bool IsRead { get; set; }
     public DateTime? ReadAt { get; set; }
+
+    /// <summary>
+    /// Deduplication key to prevent duplicate notifications.
+    /// Format: {type}:{entityId} e.g. billing.payment_succeeded:{checkoutSessionId}
+    /// </summary>
+    public string? DeduplicationKey { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>Soft delete timestamp. Null = not deleted.</summary>
+    public DateTime? DeletedAt { get; set; }
+}
+
+/// <summary>
+/// User notification preferences. One record per user.
+/// All preferences default to true (opt-in by default).
+/// </summary>
+public class NotificationPreference : BaseEntity
+{
+    public Guid UserId { get; set; }
+
+    /// <summary>Master in-app notifications toggle.</summary>
+    public bool InAppNotificationsEnabled { get; set; } = true;
+
+    /// <summary>Email notifications preference flag (Phase 11 - flag only, not enforced everywhere).</summary>
+    public bool EmailNotificationsEnabled { get; set; } = true;
+
+    public bool BillingNotificationsEnabled { get; set; } = true;
+    public bool ResumeNotificationsEnabled { get; set; } = true;
+    public bool MatchingNotificationsEnabled { get; set; } = true;
+    public bool InterviewNotificationsEnabled { get; set; } = true;
+    public bool MentorNotificationsEnabled { get; set; } = true;
+    public bool SystemNotificationsEnabled { get; set; } = true;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 }
 
 public class EmailTemplate : AuditableEntity

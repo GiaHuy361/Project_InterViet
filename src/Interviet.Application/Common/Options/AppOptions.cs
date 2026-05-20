@@ -87,3 +87,17 @@ public sealed class BillingOptions
 
     public MockMerchantOptions MockMerchant { get; set; } = new();
 }
+
+public sealed class NotificationOptions
+{
+    public const string SectionName = "Notifications";
+
+    /// <summary>Master switch. When false, no new notifications are created.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>When true, POST /api/v1/notifications/test is enabled.</summary>
+    public bool EnableTestEndpoint { get; set; } = true;
+
+    public int DefaultPageSize { get; set; } = 20;
+    public int MaxPageSize { get; set; } = 100;
+}

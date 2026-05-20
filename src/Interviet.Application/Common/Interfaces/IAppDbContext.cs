@@ -93,6 +93,7 @@ public interface IAppDbContext
 
     // Notifications
     Microsoft.EntityFrameworkCore.DbSet<Notification> Notifications { get; }
+    Microsoft.EntityFrameworkCore.DbSet<NotificationPreference> NotificationPreferences { get; }
     Microsoft.EntityFrameworkCore.DbSet<EmailTemplate> EmailTemplates { get; }
     Microsoft.EntityFrameworkCore.DbSet<EmailCenterMessage> EmailCenterMessages { get; }
     Microsoft.EntityFrameworkCore.DbSet<EmailMessageLog> EmailMessageLogs { get; }

@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Interviews;
+using Interviet.Contracts.Notifications;
 using Interviet.Shared.Results;
 using Interviet.Domain.Interviews;
+
 
 namespace Interviet.Application.Interviews.Commands.CompleteInterview;
 
@@ -19,19 +21,23 @@ public sealed class CompleteInterviewCommandHandler
     private readonly IAiInterviewClient  _aiClient;
     private readonly IActivityLogger     _actLog;
     private readonly IDateTimeProvider   _dt;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<CompleteInterviewCommandHandler> _logger;
 
     public CompleteInterviewCommandHandler(
         IAppDbContext db, IAiInterviewClient aiClient,
         IActivityLogger actLog, IDateTimeProvider dt,
+        INotificationService notificationService,
         ILogger<CompleteInterviewCommandHandler> logger)
     {
-        _db       = db;
-        _aiClient = aiClient;
-        _actLog   = actLog;
-        _dt       = dt;
-        _logger   = logger;
+        _db                  = db;
+        _aiClient            = aiClient;
+        _actLog              = actLog;
+        _dt                  = dt;
+        _notificationService = notificationService;
+        _logger              = logger;
     }
+
 
     public async Task<Result<CompleteInterviewResponse>> Handle(CompleteInterviewCommand command, CancellationToken ct)
     {
@@ -171,6 +177,23 @@ public sealed class CompleteInterviewCommandHandler
             }
             catch { /* non-critical */ }
 
+            // ── In-app notification: interview.report_ready ─────────────────────
+            try
+            {
+                await _notificationService.CreateAsync(
+                    userId           : command.UserId,
+                    type             : NotificationType.InterviewReportReady,
+                    title            : "Báo cáo phỏng vấn đã sẵn sàng",
+                    message          : $"Bạn đạt {aiResult.OverallScore:F1}/100 trong phiên phỏng vấn. Xem báo cáo chi tiết.",
+                    actionUrl        : $"/interviews/{session.Id}/report",
+                    data             : new { sessionId = session.Id, overallScore = aiResult.OverallScore },
+                    priority         : NotificationPriority.High,
+                    deduplicationKey : $"{NotificationType.InterviewReportReady}:{session.Id}",
+                    ct               : CancellationToken.None);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to create interview.report_ready notification. SessionId={SessionId}", session.Id); }
+
+
             return Result<CompleteInterviewResponse>.Success(new CompleteInterviewResponse
             {
                 SessionId   = session.Id,
@@ -200,6 +223,23 @@ public sealed class CompleteInterviewCommandHandler
                     description: $"Phân tích phỏng vấn thất bại: {aiResult.ErrorCode}.");
             }
             catch { /* non-critical */ }
+
+            // ── In-app notification: interview.failed ───────────────────────────
+            try
+            {
+                await _notificationService.CreateAsync(
+                    userId           : command.UserId,
+                    type             : NotificationType.InterviewFailed,
+                    title            : "Phân tích phỏng vấn thất bại",
+                    message          : $"Quá trình phân tích phiên phỏng vấn gặp sự cố. Vui lòng tạo phiên mới.",
+                    actionUrl        : "/interviews",
+                    data             : new { sessionId = session.Id, errorCode = aiResult.ErrorCode },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.InterviewFailed}:{session.Id}",
+                    ct               : CancellationToken.None);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to create interview.failed notification. SessionId={SessionId}", session.Id); }
+
 
             return MapAiError(aiResult.ErrorCode, aiResult.ErrorMessage, aiResult.IsServiceUnavailable);
         }

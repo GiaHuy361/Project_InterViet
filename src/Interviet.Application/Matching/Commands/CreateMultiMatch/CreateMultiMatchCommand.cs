@@ -4,9 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Matching;
+using Interviet.Contracts.Notifications;
 using Interviet.Domain.Matching;
 using Interviet.Domain.Resumes;
 using Interviet.Shared.Results;
+
 
 namespace Interviet.Application.Matching.Commands.CreateMultiMatch;
 
@@ -307,6 +309,40 @@ public sealed class CreateMultiMatchCommandHandler
                 await actLogger.LogAsync(capturedUserId, statusKey, "MatchSession", sess.Id, $"Multi-match session {sess.Status}.");
                 
                 await finalDb.SaveChangesAsync();
+
+                // ── In-app notification based on session status ────────────────────
+                try
+                {
+                    var notifSvc = finalSp.GetRequiredService<INotificationService>();
+                    int completedCount2 = sess.Targets.Count(x => x.Status == MatchSessionStatus.Completed);
+                    if (sess.Status == MatchSessionStatus.Failed)
+                    {
+                        await notifSvc.CreateAsync(
+                            userId           : capturedUserId,
+                            type             : NotificationType.MatchFailed,
+                            title            : "Đối sánh nhiều JD thất bại",
+                            message          : "Quá trình đối sánh gặp sự cố. Vui lòng thử lại.",
+                            actionUrl        : $"/matches/{capturedSessionId}",
+                            data             : new { matchSessionId = capturedSessionId },
+                            priority         : NotificationPriority.Normal,
+                            deduplicationKey : $"{NotificationType.MatchFailed}:{capturedSessionId}");
+                    }
+                    else
+                    {
+                        await notifSvc.CreateAsync(
+                            userId           : capturedUserId,
+                            type             : NotificationType.MatchCompleted,
+                            title            : "Kết quả đối sánh đã sẵn sàng",
+                            message          : $"Đã đối sánh {completedCount2}/{sess.TargetCount} vị trí thành công. Xem kết quả chi tiết.",
+                            actionUrl        : $"/matches/{capturedSessionId}",
+                            data             : new { matchSessionId = capturedSessionId, completed = completedCount2, total = sess.TargetCount },
+                            priority         : NotificationPriority.Normal,
+                            deduplicationKey : $"{NotificationType.MatchCompleted}:{capturedSessionId}");
+                    }
+                }
+                catch (Exception ex) { capturedLogger.LogWarning(ex, "Failed to create multi-match notification. SessionId={SessionId}", capturedSessionId); }
+
+
             }
         });
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Application.Common.Options;
 using Interviet.Contracts.Billing;
+using Interviet.Contracts.Notifications;
 using Interviet.Domain.Billing;
 using Interviet.Shared.Results;
 
@@ -14,18 +15,21 @@ public sealed class BillingSuccessService : IBillingSuccessService
     private readonly IAppDbContext _db;
     private readonly BillingOptions _billing;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<BillingSuccessService> _logger;
 
     public BillingSuccessService(
         IAppDbContext db,
         IOptions<BillingOptions> billing,
         IEmailService emailService,
+        INotificationService notificationService,
         ILogger<BillingSuccessService> logger)
     {
-        _db           = db;
-        _billing      = billing.Value;
-        _emailService = emailService;
-        _logger       = logger;
+        _db                  = db;
+        _billing             = billing.Value;
+        _emailService        = emailService;
+        _notificationService = notificationService;
+        _logger              = logger;
     }
 
     public async Task<Result<SimulateSuccessResponse>> ProcessPaymentSuccessAsync(
@@ -271,6 +275,41 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 "Failed to send payment success email to user {UserId} for invoice {InvoiceNumber}",
                 userId, invoiceNumber);
         }
+
+        // ── Fire-and-forget in-app notification ──────────────────────────────
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var displayAmount = session.CurrencyCode == "VND"
+                    ? $"{session.Amount:N0} ₫"
+                    : $"{session.Amount:N2} {session.CurrencyCode}";
+
+                await _notificationService.CreateAsync(
+                    userId           : userId,
+                    type             : NotificationType.BillingPaymentSucceeded,
+                    title            : "Thanh toán thành công",
+                    message          : $"Gói {plan.Name} của bạn đã được kích hoạt thành công. Số tiền: {displayAmount}.",
+                    actionUrl        : "/subscription",
+                    data             : new
+                    {
+                        checkoutSessionId = session.Id,
+                        paymentId         = tx.Id,
+                        invoiceId         = invoice.Id,
+                        subscriptionId,
+                        planKey           = session.PlanKey,
+                        provider          = session.Provider,
+                        amount            = session.Amount,
+                        currencyCode      = session.CurrencyCode
+                    },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.BillingPaymentSucceeded}:{session.Id}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create payment success notification. UserId={UserId}", userId);
+            }
+        });
 
         return new SimulateSuccessResponse
         {

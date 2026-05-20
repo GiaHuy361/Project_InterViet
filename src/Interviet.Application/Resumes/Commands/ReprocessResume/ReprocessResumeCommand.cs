@@ -2,9 +2,11 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Interviet.Application.Common.Interfaces;
+using Interviet.Contracts.Notifications;
 using Interviet.Contracts.Resumes;
 using Interviet.Domain.Resumes;
 using Interviet.Shared.Results;
+
 
 namespace Interviet.Application.Resumes.Commands.ReprocessResume;
 
@@ -181,6 +183,24 @@ public sealed class ReprocessResumeCommandHandler : IRequestHandler<ReprocessRes
                         });
                     }
                     capturedLogger.LogInformation("CV reprocessed successfully. ResumeId={ResumeId}", capturedResumeId);
+
+                    // ── In-app notification: resume.parsed ───────────────────────────
+                    try
+                    {
+                        using var notifScope = capturedScopeFactory.CreateScope();
+                        var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                        await notifSvc.CreateAsync(
+                            userId           : capturedUserId,
+                            type             : NotificationType.ResumeParsed,
+                            title            : "CV đã được phân tích xong",
+                            message          : "CV của bạn đã được phân tích thành công và sẵn sàng sử dụng.",
+                            actionUrl        : $"/cv/{capturedResumeId}",
+                            data             : new { resumeId = capturedResumeId },
+                            priority         : NotificationPriority.Normal,
+                            deduplicationKey : $"{NotificationType.ResumeParsed}:{capturedResumeId}");
+                    }
+                    catch (Exception ex) { capturedLogger.LogWarning(ex, "Failed to create resume.parsed notification. ResumeId={ResumeId}", capturedResumeId); }
+
                 }
                 else
                 {
@@ -191,6 +211,24 @@ public sealed class ReprocessResumeCommandHandler : IRequestHandler<ReprocessRes
                     ver.ProcessingError = result.ErrorMessage;
                     res.UpdatedAt       = now;
                     capturedLogger.LogWarning("CV reprocess failed. ResumeId={ResumeId} Code={Code}", capturedResumeId, result.ErrorCode);
+
+                    // ── In-app notification: resume.failed ───────────────────────────
+                    try
+                    {
+                        using var notifScope = capturedScopeFactory.CreateScope();
+                        var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                        await notifSvc.CreateAsync(
+                            userId           : capturedUserId,
+                            type             : NotificationType.ResumeFailed,
+                            title            : "Phân tích CV thất bại",
+                            message          : $"Quá trình phân tích CV gặp sự cố. Vui lòng thử lại. ({result.ErrorCode})",
+                            actionUrl        : $"/cv/{capturedResumeId}",
+                            data             : new { resumeId = capturedResumeId, errorCode = result.ErrorCode },
+                            priority         : NotificationPriority.Normal,
+                            deduplicationKey : $"{NotificationType.ResumeFailed}:{capturedResumeId}");
+                    }
+                    catch (Exception ex) { capturedLogger.LogWarning(ex, "Failed to create resume.failed notification. ResumeId={ResumeId}", capturedResumeId); }
+
                 }
 
                 await db.SaveChangesAsync();

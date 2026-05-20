@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Matching;
+using Interviet.Contracts.Notifications;
 using Interviet.Domain.Matching;
 using Interviet.Shared.Results;
+
 
 namespace Interviet.Application.Matching.Commands.CreateMatch;
 
@@ -264,7 +266,7 @@ public sealed class CreateMatchCommandHandler
 
             await db.SaveChangesAsync();
 
-            // Activity + Usage — separate scope, non-critical
+            // Activity + Usage ── separate scope, non-critical
             try
             {
                 using var hookScope  = scopeFactory.CreateScope();
@@ -277,6 +279,24 @@ public sealed class CreateMatchCommandHandler
                     referenceType: "MatchSession", referenceId: sessionId);
             }
             catch (Exception ex) { logger.LogWarning(ex, "activity/usage log failed: match_completed"); }
+
+            // ── In-app notification: match.completed ──────────────────────────
+            try
+            {
+                using var notifScope = scopeFactory.CreateScope();
+                var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                await notifSvc.CreateAsync(
+                    userId           : userId,
+                    type             : NotificationType.MatchCompleted,
+                    title            : "Kết quả đối sánh đã sẵn sàng",
+                    message          : $"Điểm đối sánh của bạn: {result.OverallScore:F1}/100. Xem chi tiết kết quả.",
+                    actionUrl        : $"/matches/{sessionId}",
+                    data             : new { matchSessionId = sessionId, overallScore = result.OverallScore },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.MatchCompleted}:{sessionId}");
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "Failed to create match.completed notification. SessionId={SessionId}", sessionId); }
+
         }
         else
         {
@@ -287,7 +307,7 @@ public sealed class CreateMatchCommandHandler
 
             await db.SaveChangesAsync();
 
-            // Activity + Usage — separate scope, non-critical
+            // Activity + Usage ── separate scope, non-critical
             try
             {
                 using var hookScope  = scopeFactory.CreateScope();
@@ -300,6 +320,24 @@ public sealed class CreateMatchCommandHandler
                     referenceType: "MatchSession", referenceId: sessionId);
             }
             catch (Exception ex) { logger.LogWarning(ex, "activity/usage log failed: match_failed"); }
+
+            // ── In-app notification: match.failed ───────────────────────────
+            try
+            {
+                using var notifScope = scopeFactory.CreateScope();
+                var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                await notifSvc.CreateAsync(
+                    userId           : userId,
+                    type             : NotificationType.MatchFailed,
+                    title            : "Đối sánh thất bại",
+                    message          : $"Quá trình đối sánh gặp sự cố. Vui lòng thử lại. ({result.ErrorCode})",
+                    actionUrl        : $"/matches/{sessionId}",
+                    data             : new { matchSessionId = sessionId, errorCode = result.ErrorCode },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.MatchFailed}:{sessionId}");
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "Failed to create match.failed notification. SessionId={SessionId}", sessionId); }
+
         }
     }
 }

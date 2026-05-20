@@ -97,6 +97,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext
 
     // ── Notifications ───────────────────────────────────────────────────────
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<EmailCenterMessage> EmailCenterMessages => Set<EmailCenterMessage>();
     public DbSet<EmailMessageLog> EmailMessageLogs => Set<EmailMessageLog>();

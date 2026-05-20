@@ -357,14 +357,48 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
     {
         b.ToTable("Notifications");
         b.HasKey(x => x.Id);
-        b.Property(x => x.Category).HasMaxLength(50).IsRequired();
-        b.Property(x => x.Type).HasMaxLength(20).IsRequired();
-        b.Property(x => x.Channel).HasMaxLength(20).IsRequired().HasDefaultValue("in_app");
+        b.Property(x => x.UserId).IsRequired();
+        b.Property(x => x.Type).HasMaxLength(100).IsRequired();
         b.Property(x => x.Title).HasMaxLength(250).IsRequired();
+        b.Property(x => x.Message).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.Priority).HasMaxLength(20).IsRequired().HasDefaultValue("normal");
         b.Property(x => x.ActionUrl).HasMaxLength(500);
-        b.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
+        b.Property(x => x.DataJson).HasMaxLength(4000);
+        b.Property(x => x.DeduplicationKey).HasMaxLength(200);
+        b.Property(x => x.CreatedAt).IsRequired();
+        b.Property(x => x.UpdatedAt);
+        b.Property(x => x.DeletedAt);
+
+        // Indexes for common query patterns
+        b.HasIndex(x => new { x.UserId, x.CreatedAt });
+        b.HasIndex(x => new { x.UserId, x.IsRead });
+        b.HasIndex(x => new { x.UserId, x.Type });
+        b.HasIndex(x => new { x.UserId, x.DeduplicationKey });
     }
 }
+
+public class NotificationPreferenceConfiguration : IEntityTypeConfiguration<NotificationPreference>
+{
+    public void Configure(EntityTypeBuilder<NotificationPreference> b)
+    {
+        b.ToTable("NotificationPreferences");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.UserId).IsRequired();
+        b.Property(x => x.InAppNotificationsEnabled).IsRequired();
+        b.Property(x => x.EmailNotificationsEnabled).IsRequired();
+        b.Property(x => x.BillingNotificationsEnabled).IsRequired();
+        b.Property(x => x.ResumeNotificationsEnabled).IsRequired();
+        b.Property(x => x.MatchingNotificationsEnabled).IsRequired();
+        b.Property(x => x.InterviewNotificationsEnabled).IsRequired();
+        b.Property(x => x.MentorNotificationsEnabled).IsRequired();
+        b.Property(x => x.SystemNotificationsEnabled).IsRequired();
+        b.Property(x => x.CreatedAt).IsRequired();
+        b.Property(x => x.UpdatedAt);
+        // One preference record per user
+        b.HasIndex(x => x.UserId).IsUnique();
+    }
+}
+
 
 public class EmailTemplateConfiguration : IEntityTypeConfiguration<EmailTemplate>
 {

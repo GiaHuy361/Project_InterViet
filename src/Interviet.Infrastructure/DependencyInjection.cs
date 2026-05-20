@@ -44,6 +44,8 @@ public static class DependencyInjection
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<AiServicesOptions>(configuration.GetSection(AiServicesOptions.SectionName));
         services.Configure<BillingOptions>(configuration.GetSection(BillingOptions.SectionName));
+        services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+
 
         // ── Email service ─────────────────────────────────────────────────
         services.AddTransient<IEmailService>(sp =>
@@ -72,6 +74,8 @@ public static class DependencyInjection
         services.AddScoped<IUsageTracker, UsageTracker>();
         services.AddScoped<IQuotaService, QuotaService>();
         services.AddScoped<IBillingSuccessService, BillingSuccessService>();
+        services.AddScoped<INotificationService, NotificationService>();
+
 
         // ── Storage service ───────────────────────────────────────────────
         services.AddSingleton<IStorageService>(sp =>

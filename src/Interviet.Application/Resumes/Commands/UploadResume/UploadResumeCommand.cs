@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Application.Common.Options;
+using Interviet.Contracts.Notifications;
 using Interviet.Contracts.Resumes;
 using Interviet.Domain.Resumes;
 using Interviet.Shared.Results;
@@ -369,6 +370,23 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
                     referenceType: "Resume", referenceId: resumeId);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed post-parse-success"); }
+
+            // ── In-app notification: resume.parsed ────────────────────────────
+            try
+            {
+                using var notifScope = _scopeFactory.CreateScope();
+                var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                await notifSvc.CreateAsync(
+                    userId           : userId,
+                    type             : NotificationType.ResumeParsed,
+                    title            : "CV đã được phân tích xong",
+                    message          : "CV của bạn đã được phân tích thành công và sẵn sàng sử dụng.",
+                    actionUrl        : $"/cv/{resumeId}",
+                    data             : new { resumeId },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.ResumeParsed}:{resumeId}");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to create resume.parsed notification. ResumeId={ResumeId}", resumeId); }
         }
         else if (result.IsServiceUnavailable)
         {
@@ -435,6 +453,23 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
                     referenceType: "Resume", referenceId: resumeId);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "activity/usage log failed post-parse-failed"); }
+
+            // ── In-app notification: resume.failed ────────────────────────────
+            try
+            {
+                using var notifScope = _scopeFactory.CreateScope();
+                var notifSvc = notifScope.ServiceProvider.GetRequiredService<INotificationService>();
+                await notifSvc.CreateAsync(
+                    userId           : userId,
+                    type             : NotificationType.ResumeFailed,
+                    title            : "Phân tích CV thất bại",
+                    message          : $"Quá trình phân tích CV gặp sự cố. Vui lòng thử lại. ({result.ErrorCode})",
+                    actionUrl        : $"/cv/{resumeId}",
+                    data             : new { resumeId, errorCode = result.ErrorCode },
+                    priority         : NotificationPriority.Normal,
+                    deduplicationKey : $"{NotificationType.ResumeFailed}:{resumeId}");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to create resume.failed notification. ResumeId={ResumeId}", resumeId); }
         }
 
         await db.SaveChangesAsync();
