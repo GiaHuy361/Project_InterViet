@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Interviet.Domain.Mentors;
+using Interviet.Domain.Identity;
+using Interviet.Domain.Profiles;
+using Interviet.Application.Common.Interfaces;
 
 namespace Interviet.Infrastructure.Persistence;
 
@@ -128,5 +131,56 @@ public static class DbSeeder
         }
 
         await db.SaveChangesAsync();
+    }
+
+    public static async Task SeedAdminUserAsync(AppDbContext db, IPasswordHasher passwordHasher)
+    {
+        var email = "hienngochuy3@gmail.com";
+        var normalizedEmail = email.ToUpperInvariant();
+        var exists = await db.Users.AnyAsync(u => u.NormalizedEmail == normalizedEmail);
+        if (!exists)
+        {
+            var now = DateTime.UtcNow;
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                FullName = "Hien Ngoc Huy",
+                Email = email,
+                NormalizedEmail = normalizedEmail,
+                PasswordHash = passwordHasher.Hash("Ae5saovjp@"),
+                RoleCode = RoleCodes.Admin,
+                Status = "free",
+                IsEmailVerified = true,
+                EmailVerifiedAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            db.Users.Add(user);
+
+            var profile = new CandidateProfile
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                CompletenessScore = 100,
+                Summary = "Default Administrator Profile",
+                YearsOfExperience = 5m,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            db.CandidateProfiles.Add(profile);
+
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
+            if (user != null)
+            {
+                user.RoleCode = RoleCodes.Admin;
+                user.PasswordHash = passwordHasher.Hash("Ae5saovjp@");
+                user.IsEmailVerified = true;
+                await db.SaveChangesAsync();
+            }
+        }
     }
 }

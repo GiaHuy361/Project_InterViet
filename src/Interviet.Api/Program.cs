@@ -235,6 +235,11 @@ try
                 Log.Information("Seed user {Email} successfully promoted to Admin on startup.", adminOpts.SeedAdminEmail);
             }
         }
+
+        // Seed the requested admin user
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<Interviet.Application.Common.Interfaces.IPasswordHasher>();
+        await Interviet.Infrastructure.Persistence.DbSeeder.SeedAdminUserAsync(db, passwordHasher);
+        Log.Information("Admin user hienngochuy3@gmail.com seeded successfully.");
     }
 
     // ── Middleware pipeline (ORDER MATTERS) ───────────────────────────────
