@@ -120,3 +120,22 @@ public sealed class MentorNetworkOptions
     public bool EnableSeedData { get; set; } = true;
 }
 
+public sealed class AdminOptions
+{
+    public const string SectionName = "Admin";
+
+    public bool Enabled { get; set; } = true;
+    public bool EnableDevBootstrap { get; set; } = true;
+    public string SeedAdminEmail { get; set; } = "admin@example.com";
+}
+
+public sealed class SupportOptions
+{
+    public const string SectionName = "Support";
+
+    public bool Enabled { get; set; } = true;
+    public int DefaultPageSize { get; set; } = 20;
+    public int MaxPageSize { get; set; } = 100;
+}
+
+

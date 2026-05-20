@@ -110,6 +110,8 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<SupportTicketMessage> SupportTicketMessages { get; }
     Microsoft.EntityFrameworkCore.DbSet<UserFeedback> UserFeedbacks { get; }
     Microsoft.EntityFrameworkCore.DbSet<AdminActionLog> AdminActionLogs { get; }
+    Microsoft.EntityFrameworkCore.DbSet<AuditLog> AuditLogs { get; }
+
 
     // Dashboard & AI
     Microsoft.EntityFrameworkCore.DbSet<OnboardingProgress> OnboardingProgress { get; }

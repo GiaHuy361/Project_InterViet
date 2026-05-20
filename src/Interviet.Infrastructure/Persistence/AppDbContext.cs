@@ -114,6 +114,8 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
     public DbSet<AdminActionLog> AdminActionLogs => Set<AdminActionLog>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
 
     // ── Dashboard & AI ──────────────────────────────────────────────────────
     public DbSet<OnboardingProgress> OnboardingProgress => Set<OnboardingProgress>();

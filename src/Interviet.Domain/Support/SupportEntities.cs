@@ -72,6 +72,7 @@ public class SupportTicket : AuditableEntity
     public string Description { get; set; } = string.Empty;
     public string? AssignedTo { get; set; }
     public DateTime? ClosedAt { get; set; }
+    public DateTime? LastMessageAt { get; set; }
 
     public ICollection<SupportTicketMessage> Messages { get; set; } = [];
 }
@@ -85,6 +86,7 @@ public class SupportTicketMessage : BaseEntity
     public Guid? SenderUserId { get; set; }
     public string MessageBody { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsInternalNote { get; set; } = false;
 }
 
 public class UserFeedback : BaseEntity
@@ -104,5 +106,19 @@ public class AdminActionLog : BaseEntity
     public string TargetEntityType { get; set; } = string.Empty;
     public Guid? TargetEntityId { get; set; }
     public string? Details { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class AuditLog : BaseEntity
+{
+    public Guid? ActorId { get; set; }
+    public string? ActorEmail { get; set; }
+    public string ActorRole { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string? Resource { get; set; }
+    public string? ResourceId { get; set; }
+    public string? MetadataJson { get; set; }
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

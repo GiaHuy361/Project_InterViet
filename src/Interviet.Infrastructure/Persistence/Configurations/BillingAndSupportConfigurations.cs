@@ -477,6 +477,7 @@ public class SupportTicketConfiguration : IEntityTypeConfiguration<SupportTicket
         b.Property(x => x.Subject).HasMaxLength(250).IsRequired();
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
         b.Property(x => x.AssignedTo).HasMaxLength(100);
+        b.Property(x => x.LastMessageAt);
         b.HasIndex(x => x.TicketNumber).IsUnique();
         b.HasIndex(x => new { x.UserId, x.CreatedAt });
         b.HasMany(x => x.Messages).WithOne().HasForeignKey(m => m.SupportTicketId);
@@ -490,6 +491,7 @@ public class SupportTicketMessageConfiguration : IEntityTypeConfiguration<Suppor
         b.ToTable("SupportTicketMessages");
         b.HasKey(x => x.Id);
         b.Property(x => x.SenderType).HasMaxLength(20).IsRequired();
+        b.Property(x => x.IsInternalNote).HasDefaultValue(false);
     }
 }
 
@@ -501,6 +503,22 @@ public class AdminActionLogConfiguration : IEntityTypeConfiguration<AdminActionL
         b.HasKey(x => x.Id);
         b.Property(x => x.ActionKey).HasMaxLength(100).IsRequired();
         b.Property(x => x.TargetEntityType).HasMaxLength(100).IsRequired();
+    }
+}
+
+public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
+{
+    public void Configure(EntityTypeBuilder<AuditLog> b)
+    {
+        b.ToTable("AuditLogs");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ActorRole).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Action).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Resource).HasMaxLength(100);
+        b.Property(x => x.ResourceId).HasMaxLength(100);
+        b.Property(x => x.IpAddress).HasMaxLength(64);
+        b.Property(x => x.UserAgent).HasMaxLength(1000);
+        b.HasIndex(x => new { x.ActorId, x.CreatedAt });
     }
 }
 

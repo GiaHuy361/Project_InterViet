@@ -92,7 +92,13 @@ try
             };
         });
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("AdminOnly", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Admin));
+        options.AddPolicy("AdminOrSupport", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Admin, Interviet.Domain.Identity.RoleCodes.Support));
+    });
 
     // ── Controllers ───────────────────────────────────────────────────────
     builder.Services.AddControllers()
@@ -215,6 +221,19 @@ try
         {
             await Interviet.Infrastructure.Persistence.DbSeeder.SeedMentorsAsync(db);
             Log.Information("Mentor seed data applied successfully.");
+        }
+
+        var adminOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.AdminOptions>>().Value;
+        if (adminOpts.EnableDevBootstrap && !string.IsNullOrWhiteSpace(adminOpts.SeedAdminEmail))
+        {
+            var seedEmailNormalized = adminOpts.SeedAdminEmail.ToUpperInvariant();
+            var seedUser = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == seedEmailNormalized);
+            if (seedUser != null && seedUser.RoleCode != Interviet.Domain.Identity.RoleCodes.Admin)
+            {
+                seedUser.RoleCode = Interviet.Domain.Identity.RoleCodes.Admin;
+                await db.SaveChangesAsync();
+                Log.Information("Seed user {Email} successfully promoted to Admin on startup.", adminOpts.SeedAdminEmail);
+            }
         }
     }
 

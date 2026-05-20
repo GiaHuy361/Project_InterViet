@@ -34,8 +34,10 @@ public static class DependencyInjection
 
         // ── Infrastructure services ───────────────────────────────────────
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
+
 
         // ── Options binding ───────────────────────────────────────────────
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
         services.Configure<ReportOptions>(configuration.GetSection(ReportOptions.SectionName));
         services.Configure<MentorNetworkOptions>(configuration.GetSection(MentorNetworkOptions.SectionName));
+        services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
+        services.Configure<SupportOptions>(configuration.GetSection(SupportOptions.SectionName));
 
 
         // ── Email service ─────────────────────────────────────────────────
