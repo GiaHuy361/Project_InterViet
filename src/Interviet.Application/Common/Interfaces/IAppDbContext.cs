@@ -83,6 +83,7 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<PaymentTransaction> PaymentTransactions { get; }
     Microsoft.EntityFrameworkCore.DbSet<Invoice> Invoices { get; }
     Microsoft.EntityFrameworkCore.DbSet<BillingCheckoutSession> BillingCheckoutSessions { get; }
+    Microsoft.EntityFrameworkCore.DbSet<BillingPaymentAttempt> BillingPaymentAttempts { get; }
 
     // Quota
     Microsoft.EntityFrameworkCore.DbSet<UsageQuotaPolicy> UsageQuotaPolicies { get; }

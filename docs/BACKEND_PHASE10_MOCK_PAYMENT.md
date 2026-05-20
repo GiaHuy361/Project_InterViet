@@ -59,6 +59,39 @@ Tất cả endpoints đều yêu cầu `[Authorize]`.
 
 ---
 
+## Phase 10B: Mock Checkout Experience (QR & Bank Transfer)
+
+Nâng cấp trải nghiệm thanh toán mô phỏng chuyển khoản thủ công và quét mã QR Code động.
+
+### Flow nâng cấp Happy Path:
+```
+1. POST /api/v1/billing/checkout
+   → Trả về CheckoutResponse có thêm `paymentInstructionsUrl`
+
+2. GET /api/v1/billing/checkout-sessions/{id}/payment-instructions
+   → Nhận thông tin tài khoản Merchant Mock, số tiền, và mã QR dạng Base64 (sinh offline qua QRCoder)
+   → Nội dung chuyển khoản yêu cầu dạng: IVT {yyyyMMdd} {first 6 chars of sessionId}
+
+3. POST /api/v1/billing/checkout-sessions/{id}/submit-bank-transfer
+   Body: { payerAccountNumber, payerAccountName, amountPaid, transferContent }
+   → Validate số tiền (khớp 100%) và nội dung chuyển khoản (trim + case-insensitive)
+   → Nếu Sai: Lưu nỗ lực dạng `rejected` và trả về 400 Bad Request
+   → Nếu Đúng: Lưu nỗ lực dạng `accepted`, đổi trạng thái session sang `succeeded`, nâng cấp Subscription, xuất Hóa đơn (Paid) và gửi Email receipt.
+   → Số tài khoản người chuyển sẽ được ẩn (masked) an toàn dưới dạng `******7890` trước khi lưu vào DB.
+
+4. GET /api/v1/billing/checkout-sessions/{id}/attempts
+   → Trả về lịch sử nỗ lực xác thực giao dịch chuyển khoản cho checkout session cụ thể.
+```
+
+### Endpoints bổ sung (Phase 10B):
+```
+GET  /api/v1/billing/checkout-sessions/{id}/payment-instructions
+POST /api/v1/billing/checkout-sessions/{id}/submit-bank-transfer
+GET  /api/v1/billing/checkout-sessions/{id}/attempts
+```
+
+---
+
 ## Simulate States
 
 | Action | Hiệu ứng |
@@ -74,6 +107,7 @@ Tất cả endpoints đều yêu cầu `[Authorize]`.
 ## Database Tables mới
 
 - `BillingCheckoutSessions` — lưu checkout sessions
+- `BillingPaymentAttempts` — lưu lịch sử nỗ lực xác minh chuyển khoản ngân hàng của user (Phase 10B)
 
 **Cột mới trên tables cũ:**
 - `PaymentTransactions`: thêm `PlanKey`, `CheckoutSessionId`
@@ -95,13 +129,20 @@ Ví dụ: `IVT-20260520-0001`, `IVT-20260520-0002`
   "EnableDevSubscriptionActivation": false,
   "MockPaymentsEnabled": true,
   "MockCheckoutTtlMinutes": 30,
-  "FrontendBaseUrl": "http://localhost:3000"
+  "FrontendBaseUrl": "http://localhost:3000",
+  "MockMerchant": {
+    "MerchantName": "INTER-VIET",
+    "BankName": "INTER-VIET Mock Bank",
+    "BankCode": "IVB",
+    "AccountNumber": "9704000000012345",
+    "AccountName": "CONG TY TNHH INTER VIET"
+  }
 }
 ```
 
 ---
 
-## Frontend sau simulate-success cần refetch
+## Frontend sau simulate-success / submit-bank-transfer thành công cần refetch
 
 ```
 GET /api/v1/subscription

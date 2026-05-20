@@ -87,6 +87,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<BillingCheckoutSession> BillingCheckoutSessions => Set<BillingCheckoutSession>();
+    public DbSet<BillingPaymentAttempt> BillingPaymentAttempts => Set<BillingPaymentAttempt>();
 
     // ── Quota ───────────────────────────────────────────────────────────────
     public DbSet<UsageQuotaPolicy> UsageQuotaPolicies => Set<UsageQuotaPolicy>();

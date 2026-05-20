@@ -61,6 +61,15 @@ public sealed class AiServicesOptions
     public int TimeoutSeconds { get; set; } = 60;
 }
 
+public sealed class MockMerchantOptions
+{
+    public string MerchantName { get; set; } = "INTER-VIET";
+    public string BankName { get; set; } = "INTER-VIET Mock Bank";
+    public string BankCode { get; set; } = "IVB";
+    public string AccountNumber { get; set; } = "9704000000012345";
+    public string AccountName { get; set; } = "CONG TY TNHH INTER VIET";
+}
+
 public sealed class BillingOptions
 {
     public const string SectionName = "Billing";
@@ -75,4 +84,6 @@ public sealed class BillingOptions
 
     /// <summary>Frontend base URL used to build checkoutUrl links.</summary>
     public string FrontendBaseUrl { get; set; } = "http://localhost:3000";
+
+    public MockMerchantOptions MockMerchant { get; set; } = new();
 }

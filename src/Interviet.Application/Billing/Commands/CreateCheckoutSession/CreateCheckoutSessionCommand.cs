@@ -83,7 +83,8 @@ public sealed class CreateCheckoutSessionCommandHandler
             Provider          = session.Provider,
             PlanKey           = session.PlanKey,
             Amount            = session.Amount,
-            CurrencyCode      = session.CurrencyCode
+            CurrencyCode      = session.CurrencyCode,
+            PaymentInstructionsUrl = $"/api/v1/billing/checkout-sessions/{session.Id}/payment-instructions"
         };
     }
 }

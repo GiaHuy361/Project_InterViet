@@ -71,6 +71,7 @@ public sealed class CheckoutResponse
     public string PlanKey { get; init; } = string.Empty;
     public decimal Amount { get; init; }
     public string CurrencyCode { get; init; } = string.Empty;
+    public string? PaymentInstructionsUrl { get; init; }
 }
 
 public sealed class CheckoutSessionResponse
@@ -185,4 +186,71 @@ public static class MockProvider
 
     public static bool IsValid(string? provider) =>
         !string.IsNullOrWhiteSpace(provider) && Valid.Contains(provider);
+}
+
+// ── Phase 10B: Mock Checkout Experience ──────────────────────────────────────────
+
+public sealed class PaymentInstructionsResponse
+{
+    public Guid CheckoutSessionId { get; init; }
+    public string PlanKey { get; init; } = string.Empty;
+    public decimal Amount { get; init; }
+    public string CurrencyCode { get; init; } = string.Empty;
+    public MerchantResponse Merchant { get; init; } = new();
+    public TransferResponse Transfer { get; init; } = new();
+    public QrResponse Qr { get; init; } = new();
+}
+
+public sealed class MerchantResponse
+{
+    public string MerchantName { get; init; } = string.Empty;
+    public string BankName { get; init; } = string.Empty;
+    public string BankCode { get; init; } = string.Empty;
+    public string AccountNumber { get; init; } = string.Empty;
+    public string AccountName { get; init; } = string.Empty;
+}
+
+public sealed class TransferResponse
+{
+    public string RequiredContent { get; init; } = string.Empty;
+    public decimal Amount { get; init; }
+    public string CurrencyCode { get; init; } = "VND";
+}
+
+public sealed class QrResponse
+{
+    public string Payload { get; init; } = string.Empty;
+    public string ImageBase64 { get; init; } = string.Empty; // data:image/png;base64,...
+}
+
+public sealed class SubmitBankTransferRequest
+{
+    public string PayerAccountNumber { get; init; } = string.Empty;
+    public string PayerAccountName { get; init; } = string.Empty;
+    public decimal AmountPaid { get; init; }
+    public string TransferContent { get; init; } = string.Empty;
+}
+
+public sealed class SubmitBankTransferResponse
+{
+    public Guid CheckoutSessionId { get; init; }
+    public string Status { get; init; } = string.Empty; // succeeded / failed
+    public AttemptResponse Attempt { get; init; } = new();
+    public SimulateSuccessResponse? SuccessInfo { get; init; }
+}
+
+public sealed class AttemptResponse
+{
+    public Guid Id { get; init; }
+    public Guid CheckoutSessionId { get; init; }
+    public string Provider { get; init; } = string.Empty;
+    public string Method { get; init; } = string.Empty;
+    public string PayerAccountNumberMasked { get; init; } = string.Empty;
+    public string PayerAccountName { get; init; } = string.Empty;
+    public decimal AmountPaid { get; init; }
+    public string CurrencyCode { get; init; } = "VND";
+    public string TransferContent { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty; // submitted / accepted / rejected
+    public string? RejectionReason { get; init; }
+    public DateTime CreatedAt { get; init; }
 }

@@ -221,6 +221,29 @@ public class BillingCheckoutSessionConfiguration : IEntityTypeConfiguration<Bill
     }
 }
 
+public class BillingPaymentAttemptConfiguration : IEntityTypeConfiguration<BillingPaymentAttempt>
+{
+    public void Configure(EntityTypeBuilder<BillingPaymentAttempt> b)
+    {
+        b.ToTable("BillingPaymentAttempts");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Method).HasMaxLength(50).IsRequired();
+        b.Property(x => x.PayerAccountNumberMasked).HasMaxLength(100).IsRequired();
+        b.Property(x => x.PayerAccountName).HasMaxLength(200).IsRequired();
+        b.Property(x => x.AmountPaid).HasColumnType("decimal(18,2)");
+        b.Property(x => x.CurrencyCode).HasMaxLength(10).HasDefaultValue("VND");
+        b.Property(x => x.TransferContent).HasMaxLength(250).IsRequired();
+        b.Property(x => x.ExpectedTransferContent).HasMaxLength(250).IsRequired();
+        b.Property(x => x.TransactionReference).HasMaxLength(150).IsRequired();
+        b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        b.Property(x => x.RejectionReason).HasMaxLength(500);
+
+        b.HasIndex(x => new { x.UserId, x.CheckoutSessionId, x.CreatedAt });
+        b.HasIndex(x => x.TransactionReference);
+    }
+}
+
 // ── Quota ─────────────────────────────────────────────────────────────────────
 public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuotaPolicy>
 {

@@ -9,6 +9,9 @@ using Interviet.Application.Billing.Commands.SimulatePaymentCancelled;
 using Interviet.Application.Billing.Queries.GetCheckoutSession;
 using Interviet.Application.Billing.Queries.GetMyInvoices;
 using Interviet.Application.Billing.Queries.GetMyPayments;
+using Interviet.Application.Billing.Queries.GetPaymentInstructions;
+using Interviet.Application.Billing.Commands.SubmitBankTransfer;
+using Interviet.Application.Billing.Queries.GetAttempts;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Billing;
 
@@ -94,6 +97,38 @@ public class BillingController : ApiControllerBase
     {
         return FromResult(await _mediator.Send(
             new SimulatePaymentCancelledCommand(_currentUser.UserId, id, request.Reason)));
+    }
+
+    // ── Phase 10B: Mock Checkout Experience ────────────────────────────────────
+
+    /// <summary>Gets mock bank transfer payment instructions and QR code for the session.</summary>
+    [HttpGet("checkout-sessions/{id:guid}/payment-instructions")]
+    public async Task<IActionResult> GetPaymentInstructions(Guid id)
+    {
+        return FromResult(await _mediator.Send(
+            new GetPaymentInstructionsQuery(_currentUser.UserId, id)));
+    }
+
+    /// <summary>Submits mock bank transfer payment details for validation.</summary>
+    [HttpPost("checkout-sessions/{id:guid}/submit-bank-transfer")]
+    public async Task<IActionResult> SubmitBankTransfer(Guid id, [FromBody] SubmitBankTransferRequest request)
+    {
+        return FromResult(await _mediator.Send(new SubmitBankTransferCommand(
+            UserId: _currentUser.UserId,
+            CheckoutSessionId: id,
+            PayerAccountNumber: request.PayerAccountNumber,
+            PayerAccountName: request.PayerAccountName,
+            AmountPaid: request.AmountPaid,
+            TransferContent: request.TransferContent
+        )));
+    }
+
+    /// <summary>Lists all mock bank transfer validation attempts for the session.</summary>
+    [HttpGet("checkout-sessions/{id:guid}/attempts")]
+    public async Task<IActionResult> GetAttempts(Guid id)
+    {
+        return FromResult(await _mediator.Send(
+            new GetAttemptsQuery(_currentUser.UserId, id)));
     }
 
     // ── Invoices & Payments ───────────────────────────────────────────────────

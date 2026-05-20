@@ -29,6 +29,26 @@ public class BillingCheckoutSession : AuditableEntity
     public PaymentTransaction? PaymentTransaction { get; set; }
 }
 
+public class BillingPaymentAttempt : BaseEntity
+{
+    public Guid UserId { get; set; }
+    public Guid CheckoutSessionId { get; set; }
+    public string Provider { get; set; } = string.Empty;
+    public string Method { get; set; } = string.Empty; // bank_transfer / qr
+    public string PayerAccountNumberMasked { get; set; } = string.Empty;
+    public string PayerAccountName { get; set; } = string.Empty;
+    public decimal AmountPaid { get; set; }
+    public string CurrencyCode { get; set; } = "VND";
+    public string TransferContent { get; set; } = string.Empty;
+    public string ExpectedTransferContent { get; set; } = string.Empty;
+    public string TransactionReference { get; set; } = string.Empty;
+
+    /// <summary>submitted | accepted | rejected</summary>
+    public string Status { get; set; } = "submitted";
+    public string? RejectionReason { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class Plan : AuditableEntity
 {
     public string Code { get; set; } = string.Empty;

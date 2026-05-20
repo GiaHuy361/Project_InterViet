@@ -35,6 +35,7 @@ public static class DependencyInjection
         // ── Infrastructure services ───────────────────────────────────────
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
 
         // ── Options binding ───────────────────────────────────────────────
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
@@ -70,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IActivityLogger, ActivityLogger>();
         services.AddScoped<IUsageTracker, UsageTracker>();
         services.AddScoped<IQuotaService, QuotaService>();
+        services.AddScoped<IBillingSuccessService, BillingSuccessService>();
 
         // ── Storage service ───────────────────────────────────────────────
         services.AddSingleton<IStorageService>(sp =>
