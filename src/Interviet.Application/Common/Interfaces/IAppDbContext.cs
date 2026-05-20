@@ -82,6 +82,7 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<SubscriptionChangeLog> SubscriptionChangeLogs { get; }
     Microsoft.EntityFrameworkCore.DbSet<PaymentTransaction> PaymentTransactions { get; }
     Microsoft.EntityFrameworkCore.DbSet<Invoice> Invoices { get; }
+    Microsoft.EntityFrameworkCore.DbSet<BillingCheckoutSession> BillingCheckoutSessions { get; }
 
     // Quota
     Microsoft.EntityFrameworkCore.DbSet<UsageQuotaPolicy> UsageQuotaPolicies { get; }

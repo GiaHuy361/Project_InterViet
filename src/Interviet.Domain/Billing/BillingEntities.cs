@@ -2,6 +2,33 @@ using Interviet.Domain.Common;
 
 namespace Interviet.Domain.Billing;
 
+/// <summary>
+/// Tracks a mock payment checkout session created when the user initiates checkout.
+/// Status flow: pending → succeeded | failed | cancelled | expired
+/// </summary>
+public class BillingCheckoutSession : AuditableEntity
+{
+    public Guid UserId { get; set; }
+    public Guid PlanId { get; set; }
+    public string PlanKey { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string CurrencyCode { get; set; } = "VND";
+
+    /// <summary>pending | succeeded | failed | cancelled | expired</summary>
+    public string Status { get; set; } = "pending";
+
+    public string? ReturnUrl { get; set; }
+    public string? CancelUrl { get; set; }
+    public string? CheckoutUrl { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string? FailureReason { get; set; }
+
+    // Navigation
+    public PaymentTransaction? PaymentTransaction { get; set; }
+}
+
 public class Plan : AuditableEntity
 {
     public string Code { get; set; } = string.Empty;
@@ -106,6 +133,8 @@ public class PaymentTransaction : AuditableEntity
     public Guid UserId { get; set; }
     public Guid? SubscriptionId { get; set; }
     public Guid? PlanId { get; set; }
+    public string PlanKey { get; set; } = string.Empty;
+    public Guid? CheckoutSessionId { get; set; }
     public string Provider { get; set; } = string.Empty;
     public string? MethodType { get; set; }
     public string? ExternalOrderId { get; set; }
@@ -129,6 +158,9 @@ public class Invoice : BaseEntity
     public Guid UserId { get; set; }
     public Guid? SubscriptionId { get; set; }
     public Guid? PaymentTransactionId { get; set; }
+    public Guid? CheckoutSessionId { get; set; }
+    public Guid? PlanId { get; set; }
+    public string PlanKey { get; set; } = string.Empty;
     public string InvoiceNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "VND";

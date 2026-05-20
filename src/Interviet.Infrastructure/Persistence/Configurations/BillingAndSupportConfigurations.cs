@@ -168,6 +168,7 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
         b.HasKey(x => x.Id);
         b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
         b.Property(x => x.MethodType).HasMaxLength(50);
+        b.Property(x => x.PlanKey).HasMaxLength(100);
         b.Property(x => x.ExternalOrderId).HasMaxLength(150);
         b.Property(x => x.ExternalTransactionId).HasMaxLength(150);
         b.Property(x => x.IdempotencyKey).HasMaxLength(150);
@@ -175,9 +176,10 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
         b.Property(x => x.CurrencyCode).HasMaxLength(10);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
         b.Property(x => x.FailureCode).HasMaxLength(50);
-        b.HasIndex(x => x.ExternalTransactionId).IsUnique();
-        b.HasIndex(x => x.IdempotencyKey).IsUnique();
+        b.HasIndex(x => x.ExternalTransactionId).IsUnique().HasFilter("[ExternalTransactionId] IS NOT NULL");
+        b.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
         b.HasIndex(x => new { x.UserId, x.CreatedAt });
+        b.HasIndex(x => x.CheckoutSessionId);
     }
 }
 
@@ -188,10 +190,34 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         b.ToTable("Invoices");
         b.HasKey(x => x.Id);
         b.Property(x => x.InvoiceNumber).HasMaxLength(50).IsRequired();
+        b.Property(x => x.PlanKey).HasMaxLength(100);
         b.Property(x => x.Amount).HasColumnType("decimal(18,2)");
         b.Property(x => x.CurrencyCode).HasMaxLength(10);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
         b.HasIndex(x => x.InvoiceNumber).IsUnique();
+        b.HasIndex(x => new { x.UserId, x.CreatedAt });
+        b.HasIndex(x => x.CheckoutSessionId);
+    }
+}
+
+// ── Phase 10: Mock Payment Checkout Sessions ─────────────────────────────
+public class BillingCheckoutSessionConfiguration : IEntityTypeConfiguration<BillingCheckoutSession>
+{
+    public void Configure(EntityTypeBuilder<BillingCheckoutSession> b)
+    {
+        b.ToTable("BillingCheckoutSessions");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PlanKey).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+        b.Property(x => x.CurrencyCode).HasMaxLength(10).HasDefaultValue("VND");
+        b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        b.Property(x => x.ReturnUrl).HasMaxLength(500);
+        b.Property(x => x.CancelUrl).HasMaxLength(500);
+        b.Property(x => x.CheckoutUrl).HasMaxLength(1000);
+        b.Property(x => x.FailureReason).HasMaxLength(500);
+        b.HasIndex(x => new { x.UserId, x.Status, x.CreatedAt });
+        b.HasIndex(x => new { x.UserId, x.ExpiresAt });
     }
 }
 
