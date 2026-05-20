@@ -4,6 +4,7 @@ using Interviet.Domain.Resumes;
 using Interviet.Domain.Matching;
 using Interviet.Domain.Interviews;
 using Interviet.Domain.Mentors;
+using Interviet.Domain.Reports;
 
 namespace Interviet.Infrastructure.Persistence.Configurations;
 
@@ -321,6 +322,8 @@ public class InterviewReportConfiguration : IEntityTypeConfiguration<InterviewRe
         b.Property(x => x.FillerWordScore).HasColumnType("decimal(5,2)");
         b.Property(x => x.SchemaVersion).HasMaxLength(30);
         b.Property(x => x.ModelVersion).HasMaxLength(100);
+        b.Property(x => x.ScoreBreakdownsJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.FeedbackItemsJson).HasColumnType("nvarchar(max)");
         b.HasMany(x => x.ScoreBreakdowns).WithOne().HasForeignKey(s => s.InterviewReportId);
         b.HasMany(x => x.FeedbackItems).WithOne().HasForeignKey(f => f.InterviewReportId);
     }
@@ -453,4 +456,24 @@ public class InterviewRealtimeEventConfiguration : IEntityTypeConfiguration<Inte
         b.HasIndex(x => x.InterviewSessionId);
     }
 }
+
+public class ReportShareLinkConfiguration : IEntityTypeConfiguration<ReportShareLink>
+{
+    public void Configure(EntityTypeBuilder<ReportShareLink> b)
+    {
+        b.ToTable("ReportShareLinks");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ReportType).HasMaxLength(20).IsRequired();
+        b.Property(x => x.TokenHash).HasMaxLength(100).IsRequired();
+        b.Property(x => x.TokenPreview).HasMaxLength(20);
+        b.Property(x => x.Title).HasMaxLength(300).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(1000);
+
+        b.HasIndex(x => x.TokenHash).IsUnique();
+        b.HasIndex(x => new { x.UserId, x.ReportType, x.ResourceId });
+        b.HasIndex(x => x.IsActive);
+        b.HasIndex(x => x.ExpiresAt);
+    }
+}
+
 

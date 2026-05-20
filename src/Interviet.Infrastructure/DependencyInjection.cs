@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.Configure<AiServicesOptions>(configuration.GetSection(AiServicesOptions.SectionName));
         services.Configure<BillingOptions>(configuration.GetSection(BillingOptions.SectionName));
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+        services.Configure<ReportOptions>(configuration.GetSection(ReportOptions.SectionName));
 
 
         // ── Email service ─────────────────────────────────────────────────
@@ -75,6 +76,8 @@ public static class DependencyInjection
         services.AddScoped<IQuotaService, QuotaService>();
         services.AddScoped<IBillingSuccessService, BillingSuccessService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IReportShareService, ReportShareService>();
+        services.AddScoped<IReportPdfService, ReportPdfService>();
 
 
         // ── Storage service ───────────────────────────────────────────────

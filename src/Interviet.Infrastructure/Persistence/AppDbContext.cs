@@ -12,6 +12,7 @@ using Interviet.Domain.Notifications;
 using Interviet.Domain.Support;
 using Interviet.Domain.Dashboard;
 using Interviet.Domain.AiIntegration;
+using Interviet.Domain.Reports;
 
 namespace Interviet.Infrastructure.Persistence;
 
@@ -118,6 +119,9 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<DashboardSnapshot> DashboardSnapshots => Set<DashboardSnapshot>();
     public DbSet<AiJob> AiJobs => Set<AiJob>();
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs => Set<PaymentWebhookLog>();
+
+    // ── Reports ─────────────────────────────────────────────────────────────
+    public DbSet<ReportShareLink> ReportShareLinks => Set<ReportShareLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

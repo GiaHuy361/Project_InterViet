@@ -156,6 +156,8 @@ public sealed class CompleteInterviewCommandHandler
                 StrengthsJson       = aiResult.StrengthsJson,
                 WeaknessesJson      = aiResult.WeaknessesJson,
                 RecommendationsJson = aiResult.RecommendationsJson,
+                ScoreBreakdownsJson = aiResult.ScoreBreakdownsJson,
+                FeedbackItemsJson   = aiResult.FeedbackItemsJson,
                 ModelVersion        = aiResult.ModelVersion,
                 SchemaVersion       = aiResult.SchemaVersion,
                 CreatedAt           = now,
@@ -256,8 +258,8 @@ public sealed class CompleteInterviewCommandHandler
             Strengths         = JsonParseHelper.ParseStringArray(report.StrengthsJson),
             Weaknesses        = JsonParseHelper.ParseStringArray(report.WeaknessesJson),
             Recommendations   = JsonParseHelper.ParseStringArray(report.RecommendationsJson),
-            ScoreBreakdowns   = JsonParseHelper.ParseObjectArray(ai?.ScoreBreakdownsJson),
-            FeedbackItems     = JsonParseHelper.ParseObjectArray(ai?.FeedbackItemsJson),
+            ScoreBreakdowns   = JsonParseHelper.ParseObjectArray(ai?.ScoreBreakdownsJson ?? report.ScoreBreakdownsJson),
+            FeedbackItems     = JsonParseHelper.ParseObjectArray(ai?.FeedbackItemsJson ?? report.FeedbackItemsJson),
             ModelVersion      = report.ModelVersion,
             SchemaVersion     = report.SchemaVersion
         };

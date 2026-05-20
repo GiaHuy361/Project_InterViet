@@ -101,3 +101,12 @@ public sealed class NotificationOptions
     public int DefaultPageSize { get; set; } = 20;
     public int MaxPageSize { get; set; } = 100;
 }
+
+public sealed class ReportOptions
+{
+    public const string SectionName = "Reports";
+    public bool SharingEnabled { get; set; } = true;
+    public bool PdfExportEnabled { get; set; } = true;
+    public int DefaultShareExpiryDays { get; set; } = 30;
+}
+

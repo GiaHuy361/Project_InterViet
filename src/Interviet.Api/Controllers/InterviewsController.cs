@@ -15,6 +15,7 @@ using Interviet.Application.Interviews.Queries.GetMyInterviews;
 using Interviet.Application.Interviews.Queries.GetInterviewById;
 using Interviet.Application.Interviews.Queries.GetInterviewStats;
 using Interviet.Application.Interviews.Queries.GetInterviewRealtime;
+using Interviet.Contracts.Reports;
 using Interviet.Contracts.Interviews;
 
 namespace Interviet.Api.Controllers;
@@ -29,11 +30,19 @@ public sealed class InterviewsController : ApiControllerBase
 {
     private readonly ISender             _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly IReportShareService _shareService;
+    private readonly IReportPdfService   _pdfService;
 
-    public InterviewsController(ISender mediator, ICurrentUserService currentUser)
+    public InterviewsController(
+        ISender mediator,
+        ICurrentUserService currentUser,
+        IReportShareService shareService,
+        IReportPdfService pdfService)
     {
-        _mediator    = mediator;
-        _currentUser = currentUser;
+        _mediator     = mediator;
+        _currentUser  = currentUser;
+        _shareService = shareService;
+        _pdfService   = pdfService;
     }
 
     /// <summary>Check if current user has remaining interview.ai quota today. Does NOT consume quota.</summary>
@@ -251,6 +260,57 @@ public sealed class InterviewsController : ApiControllerBase
             ModelVersion:      request.ModelVersion,
             SchemaVersion:     request.SchemaVersion), ct);
 
+        return FromResult(result);
+    }
+
+    /// <summary>Export report of an interview session as a PDF file.</summary>
+    [HttpGet("{id:guid}/report/export-pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileContentResult))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ExportPdf(Guid id, CancellationToken ct)
+    {
+        var result = await _pdfService.GenerateInterviewReportPdfAsync(id, _currentUser.UserId, ct);
+        if (result.IsFailure) return FromResult(result);
+        return File(result.Value, "application/pdf", $"interview-report-{id}.pdf");
+    }
+
+    /// <summary>Create a new report share link for an interview session.</summary>
+    [HttpPost("{id:guid}/report/share")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CreateShareLinkResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ShareReport(
+        Guid id, [FromBody] CreateShareLinkRequest request, CancellationToken ct)
+    {
+        var result = await _shareService.CreateInterviewShareAsync(_currentUser.UserId, id, request, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Get all active, non-revoked share links for an interview session.</summary>
+    [HttpGet("{id:guid}/report/shares")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<ShareLinkListItemResponse>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetShares(Guid id, CancellationToken ct)
+    {
+        var result = await _shareService.GetInterviewSharesAsync(_currentUser.UserId, id, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Revoke (disable) a specific report share link.</summary>
+    [HttpDelete("{id:guid}/report/shares/{shareId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RevokeShareLinkResponse))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RevokeShare(Guid id, Guid shareId, CancellationToken ct)
+    {
+        var result = await _shareService.RevokeShareAsync(_currentUser.UserId, shareId, ct);
         return FromResult(result);
     }
 }

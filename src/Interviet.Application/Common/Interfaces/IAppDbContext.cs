@@ -10,6 +10,7 @@ using Interviet.Domain.Support;
 using Interviet.Domain.Dashboard;
 using Interviet.Domain.Profiles;
 using Interviet.Domain.AiIntegration;
+using Interviet.Domain.Reports;
 
 namespace Interviet.Application.Common.Interfaces;
 
@@ -114,6 +115,9 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<DashboardSnapshot> DashboardSnapshots { get; }
     Microsoft.EntityFrameworkCore.DbSet<AiJob> AiJobs { get; }
     Microsoft.EntityFrameworkCore.DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; }
+
+    // Reports
+    Microsoft.EntityFrameworkCore.DbSet<ReportShareLink> ReportShareLinks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

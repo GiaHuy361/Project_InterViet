@@ -7,6 +7,7 @@ using Interviet.Application.Matching.Commands.CreateMultiMatch;
 using Interviet.Application.Matching.Queries.GetMatchById;
 using Interviet.Application.Matching.Queries.GetMyMatches;
 using Interviet.Contracts.Matching;
+using Interviet.Contracts.Reports;
 
 namespace Interviet.Api.Controllers;
 
@@ -21,11 +22,19 @@ public sealed class MatchController : ApiControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly IReportShareService _shareService;
+    private readonly IReportPdfService   _pdfService;
 
-    public MatchController(IMediator mediator, ICurrentUserService currentUser)
+    public MatchController(
+        IMediator mediator,
+        ICurrentUserService currentUser,
+        IReportShareService shareService,
+        IReportPdfService pdfService)
     {
-        _mediator    = mediator;
-        _currentUser = currentUser;
+        _mediator     = mediator;
+        _currentUser  = currentUser;
+        _shareService = shareService;
+        _pdfService   = pdfService;
     }
 
     /// <summary>
@@ -109,6 +118,57 @@ public sealed class MatchController : ApiControllerBase
     {
         var result = await _mediator.Send(
             new GetMatchByIdQuery(sessionId, _currentUser.UserId), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Export report of a CV-JD match session as a PDF file.</summary>
+    [HttpGet("{sessionId:guid}/report/export-pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileContentResult))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ExportPdf(Guid sessionId, CancellationToken ct)
+    {
+        var result = await _pdfService.GenerateMatchReportPdfAsync(sessionId, _currentUser.UserId, ct);
+        if (result.IsFailure) return FromResult(result);
+        return File(result.Value, "application/pdf", $"match-report-{sessionId}.pdf");
+    }
+
+    /// <summary>Create a new report share link for a CV-JD match session.</summary>
+    [HttpPost("{sessionId:guid}/report/share")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CreateShareLinkResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ShareReport(
+        Guid sessionId, [FromBody] CreateShareLinkRequest request, CancellationToken ct)
+    {
+        var result = await _shareService.CreateMatchShareAsync(_currentUser.UserId, sessionId, request, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Get all active, non-revoked share links for a CV-JD match session.</summary>
+    [HttpGet("{sessionId:guid}/report/shares")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<ShareLinkListItemResponse>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetShares(Guid sessionId, CancellationToken ct)
+    {
+        var result = await _shareService.GetMatchSharesAsync(_currentUser.UserId, sessionId, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>Revoke (disable) a specific report share link.</summary>
+    [HttpDelete("{sessionId:guid}/report/shares/{shareId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RevokeShareLinkResponse))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RevokeShare(Guid sessionId, Guid shareId, CancellationToken ct)
+    {
+        var result = await _shareService.RevokeShareAsync(_currentUser.UserId, shareId, ct);
         return FromResult(result);
     }
 }

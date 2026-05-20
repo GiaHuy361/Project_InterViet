@@ -89,6 +89,8 @@ public class InterviewReport : AuditableEntity
     public string? SchemaVersion { get; set; }
     public string? ModelVersion { get; set; }
     public Guid? ExportedPdfFileId { get; set; }
+    public string? ScoreBreakdownsJson { get; set; }
+    public string? FeedbackItemsJson { get; set; }
 
     public ICollection<InterviewScoreBreakdown> ScoreBreakdowns { get; set; } = [];
     public ICollection<InterviewFeedbackItem> FeedbackItems { get; set; } = [];
