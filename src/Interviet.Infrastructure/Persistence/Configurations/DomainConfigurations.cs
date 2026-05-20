@@ -355,18 +355,40 @@ public class InterviewFeedbackItemConfiguration : IEntityTypeConfiguration<Inter
 }
 
 // ── Mentor ───────────────────────────────────────────────────────────────────
-public class MentorConfiguration : IEntityTypeConfiguration<Mentor>
+public class MentorProfileConfiguration : IEntityTypeConfiguration<MentorProfile>
 {
-    public void Configure(EntityTypeBuilder<Mentor> b)
+    public void Configure(EntityTypeBuilder<MentorProfile> b)
     {
-        b.ToTable("Mentors");
+        b.ToTable("MentorProfiles");
         b.HasKey(x => x.Id);
         b.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         b.Property(x => x.Headline).HasMaxLength(250);
-        b.Property(x => x.YearsOfExperience).HasColumnType("decimal(5,2)");
-        b.Property(x => x.RatingAverage).HasColumnType("decimal(4,2)");
-        b.HasMany(x => x.AvailabilitySlots).WithOne(s => s.Mentor).HasForeignKey(s => s.MentorId);
-        b.HasMany(x => x.Bookings).WithOne(bk => bk.Mentor).HasForeignKey(bk => bk.MentorId);
+        b.Property(x => x.AvatarUrl).HasMaxLength(500);
+        b.Property(x => x.Bio).HasMaxLength(2000);
+        b.Property(x => x.YearsOfExperience).HasColumnType("decimal(4,1)");
+        b.Property(x => x.RatingAverage).HasColumnType("decimal(3,2)");
+        b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+
+        b.HasMany(x => x.AvailabilitySlots).WithOne(s => s.Mentor).HasForeignKey(s => s.MentorId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(x => x.Bookings).WithOne(bk => bk.Mentor).HasForeignKey(bk => bk.MentorId).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(x => x.Specialties).WithMany(s => s.Mentors)
+         .UsingEntity<Dictionary<string, object>>(
+             "MentorProfileSpecialties",
+             j => j.HasOne<MentorSpecialty>().WithMany().HasForeignKey("SpecialtyId"),
+             j => j.HasOne<MentorProfile>().WithMany().HasForeignKey("MentorId"));
+    }
+}
+
+public class MentorSpecialtyConfiguration : IEntityTypeConfiguration<MentorSpecialty>
+{
+    public void Configure(EntityTypeBuilder<MentorSpecialty> b)
+    {
+        b.ToTable("MentorSpecialties");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Code).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(500);
+        b.HasIndex(x => x.Code).IsUnique();
     }
 }
 
@@ -377,6 +399,8 @@ public class MentorAvailabilitySlotConfiguration : IEntityTypeConfiguration<Ment
         b.ToTable("MentorAvailabilitySlots");
         b.HasKey(x => x.Id);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        b.Property(x => x.PriceAmount).HasColumnType("decimal(18,2)");
+        b.Property(x => x.CurrencyCode).HasMaxLength(10).HasDefaultValue("VND");
         b.HasIndex(x => new { x.MentorId, x.StartsAt });
     }
 }
@@ -388,11 +412,16 @@ public class MentorBookingConfiguration : IEntityTypeConfiguration<MentorBooking
         b.ToTable("MentorBookings");
         b.HasKey(x => x.Id);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
-        b.Property(x => x.MeetingMode).HasMaxLength(30);
-        b.Property(x => x.MeetingLink).HasMaxLength(500);
-        b.HasOne(x => x.Review).WithOne()
-         .HasForeignKey<MentorReview>(r => r.MentorBookingId)
-         .OnDelete(DeleteBehavior.Cascade);
+        b.Property(x => x.ServiceType).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+        b.Property(x => x.CurrencyCode).HasMaxLength(10).HasDefaultValue("VND");
+        b.Property(x => x.MeetingUrl).HasMaxLength(500);
+        b.Property(x => x.CandidateNotes).HasMaxLength(2000);
+        b.Property(x => x.CancelReason).HasMaxLength(500);
+
+        b.HasOne(x => x.AvailabilitySlot).WithMany().HasForeignKey(x => x.AvailabilitySlotId).OnDelete(DeleteBehavior.SetNull);
+        b.HasOne(x => x.Review).WithOne(r => r.Booking).HasForeignKey<MentorReview>(r => r.MentorBookingId).OnDelete(DeleteBehavior.Cascade);
+
         b.HasIndex(x => new { x.UserId, x.ScheduledStartsAt });
     }
 }
@@ -403,6 +432,7 @@ public class MentorReviewConfiguration : IEntityTypeConfiguration<MentorReview>
     {
         b.ToTable("MentorReviews");
         b.HasKey(x => x.Id);
+        b.Property(x => x.Comment).HasMaxLength(1000);
         b.HasIndex(x => x.MentorBookingId).IsUnique();
     }
 }

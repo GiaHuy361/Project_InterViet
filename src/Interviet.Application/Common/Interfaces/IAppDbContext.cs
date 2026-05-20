@@ -69,7 +69,8 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<InterviewRealtimeEvent> InterviewRealtimeEvents { get; }
 
     // Mentor
-    Microsoft.EntityFrameworkCore.DbSet<Mentor> Mentors { get; }
+    Microsoft.EntityFrameworkCore.DbSet<MentorProfile> MentorProfiles { get; }
+    Microsoft.EntityFrameworkCore.DbSet<MentorSpecialty> MentorSpecialties { get; }
     Microsoft.EntityFrameworkCore.DbSet<MentorAvailabilitySlot> MentorAvailabilitySlots { get; }
     Microsoft.EntityFrameworkCore.DbSet<MentorBooking> MentorBookings { get; }
     Microsoft.EntityFrameworkCore.DbSet<MentorReview> MentorReviews { get; }

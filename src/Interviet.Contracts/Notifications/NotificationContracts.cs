@@ -21,6 +21,12 @@ public static class NotificationType
 
     // System
     public const string SystemAnnouncement = "system.announcement";
+
+    // Mentor
+    public const string MentorBookingConfirmed = "mentor.booking_confirmed";
+    public const string MentorBookingCancelled = "mentor.booking_cancelled";
+    public const string MentorBookingCompleted = "mentor.booking_completed";
+    public const string MentorReviewSubmitted  = "mentor.review_submitted";
 }
 
 // ── Priority constants ────────────────────────────────────────────────────────

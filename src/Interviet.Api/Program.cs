@@ -209,6 +209,13 @@ try
         var db = scope.ServiceProvider.GetRequiredService<Interviet.Infrastructure.Persistence.AppDbContext>();
         await db.Database.MigrateAsync();
         Log.Information("Database migrations applied successfully.");
+
+        var mentorOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.MentorNetworkOptions>>().Value;
+        if (mentorOpts.EnableSeedData)
+        {
+            await Interviet.Infrastructure.Persistence.DbSeeder.SeedMentorsAsync(db);
+            Log.Information("Mentor seed data applied successfully.");
+        }
     }
 
     // ── Middleware pipeline (ORDER MATTERS) ───────────────────────────────

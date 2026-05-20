@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.Configure<BillingOptions>(configuration.GetSection(BillingOptions.SectionName));
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
         services.Configure<ReportOptions>(configuration.GetSection(ReportOptions.SectionName));
+        services.Configure<MentorNetworkOptions>(configuration.GetSection(MentorNetworkOptions.SectionName));
 
 
         // ── Email service ─────────────────────────────────────────────────

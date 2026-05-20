@@ -110,3 +110,13 @@ public sealed class ReportOptions
     public int DefaultShareExpiryDays { get; set; } = 30;
 }
 
+public sealed class MentorNetworkOptions
+{
+    public const string SectionName = "MentorNetwork";
+
+    public bool Enabled { get; set; } = true;
+    public string MockMeetingBaseUrl { get; set; } = "http://localhost:3000/mentor-bookings";
+    public int DefaultSlotDurationMinutes { get; set; } = 45;
+    public bool EnableSeedData { get; set; } = true;
+}
+

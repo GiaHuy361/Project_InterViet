@@ -100,6 +100,9 @@ public sealed class UsageTracker : IUsageTracker
             case QuotaFeatureKeys.JdCreate:
                 // No dedicated column in UserDailyUsage.
                 break;
+            case QuotaFeatureKeys.MentorBooking:
+                daily.MentorBookingCount++;
+                break;
         }
     }
 }

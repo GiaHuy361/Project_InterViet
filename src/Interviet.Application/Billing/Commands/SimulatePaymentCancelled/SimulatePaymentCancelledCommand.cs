@@ -62,6 +62,25 @@ public sealed class SimulatePaymentCancelledCommandHandler
         session.CompletedAt   = now;
         session.UpdatedAt     = now;
 
+        if (session.Purpose == "mentor_booking")
+        {
+            var bookingId = session.ResourceId ?? Guid.Empty;
+            var booking = await _db.MentorBookings
+                .Include(b => b.AvailabilitySlot)
+                .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+            if (booking is not null)
+            {
+                booking.Status = "payment_cancelled";
+                booking.UpdatedAt = now;
+
+                if (booking.AvailabilitySlot is not null && booking.AvailabilitySlot.StartsAt > now)
+                {
+                    booking.AvailabilitySlot.Status = "available";
+                    booking.AvailabilitySlot.ReservedUntil = null;
+                }
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return new SimulateCancelledResponse

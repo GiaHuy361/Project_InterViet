@@ -14,6 +14,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
 {
     private readonly IAppDbContext _db;
     private readonly BillingOptions _billing;
+    private readonly MentorNetworkOptions _mentorOptions;
     private readonly IEmailService _emailService;
     private readonly INotificationService _notificationService;
     private readonly ILogger<BillingSuccessService> _logger;
@@ -21,12 +22,14 @@ public sealed class BillingSuccessService : IBillingSuccessService
     public BillingSuccessService(
         IAppDbContext db,
         IOptions<BillingOptions> billing,
+        IOptions<MentorNetworkOptions> mentorOptions,
         IEmailService emailService,
         INotificationService notificationService,
         ILogger<BillingSuccessService> logger)
     {
         _db                  = db;
         _billing             = billing.Value;
+        _mentorOptions       = mentorOptions.Value;
         _emailService        = emailService;
         _notificationService = notificationService;
         _logger              = logger;
@@ -60,9 +63,15 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 .FirstOrDefaultAsync(t => t.CheckoutSessionId == session.Id, ct);
             var existingInv = await _db.Invoices
                 .FirstOrDefaultAsync(i => i.CheckoutSessionId == session.Id, ct);
-            var existingSub = await _db.Subscriptions
-                .FirstOrDefaultAsync(s => s.UserId == userId
-                    && s.Status == SubscriptionStatus.Active, ct);
+
+            Guid existingSubId = Guid.Empty;
+            if (session.Purpose != "mentor_booking")
+            {
+                var existingSub = await _db.Subscriptions
+                    .FirstOrDefaultAsync(s => s.UserId == userId
+                        && s.Status == SubscriptionStatus.Active, ct);
+                existingSubId = existingSub?.Id ?? Guid.Empty;
+            }
 
             return new SimulateSuccessResponse
             {
@@ -72,7 +81,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 InvoiceNumber        = existingInv?.InvoiceNumber ?? string.Empty,
                 IsIdempotent         = true,
                 EmailSent            = false,
-                SubscriptionId       = existingSub?.Id ?? Guid.Empty
+                SubscriptionId       = existingSubId
             };
         }
 
@@ -89,6 +98,175 @@ public sealed class BillingSuccessService : IBillingSuccessService
             return Error.Conflict("CheckoutSession.Expired", "This checkout session has expired.");
         }
 
+        var now = DateTime.UtcNow;
+
+        if (session.Purpose == "mentor_booking")
+        {
+            var bookingId = session.ResourceId ?? Guid.Empty;
+            var booking = await _db.MentorBookings
+                .Include(b => b.Mentor)
+                .Include(b => b.AvailabilitySlot)
+                .FirstOrDefaultAsync(b => b.Id == bookingId, ct);
+            
+            if (booking is null)
+                return Error.NotFound("MentorBooking.NotFound", "Mentor booking not found.");
+
+            var bookingUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+            if (bookingUser is null)
+                return Error.NotFound("User.NotFound", "User not found.");
+
+            session.Status      = CheckoutSessionStatus.Succeeded;
+            session.CompletedAt = now;
+            session.UpdatedAt   = now;
+
+            var bookingTx = new PaymentTransaction
+            {
+                Id                  = Guid.NewGuid(),
+                UserId              = userId,
+                CheckoutSessionId   = session.Id,
+                Provider            = session.Provider,
+                MethodType          = methodType ?? "bank_transfer",
+                ExternalTransactionId = externalTxId,
+                Amount              = session.Amount,
+                CurrencyCode        = session.CurrencyCode,
+                Status              = PaymentStatus.Succeeded,
+                PaidAt              = now,
+                CreatedAt           = now,
+                UpdatedAt           = now,
+                Purpose             = "mentor_booking",
+                ResourceId          = bookingId,
+                Description         = session.Description
+            };
+            _db.PaymentTransactions.Add(bookingTx);
+
+            var bookingTodayStr = now.ToString("yyyyMMdd");
+            var bookingTodayStart = now.Date;
+            var bookingTodayEnd   = bookingTodayStart.AddDays(1);
+            var bookingCountToday = await _db.Invoices
+                .CountAsync(i => i.CreatedAt >= bookingTodayStart && i.CreatedAt < bookingTodayEnd, ct);
+            var bookingInvoiceNumber = $"IVT-{bookingTodayStr}-{(bookingCountToday + 1):D4}";
+
+            var bookingInvoice = new Invoice
+            {
+                Id                  = Guid.NewGuid(),
+                UserId              = userId,
+                PaymentTransactionId = bookingTx.Id,
+                CheckoutSessionId   = session.Id,
+                InvoiceNumber       = bookingInvoiceNumber,
+                Amount              = session.Amount,
+                CurrencyCode        = session.CurrencyCode,
+                Status              = InvoiceStatus.Paid,
+                IssuedAt            = now,
+                PaidAt              = now,
+                CreatedAt           = now,
+                Purpose             = "mentor_booking",
+                ResourceId          = bookingId,
+                Description         = session.Description
+            };
+            _db.Invoices.Add(bookingInvoice);
+
+            booking.Status = "confirmed";
+            booking.UpdatedAt = now;
+
+            var mockMeetingUrl = $"{_mentorOptions.MockMeetingBaseUrl.TrimEnd('/')}/{bookingId}/join";
+            booking.MeetingUrl = mockMeetingUrl;
+
+            if (booking.AvailabilitySlot is not null)
+            {
+                booking.AvailabilitySlot.Status = "booked";
+            }
+
+            await _db.SaveChangesAsync(ct);
+
+            var bookingEmailSent = false;
+            try
+            {
+                var displayAmount = session.CurrencyCode == "VND"
+                    ? $"{session.Amount:N0} ₫"
+                    : $"{session.Amount:N2} {session.CurrencyCode}";
+
+                var providerDisplay = MockProvider.GetDisplayName(session.Provider);
+                var serviceTypeDisplay = booking.ServiceType switch
+                {
+                    "cv_review" => "CV Review",
+                    "mock_interview" => "Mock Interview",
+                    "career_coaching" => "Career Coaching",
+                    "technical_mentoring" => "Technical Mentoring",
+                    _ => booking.ServiceType
+                };
+
+                var htmlBody = $"""
+                    <h2>Thanh toán lịch hẹn Mentor thành công!</h2>
+                    <p>Xin chào <strong>{bookingUser.FullName}</strong>,</p>
+                    <p>Lịch hẹn của bạn với Mentor <strong>{booking.Mentor.FullName}</strong> đã được xác nhận thành công.</p>
+                    <table border="0" cellpadding="6" style="border-collapse:collapse;">
+                      <tr><td><strong>Dịch vụ:</strong></td><td>{serviceTypeDisplay}</td></tr>
+                      <tr><td><strong>Thời gian bắt đầu:</strong></td><td>{booking.ScheduledStartsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
+                      <tr><td><strong>Thời gian kết thúc:</strong></td><td>{booking.ScheduledEndsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
+                      <tr><td><strong>Mã hóa đơn:</strong></td><td>{bookingInvoiceNumber}</td></tr>
+                      <tr><td><strong>Số tiền đã thanh toán:</strong></td><td>{displayAmount}</td></tr>
+                      <tr><td><strong>Phương thức:</strong></td><td>{providerDisplay}</td></tr>
+                      <tr><td><strong>Link tham gia họp:</strong></td><td><a href="{mockMeetingUrl}">{mockMeetingUrl}</a></td></tr>
+                    </table>
+                    <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
+                    """;
+
+                await _emailService.SendAsync(new EmailMessage(
+                    ToAddress : bookingUser.Email,
+                    ToName    : bookingUser.FullName,
+                    Subject   : "Xác nhận lịch đặt Mentor thành công",
+                    HtmlBody  : htmlBody
+                ), ct);
+
+                bookingEmailSent = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to send mentor booking success email to user {UserId} for invoice {InvoiceNumber}",
+                    userId, bookingInvoiceNumber);
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.CreateAsync(
+                        userId           : userId,
+                        type             : "mentor.booking_confirmed",
+                        title            : "Lịch hẹn Mentor đã xác nhận",
+                        message          : $"Lịch đặt với {booking.Mentor.FullName} đã được xác nhận thành công. Link họp trực tuyến đã sẵn sàng.",
+                        actionUrl        : $"/mentor-bookings/{bookingId}",
+                        data             : new
+                        {
+                            bookingId = booking.Id,
+                            mentorId = booking.MentorId,
+                            mentorName = booking.Mentor.FullName,
+                            startsAt = booking.ScheduledStartsAt,
+                            endsAt = booking.ScheduledEndsAt,
+                            meetingUrl = mockMeetingUrl
+                        },
+                        priority         : NotificationPriority.Normal,
+                        deduplicationKey : $"mentor.booking_confirmed:{bookingId}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create booking confirmed notification. UserId={UserId}", userId);
+                }
+            });
+
+            return new SimulateSuccessResponse
+            {
+                CheckoutSessionId    = session.Id,
+                PaymentTransactionId = bookingTx.Id,
+                InvoiceId            = bookingInvoice.Id,
+                InvoiceNumber        = bookingInvoiceNumber,
+                IsIdempotent         = false,
+                EmailSent            = bookingEmailSent,
+                SubscriptionId       = Guid.Empty
+            };
+        }
+
         // Load plan + user
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == session.PlanId, ct);
         if (plan is null)
@@ -97,8 +275,6 @@ public sealed class BillingSuccessService : IBillingSuccessService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null)
             return Error.NotFound("User.NotFound", "User not found.");
-
-        var now = DateTime.UtcNow;
 
         // ── Transaction: update session, create payment, invoice, activate subscription ──
         session.Status      = CheckoutSessionStatus.Succeeded;

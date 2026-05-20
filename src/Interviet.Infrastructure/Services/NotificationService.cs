@@ -43,6 +43,7 @@ public sealed class NotificationService : INotificationService
             var t when t.StartsWith("match.")   => pref.MatchingNotificationsEnabled,
             var t when t.StartsWith("interview.") => pref.InterviewNotificationsEnabled,
             var t when t.StartsWith("system.")  => pref.SystemNotificationsEnabled,
+            var t when t.StartsWith("mentor.")  => pref.MentorNotificationsEnabled,
             _ => true // unknown category — allow by default
         };
     }

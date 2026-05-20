@@ -176,6 +176,9 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
         b.Property(x => x.CurrencyCode).HasMaxLength(10);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
         b.Property(x => x.FailureCode).HasMaxLength(50);
+        b.Property(x => x.Purpose).HasMaxLength(50).IsRequired().HasDefaultValue("subscription_plan");
+        b.Property(x => x.ResourceId);
+        b.Property(x => x.Description).HasMaxLength(500);
         b.HasIndex(x => x.ExternalTransactionId).IsUnique().HasFilter("[ExternalTransactionId] IS NOT NULL");
         b.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
         b.HasIndex(x => new { x.UserId, x.CreatedAt });
@@ -194,6 +197,9 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         b.Property(x => x.Amount).HasColumnType("decimal(18,2)");
         b.Property(x => x.CurrencyCode).HasMaxLength(10);
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        b.Property(x => x.Purpose).HasMaxLength(50).IsRequired().HasDefaultValue("subscription_plan");
+        b.Property(x => x.ResourceId);
+        b.Property(x => x.Description).HasMaxLength(500);
         b.HasIndex(x => x.InvoiceNumber).IsUnique();
         b.HasIndex(x => new { x.UserId, x.CreatedAt });
         b.HasIndex(x => x.CheckoutSessionId);
@@ -207,7 +213,7 @@ public class BillingCheckoutSessionConfiguration : IEntityTypeConfiguration<Bill
     {
         b.ToTable("BillingCheckoutSessions");
         b.HasKey(x => x.Id);
-        b.Property(x => x.PlanKey).HasMaxLength(100).IsRequired();
+        b.Property(x => x.PlanKey).HasMaxLength(100).IsRequired(false);
         b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
         b.Property(x => x.Amount).HasColumnType("decimal(18,2)");
         b.Property(x => x.CurrencyCode).HasMaxLength(10).HasDefaultValue("VND");
@@ -216,6 +222,9 @@ public class BillingCheckoutSessionConfiguration : IEntityTypeConfiguration<Bill
         b.Property(x => x.CancelUrl).HasMaxLength(500);
         b.Property(x => x.CheckoutUrl).HasMaxLength(1000);
         b.Property(x => x.FailureReason).HasMaxLength(500);
+        b.Property(x => x.Purpose).HasMaxLength(50).IsRequired().HasDefaultValue("subscription_plan");
+        b.Property(x => x.ResourceId);
+        b.Property(x => x.Description).HasMaxLength(500);
         b.HasIndex(x => new { x.UserId, x.Status, x.CreatedAt });
         b.HasIndex(x => new { x.UserId, x.ExpiresAt });
     }

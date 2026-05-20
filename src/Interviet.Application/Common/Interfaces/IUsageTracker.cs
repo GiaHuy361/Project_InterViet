@@ -32,4 +32,5 @@ public static class QuotaFeatureKeys
     public const string CvStorage     = "cv.storage";
     public const string CvOptimization= "cv.optimization";
     public const string InterviewAi   = "interview.ai";
+    public const string MentorBooking   = "mentor.booking";
 }

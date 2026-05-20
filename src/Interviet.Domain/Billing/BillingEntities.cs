@@ -9,8 +9,8 @@ namespace Interviet.Domain.Billing;
 public class BillingCheckoutSession : AuditableEntity
 {
     public Guid UserId { get; set; }
-    public Guid PlanId { get; set; }
-    public string PlanKey { get; set; } = string.Empty;
+    public Guid? PlanId { get; set; }
+    public string? PlanKey { get; set; }
     public string Provider { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "VND";
@@ -24,6 +24,10 @@ public class BillingCheckoutSession : AuditableEntity
     public DateTime ExpiresAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string? FailureReason { get; set; }
+
+    public string Purpose { get; set; } = "subscription_plan";
+    public Guid? ResourceId { get; set; }
+    public string? Description { get; set; }
 
     // Navigation
     public PaymentTransaction? PaymentTransaction { get; set; }
@@ -153,7 +157,7 @@ public class PaymentTransaction : AuditableEntity
     public Guid UserId { get; set; }
     public Guid? SubscriptionId { get; set; }
     public Guid? PlanId { get; set; }
-    public string PlanKey { get; set; } = string.Empty;
+    public string? PlanKey { get; set; }
     public Guid? CheckoutSessionId { get; set; }
     public string Provider { get; set; } = string.Empty;
     public string? MethodType { get; set; }
@@ -171,6 +175,10 @@ public class PaymentTransaction : AuditableEntity
     public string? FailureCode { get; set; }
     public string? FailureMessage { get; set; }
     public string? RawPayloadJson { get; set; }
+
+    public string Purpose { get; set; } = "subscription_plan";
+    public Guid? ResourceId { get; set; }
+    public string? Description { get; set; }
 }
 
 public class Invoice : BaseEntity
@@ -180,7 +188,7 @@ public class Invoice : BaseEntity
     public Guid? PaymentTransactionId { get; set; }
     public Guid? CheckoutSessionId { get; set; }
     public Guid? PlanId { get; set; }
-    public string PlanKey { get; set; } = string.Empty;
+    public string? PlanKey { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "VND";
@@ -191,4 +199,8 @@ public class Invoice : BaseEntity
     public Guid? PdfFileId { get; set; }
     public string? MetadataJson { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public string Purpose { get; set; } = "subscription_plan";
+    public Guid? ResourceId { get; set; }
+    public string? Description { get; set; }
 }
