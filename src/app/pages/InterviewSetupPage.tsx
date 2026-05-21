@@ -8,7 +8,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { AIModelDropdown } from '../components/AIModelDropdown';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { AlertCircle, Sparkles, Clock, Target, User, MessageSquare, Mic } from 'lucide-react';
+import { AlertCircle, Sparkles, Clock, Target, User, MessageSquare, Mic, Volume2, Languages, FileText } from 'lucide-react';
+import { Switch } from '../components/ui/switch';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { useAsyncQuery } from '../../hooks/useAsyncQuery';
 import { ApiError } from '../../lib/api/apiError';
@@ -31,6 +32,9 @@ export const InterviewSetupPage: React.FC = () => {
   const [interviewerMode, setInterviewerMode] = useState<InterviewerMode | ''>('');
   const [selectedModel, setSelectedModel] = useState<AiModelValue>('gpt-4o-mini');
   const [mode, setMode] = useState<'text' | 'voice'>('text');
+  const [voice, setVoice] = useState<string>('alloy');
+  const [language, setLanguage] = useState<string>('vi');
+  const [enableTranscript, setEnableTranscript] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -108,7 +112,14 @@ export const InterviewSetupPage: React.FC = () => {
       });
 
       if (mode === 'voice') {
-        navigate(`/phong-van-pre-call`, { state: { sessionId: session.id } });
+        navigate(`/phong-van-pre-call`, {
+          state: {
+            sessionId: session.id,
+            voice,
+            language,
+            enableTranscript,
+          },
+        });
       } else {
         navigate(`/phong-van-live/${session.id}`);
       }
@@ -308,6 +319,67 @@ export const InterviewSetupPage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {mode === 'voice' && (
+            <>
+              {/* Voice Selection */}
+              <div>
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <Volume2 size={18} className="text-blue-600" />
+                  Giọng nói AI (Voice)
+                </Label>
+                <Select value={voice} onValueChange={setVoice}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn giọng nói..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alloy">Alloy (Trung tính, dễ nghe)</SelectItem>
+                    <SelectItem value="ash">Ash (Trầm ấm, nam)</SelectItem>
+                    <SelectItem value="ballad">Ballad (Mượt mà, nữ)</SelectItem>
+                    <SelectItem value="coral">Coral (Thân thiện, nữ)</SelectItem>
+                    <SelectItem value="echo">Echo (Cá tính, nam)</SelectItem>
+                    <SelectItem value="sage">Sage (Chuyên nghiệp, nữ)</SelectItem>
+                    <SelectItem value="shimmer">Shimmer (Tươi sáng, nữ)</SelectItem>
+                    <SelectItem value="verse">Verse (Năng động, nam)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Language Selection */}
+              <div>
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <Languages size={18} className="text-blue-600" />
+                  Ngôn ngữ phỏng vấn
+                </Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn ngôn ngữ..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vi">Tiếng Việt (vi)</SelectItem>
+                    <SelectItem value="en">Tiếng Anh (en)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Enable Transcript Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <FileText size={18} className="text-blue-600" />
+                    Hiển thị text transcript realtime
+                  </Label>
+                  <p className="text-sm text-gray-500">
+                    Bật để hiển thị trực quan hội thoại dạng văn bản trong khi nói.
+                  </p>
+                </div>
+                <Switch
+                  checked={enableTranscript}
+                  onCheckedChange={setEnableTranscript}
+                />
+              </div>
+            </>
+          )}
           {submitError && (
             <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
               {submitError}

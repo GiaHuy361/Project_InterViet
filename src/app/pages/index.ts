@@ -11,6 +11,7 @@ export * from './CandidateSubscriptionPage';
 export * from './CVMatchingPage';
 export * from './InterviewSetupPage';
 export * from './InterviewPreCallPage';
+export * from './InterviewVoiceLivePage';
 export * from './InterviewLivePage';
 export * from './InterviewDetailPage';
 export * from './InterviewStatsPage';

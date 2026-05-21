@@ -9,6 +9,9 @@ export const InterviewPreCallPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const sessionId = location.state?.sessionId;
+  const voice = location.state?.voice || 'alloy';
+  const language = location.state?.language || 'vi';
+  const enableTranscript = location.state?.enableTranscript !== false;
   
   const [micPermission, setMicPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [isTesting, setIsTesting] = useState(false);
@@ -54,9 +57,13 @@ export const InterviewPreCallPage: React.FC = () => {
       return;
     }
 
-    // In a full implementation, we might navigate to InterviewVoiceLivePage
-    // For now, we fallback to InterviewLivePage or a placeholder
-    navigate(`/phong-van-live/${sessionId}`);
+    navigate(`/phong-van-voice-live/${sessionId}`, {
+      state: {
+        voice,
+        language,
+        enableTranscript,
+      },
+    });
   };
 
   return (
@@ -157,6 +164,10 @@ export const InterviewPreCallPage: React.FC = () => {
           <li className="flex items-start gap-2">
             <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-1.5"></div>
             <span>Nói rõ ràng và tự nhiên như đang trò chuyện thật</span>
+          </li>
+          <li className="flex items-start gap-2 text-amber-700 font-medium">
+            <div className="w-1.5 h-1.5 bg-amber-700 rounded-full mt-1.5"></div>
+            <span>⚠️ Không tải lại trang (F5) trong khi phỏng vấn voice để tránh mất kết nối.</span>
           </li>
         </ul>
       </Card>

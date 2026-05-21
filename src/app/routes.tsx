@@ -103,6 +103,7 @@ export const router = createBrowserRouter([
           { path: 'phong-van-setup', Component: Pages.InterviewSetupPage },
           { path: 'phong-van-pre-call', Component: Pages.InterviewPreCallPage },
           { path: 'phong-van-live/:id', Component: Pages.InterviewLivePage },
+          { path: 'phong-van-voice-live/:id', Component: Pages.InterviewVoiceLivePage },
           { path: 'phong-van-report/:id', Component: Pages.InterviewReportPage },
           { path: 'phong-van-chi-tiet/:id', Component: Pages.InterviewDetailPage },
           { path: 'phong-van-thong-ke', Component: Pages.InterviewStatsPage },
