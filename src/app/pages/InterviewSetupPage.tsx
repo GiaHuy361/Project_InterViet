@@ -100,7 +100,7 @@ export const InterviewSetupPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const session = await createInterview({
+      const createInterviewPayload = {
         position: position.trim(),
         level: level as InterviewLevel,
         interviewType: interviewType as InterviewType,
@@ -109,7 +109,11 @@ export const InterviewSetupPage: React.FC = () => {
         mode: mode,
         interviewerMode: interviewerMode as InterviewerMode,
         aiModel: selectedModel,
-      });
+      };
+
+      console.log('[InterviewSetup] createInterview payload:', createInterviewPayload);
+
+      const session = await createInterview(createInterviewPayload);
 
       if (mode === 'voice') {
         navigate(`/phong-van-pre-call`, {

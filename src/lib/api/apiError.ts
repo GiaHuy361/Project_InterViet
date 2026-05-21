@@ -21,8 +21,8 @@ export class ApiError extends Error {
     this.requestId = error.requestId;
 
     // Maintain proper stack trace (only available in V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
+    if (typeof (Error as any).captureStackTrace === 'function') {
+      (Error as any).captureStackTrace(this, ApiError);
     }
   }
 

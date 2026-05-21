@@ -22,6 +22,24 @@ export type AiModelValue =
   | 'basic'
   | 'advanced';
 
+const LEGACY_AI_MODEL_TO_TIER: Record<string, 'basic' | 'standard' | 'advanced'> = {
+  'gpt-4o-mini': 'basic',
+  'gpt-3.5-turbo': 'basic',
+  'gpt-4o': 'standard',
+  'gpt-4o-realtime': 'standard',
+  'claude-3-opus': 'advanced',
+  'gemini-1.5-pro': 'advanced',
+  'mixtral-8x7b': 'advanced',
+  'gemini-3-flash-preview': 'basic',
+  'gemini-3.1-pro': 'advanced',
+};
+
+export const normalizeAiModelTier = (value?: string | null): 'basic' | 'standard' | 'advanced' => {
+  if (!value) return 'basic';
+  if (value === 'basic' || value === 'standard' || value === 'advanced') return value;
+  return LEGACY_AI_MODEL_TO_TIER[value] ?? 'basic';
+};
+
 export interface InterviewQuotaResponse {
   featureKey: string;
   canCreate: boolean;
@@ -98,6 +116,7 @@ export interface InterviewSession {
   interviewerMode: InterviewerMode | string;
   aiModel: AiModelValue | string;
   status: InterviewStatus | string;
+  aiModelRaw?: string | null;
   totalExpectedQuestions?: number | null;
   answeredCount?: number | null;
   createdAt: string;
@@ -513,7 +532,8 @@ const mapDetail = (detail: RawInterviewSessionDetailResponse): InterviewSession 
     durationMinutes: detail.durationMinutes,
     mode: detail.mode as InterviewMode,
     interviewerMode: detail.interviewerMode ?? '',
-    aiModel: detail.aiModel ?? '',
+    aiModel: normalizeAiModelTier(detail.aiModel),
+    aiModelRaw: detail.aiModel ?? null,
     status: detail.status,
     totalExpectedQuestions: detail.totalExpectedQuestions,
     answeredCount: detail.answeredCount,
@@ -538,7 +558,7 @@ const mapListItem = (item: RawInterviewSessionListItem): InterviewSession => ({
   durationMinutes: item.durationMinutes,
   mode: item.mode as InterviewMode,
   interviewerMode: '',
-  aiModel: item.aiModel ?? '',
+  aiModel: normalizeAiModelTier(item.aiModel),
   status: item.status,
   totalExpectedQuestions: item.questionCount,
   answeredCount: item.answeredCount,
@@ -549,6 +569,7 @@ const mapListItem = (item: RawInterviewSessionListItem): InterviewSession => ({
   questions: [],
   answers: [],
   report: null,
+  aiModelRaw: item.aiModel ?? null,
 });
 
 export async function checkQuota(): Promise<InterviewQuotaResponse> {
@@ -568,7 +589,8 @@ export async function createInterview(
     durationMinutes: raw.durationMinutes,
     mode: raw.mode as InterviewMode,
     interviewerMode: raw.interviewerMode,
-    aiModel: raw.aiModel,
+    aiModel: normalizeAiModelTier(raw.aiModel),
+    aiModelRaw: raw.aiModel ?? null,
     status: raw.status,
     totalExpectedQuestions: null,
     answeredCount: 0,

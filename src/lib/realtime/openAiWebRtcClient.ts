@@ -90,6 +90,10 @@ export class OpenAiWebRtcClient {
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
 
+      if (!offer.sdp) {
+        throw new Error('Failed to create SDP offer.');
+      }
+
       // 6. POST SDP offer to connectUrl
       const headers: Record<string, string> = {
         'Content-Type': 'application/sdp',
@@ -99,32 +103,114 @@ export class OpenAiWebRtcClient {
         headers['Authorization'] = `Bearer ${clientSecret}`;
       }
 
-      const response = await fetch(connectUrl, {
-        method: 'POST',
-        body: offer.sdp,
-        headers,
-      });
+      let responseText: string | null = null;
+      let remoteSdp: string | null = null;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to establish WebRTC connection with server: ${response.status} ${errorText}`);
-      }
-
-      // 7. Parse SDP answer defensively
-      const responseText = await response.text();
-      let remoteSdp = responseText;
-      try {
-        const json = JSON.parse(responseText);
-        if (json.sdp) {
-          remoteSdp = json.sdp;
-        } else if (json.answer) {
-          remoteSdp = json.answer;
+      if (connectUrl.startsWith('ws://') || connectUrl.startsWith('wss://')) {
+        // For WebSocket endpoints, open a WS, send offer, wait for answer message
+        let wsUrl = connectUrl;
+        // append client secret as query param when provided
+        if (clientSecret) {
+          const sep = wsUrl.includes('?') ? '&' : '?';
+          wsUrl = `${wsUrl}${sep}client_secret=${encodeURIComponent(clientSecret)}`;
         }
-      } catch {
-        // Response is raw text SDP
+
+        responseText = await new Promise<string>((resolve, reject) => {
+          const ws = new WebSocket(wsUrl);
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('WebSocket timed out waiting for SDP answer'));
+          }, 20000);
+
+          ws.onopen = () => {
+            // Send offer as JSON payload
+            try {
+              ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+            } catch (e) {
+              // fallback: send raw SDP if available
+              if (offer.sdp) {
+                ws.send(offer.sdp);
+              } else {
+                ws.close();
+                reject(new Error('SDP offer is empty; cannot send to WebSocket endpoint'));
+              }
+            }
+          };
+
+          ws.onmessage = (ev) => {
+            clearTimeout(timeout);
+            const data = typeof ev.data === 'string' ? ev.data : null;
+            if (!data) {
+              ws.close();
+              reject(new Error('No SDP answer received from WebSocket'));
+              return;
+            }
+            // Try to parse JSON, else use raw SDP
+            try {
+              const json = JSON.parse(data);
+              if (json.sdp) {
+                resolve(json.sdp);
+              } else if (json.answer) {
+                resolve(json.answer);
+              } else if (json.type === 'answer' && json.sdp) {
+                resolve(json.sdp);
+              } else {
+                // unknown JSON shape, resolve with raw text
+                resolve(data);
+              }
+            } catch {
+              // raw SDP text
+              resolve(data);
+            }
+            ws.close();
+          };
+
+          ws.onerror = (err) => {
+            clearTimeout(timeout);
+            reject(new Error('WebSocket error while exchanging SDP'));
+          };
+
+          ws.onclose = () => {
+            // nothing
+          };
+        });
+
+        remoteSdp = responseText;
+      } else {
+        // HTTP(S) endpoint - use fetch
+        const response = await fetch(connectUrl, {
+          method: 'POST',
+          body: offer.sdp,
+          headers,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to establish WebRTC connection with server: ${response.status} ${errorText}`);
+        }
+
+        responseText = await response.text();
+
+        try {
+          const json = JSON.parse(responseText);
+          if (json.sdp) {
+            remoteSdp = json.sdp;
+          } else if (json.answer) {
+            remoteSdp = json.answer;
+          } else {
+            remoteSdp = responseText;
+          }
+        } catch {
+          // Response is raw text SDP
+          remoteSdp = responseText;
+        }
       }
 
       // 8. Set Remote Description
+      if (!remoteSdp) {
+        throw new Error('No remote SDP received from server');
+      }
+
       await this.pc.setRemoteDescription({
         type: 'answer',
         sdp: remoteSdp,

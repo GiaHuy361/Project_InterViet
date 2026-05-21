@@ -38,6 +38,7 @@ import {
   type InterviewReport
 } from '../../services/interviewService';
 import { OpenAiWebRtcClient } from '../../lib/realtime/openAiWebRtcClient';
+import { GeminiLiveClient } from '../../lib/realtime/geminiLiveClient';
 import { TranscriptBuilder } from '../../lib/realtime/transcriptBuilder';
 
 type VoiceState =
@@ -73,8 +74,8 @@ export const InterviewVoiceLivePage: React.FC = () => {
   const clientSecretRef = useRef<string | null>(null);
   const connectUrlRef = useRef<string | null>(null);
   
-  // WebRTC Client and Transcript Builder
-  const rtcClientRef = useRef<OpenAiWebRtcClient | null>(null);
+  // WebRTC / WebSocket Client and Transcript Builder
+  const rtcClientRef = useRef<OpenAiWebRtcClient | GeminiLiveClient | null>(null);
   const builderRef = useRef<TranscriptBuilder>(new TranscriptBuilder());
   const [turns, setTurns] = useState<any[]>([]);
   
@@ -135,33 +136,48 @@ export const InterviewVoiceLivePage: React.FC = () => {
 
         // Start realtime session on backend
         const validModels = ['gpt-4o-mini', 'gpt-4o', 'gemini-3-flash-preview', 'gemini-3.1-pro', 'standard', 'basic', 'advanced'];
-        const selectedModel = (detail.aiModel && validModels.includes(detail.aiModel))
+        const selectedModel = (detail.aiModelRaw && validModels.includes(detail.aiModelRaw))
+          ? detail.aiModelRaw
+          : detail.aiModel && validModels.includes(detail.aiModel)
           ? detail.aiModel
           : 'gpt-4o-mini';
 
-        const startResponse = await startInterviewRealtime(id, {
-          mode: 'voice',
+        const realtimePayload = {
+          mode: 'voice' as const,
           aiModel: selectedModel,
           voice,
           language,
-          enableTranscript
+          enableTranscript,
+        };
+        console.log('[InterviewVoiceLive] startInterviewRealtime payload:', {
+          sessionId: id,
+          payload: realtimePayload,
+          sessionDetailModel: detail.aiModel,
+          sessionDetailModelRaw: detail.aiModelRaw,
         });
+
+        const startResponse = await startInterviewRealtime(id, realtimePayload);
 
         realtimeSessionIdRef.current = startResponse.realtimeSessionId;
         clientSecretRef.current = startResponse.clientSecret || null;
         connectUrlRef.current = startResponse.connectUrl || null;
 
         if (startResponse.isIdempotent && !startResponse.clientSecret) {
-          throw new Error(
+          // Don't throw — present a recoverable error state and let user end the active
+          // realtime session. Keep realtimeSessionIdRef so the frontend can ask server to end it.
+          setState('Error');
+          setErrorMessage(
             'Phiên realtime đã active nhưng không thể khôi phục clientSecret. Vui lòng kết thúc phiên hiện tại trước khi tạo mới.'
           );
+          return;
         }
 
-        // Validate supported provider
+        // Validate supported provider: warn but don't block if server provided connect info
         const provider = startResponse.provider?.toLowerCase() || 'openai';
         if (provider !== 'openai') {
-          throw new Error(
-            `Nhà cung cấp dịch vụ realtime "${startResponse.provider || 'Gemini'}" hiện chưa được hỗ trợ hoàn chỉnh (Pending Integration). Vui lòng thử lại với OpenAI.`
+          console.warn(
+            `[InterviewVoiceLive] Realtime provider "${startResponse.provider}" is not 'openai'. Proceeding if server returned connectUrl/clientSecret.`,
+            startResponse
           );
         }
 
@@ -172,10 +188,10 @@ export const InterviewVoiceLivePage: React.FC = () => {
         // Move to connecting state
         setState('Connecting');
         
-        // Initialize WebRTC client
-        rtcClientRef.current = new OpenAiWebRtcClient({
-          onConnectionStateChange: (connectionState) => {
-            console.log('WebRTC State Change:', connectionState);
+        // Initialize appropriate client based on provider
+        const callbacks = {
+          onConnectionStateChange: (connectionState: any) => {
+            console.log(`${provider} State Change:`, connectionState);
             if (connectionState === 'connected') {
               setState('Live');
               // Start visualizer using mic stream
@@ -190,32 +206,38 @@ export const InterviewVoiceLivePage: React.FC = () => {
               }
             }
           },
-          onUserTranscript: (text, itemId) => {
+          onUserTranscript: (text: string, itemId: string) => {
             if (enableTranscript) {
               builderRef.current.updateTurn(itemId, 'user', text);
               setTurns(builderRef.current.getTurns());
             }
           },
-          onAssistantTranscriptDelta: (delta, itemId) => {
+          onAssistantTranscriptDelta: (delta: string, itemId: string) => {
             if (enableTranscript) {
               builderRef.current.appendDelta(itemId, 'assistant', delta);
               setTurns(builderRef.current.getTurns());
             }
           },
-          onAssistantTranscriptDone: (text, itemId) => {
+          onAssistantTranscriptDone: (text: string, itemId: string) => {
             if (enableTranscript) {
               builderRef.current.updateTurn(itemId, 'assistant', text);
               setTurns(builderRef.current.getTurns());
             }
           },
-          onError: (err) => {
-            console.error('WebRTC Client Error:', err);
+          onError: (err: any) => {
+            console.error(`${provider} Client Error:`, err);
             setState('Error');
             setErrorMessage(err.message || 'Lỗi kết nối âm thanh realtime.');
           }
-        });
+        };
 
-        // Establish the WebRTC connection
+        if (provider === 'gemini') {
+          rtcClientRef.current = new GeminiLiveClient(callbacks);
+        } else {
+          rtcClientRef.current = new OpenAiWebRtcClient(callbacks);
+        }
+
+        // Establish the connection
         await rtcClientRef.current.connect(
           startResponse.connectUrl,
           startResponse.clientSecret,
@@ -322,6 +344,51 @@ export const InterviewVoiceLivePage: React.FC = () => {
     // Populate manual review fields from the builder data
     setManualTranscript(builderRef.current.getRawTranscript());
     setManualQaPairs(builderRef.current.getQaPairs());
+  };
+
+  // 5b. Force end an active realtime session (used when server reports an idempotent session
+  // that cannot restore clientSecret). This lets the user terminate the orphaned session
+  // and then retry starting a new one.
+  const handleForceEndSession = async () => {
+    if (!id || !realtimeSessionIdRef.current) return;
+    setErrorMessage(null);
+    try {
+      await endInterviewRealtime(id, { realtimeSessionId: realtimeSessionIdRef.current, reason: 'force_end_by_user' });
+      // Clear local refs and reload to attempt a fresh start
+      realtimeSessionIdRef.current = null;
+      clientSecretRef.current = null;
+      connectUrlRef.current = null;
+      // reload to re-run init sequence
+      window.location.reload();
+    } catch (err: any) {
+      const apiErr = err instanceof ApiError ? err : null;
+      setErrorMessage(apiErr?.getUserMessage() || 'Không thể kết thúc phiên realtime hiện tại. Vui lòng thử lại sau.');
+    }
+  };
+
+  const handleRetry = async () => {
+    // Nếu bị lỗi timeout/mất WebRTC nhưng vẫn còn secret thì thử reconnect WebRTC
+    if (clientSecretRef.current && connectUrlRef.current && rtcClientRef.current) {
+      setErrorMessage(null);
+      setState('Connecting');
+      try {
+        await rtcClientRef.current.connect(
+          connectUrlRef.current,
+          clientSecretRef.current,
+          undefined
+        );
+        return;
+      } catch (err: any) {
+        console.warn('Retry WebRTC failed, falling back to force end', err);
+      }
+    }
+    
+    // Nếu secret bị null (vì idempotent) hoặc reconnect tiếp tục thất bại, gọi handleForceEndSession để reset hoàn toàn
+    if (realtimeSessionIdRef.current) {
+      await handleForceEndSession();
+    } else {
+      window.location.reload();
+    }
   };
 
   // 6. QA Pairs Editor functions
@@ -465,10 +532,15 @@ export const InterviewVoiceLivePage: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
+            {realtimeSessionIdRef.current && (
+              <Button variant="destructive" onClick={() => void handleForceEndSession()}>
+                Kết thúc phiên hiện tại
+              </Button>
+            )}
             <Button onClick={() => navigate('/phong-van-setup')}>
               Quay lại thiết lập
             </Button>
-            <Button variant="outline" onClick={() => window.location.reload()}>
+            <Button variant="outline" onClick={() => void handleRetry()}>
               Thử lại ngay
             </Button>
           </div>
