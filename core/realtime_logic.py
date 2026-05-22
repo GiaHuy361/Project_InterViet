@@ -1,4 +1,4 @@
-import os
+﻿import os
 import asyncio
 import uuid
 import httpx
@@ -10,7 +10,7 @@ from core.realtime_state import ACTIVE_PROXY_SESSIONS
 logger = logging.getLogger("ai_realtime_core")
 
 # =====================================================================
-# 1. MODEL MAPPING (Giữ nguyên như lúc nãy)
+# 1. MODEL MAPPING (giữ nguyên như hiện tại)
 # =====================================================================
 REALTIME_MODELS = [
     "gemini-2.5-flash-native-audio-preview-12-2025",
@@ -23,7 +23,7 @@ REALTIME_MODELS = [
     "gpt-4o-realtime-preview"
 ]
 
-# 1. Mapping tự động từ gói cước sang Realtime Model mặc định
+# 1. Tự động ánh xạ từ gói cước sang Realtime model mặc định
 REALTIME_TIER_MAPPING = {
     "free": ["gemini-2.5-flash-native-audio-preview-12-2025"],
     "monthly": ["gemini-2.5-flash-native-audio-preview-12-2025", "gemini-3.1-flash-live-preview"],
@@ -31,9 +31,9 @@ REALTIME_TIER_MAPPING = {
     "yearly": ["gpt-realtime", "gpt-realtime-1.5", "gpt-realtime-2","gpt-4o-realtime-preview"]
 }
 
-# 2. Mapping tự động từ Model Text cụ thể sang Model Realtime tương đương
+# 2. Tự động ánh xạ từ model text cụ thể sang model realtime tương đương
 TEXT_TO_REALTIME_MAPPING = {
-    # --- Dòng OpenAI Nhỏ / Rẻ ---
+    # --- Dòng OpenAI nhỏ / rẻ ---
     "gpt-4o-mini": "gemini-2.5-flash-native-audio-preview-12-2025",
     "gpt-3.5-turbo": "gpt-4o-mini-realtime-preview",
     "gpt-4.1-mini": "gemini-2.5-flash-native-audio-preview-12-2025",
@@ -43,7 +43,7 @@ TEXT_TO_REALTIME_MAPPING = {
     "o3-mini": "gpt-4o-mini-realtime-preview",
     "o4-mini": "gpt-4o-mini-realtime-preview",
     
-    # --- Dòng OpenAI To / Đắt ---
+    # --- Dòng OpenAI lớn / đắt ---
     "gpt-5": "gpt-realtime-mini",
     "gpt-5.1": "gpt-realtime-mini",
     "gpt-5.2": "gpt-realtime-mini",
@@ -57,14 +57,14 @@ TEXT_TO_REALTIME_MAPPING = {
     "gemini-3.1-flash-lite": "gemini-2.5-flash-native-audio-preview-12-2025",
     "gemini-2.5-flash": "gemini-2.5-flash-native-audio-preview-12-2025",
     
-    # --- Dòng Gemini Pro / Preview cao cấp ---
+    # --- Dòng Gemini Pro / preview cao cấp ---
     "gemini-3-flash-preview": "gemini-3.1-flash-live-preview",
     "gemini-2.5-pro": "gemini-3.1-flash-live-preview",
     "gemini-3.1-pro-preview": "gemini-3.1-flash-live-preview"
 }
 
 def resolve_realtime_models(requested_model: str) -> List[str]:
-    """Luôn trả về 1 list các model để fallback duyệt dần"""
+    """Luôn trả về một danh sách model để fallback tuần tự."""
     model_lower = requested_model.lower()
     
     if model_lower in REALTIME_TIER_MAPPING:
@@ -79,7 +79,7 @@ def resolve_realtime_models(requested_model: str) -> List[str]:
     raise ValueError(f"MODEL_UNAVAILABLE|Model '{requested_model}' không được hệ thống hỗ trợ.")
 
 # =====================================================================
-# 2. QUẢN LÝ POOL KEYS (DÀNH RIÊNG CHO REALTIME)
+# 2. QUẢN LÝ POOL KEYS (dành riêng cho realtime)
 # =====================================================================
 OPENAI_RT_KEYS = [os.getenv(f"OPENAI_API_KEY_{i}") for i in range(4, 7) if os.getenv(f"OPENAI_API_KEY_{i}")]
 GEMINI_RT_KEYS = [os.getenv(f"GEMINI_API_KEY_{i}") for i in range(10, 13) if os.getenv(f"GEMINI_API_KEY_{i}")]
@@ -103,7 +103,7 @@ def get_rt_key(provider: str) -> str:
 # 3. BUILD SYSTEM INSTRUCTIONS CỰC NGẮN GỌN (CHO VOICE)
 # =====================================================================
 def build_realtime_instructions(payload: Any) -> str:
-    """Xây dựng prompt nhập vai. Viết để AI ĐỌC/NÓI, nên cần ngắn gọn, tự nhiên."""
+    """Xây dựng prompt nhập vai. Viết để AI đọc/nói, nên cần ngắn gọn, tự nhiên."""
     goal_text = payload.goal if payload.goal else "Không có mục tiêu cụ thể"
     return f"""Bạn là một chuyên gia tuyển dụng. Hãy tiến hành phỏng vấn bằng giọng nói.
 Ứng viên đang ứng tuyển vị trí: {payload.position} (Level: {payload.level}).
@@ -113,15 +113,15 @@ Ngôn ngữ: {payload.language}.
 
 QUY TẮC BẮT BUỘC KHI NÓI CHUYỆN:
 1. Hãy mở lời chào và đặt câu hỏi đầu tiên luôn để bắt đầu.
-2. Trả lời cực kỳ ngắn gọn, tự nhiên như người thật đang nói chuyện. 
-3. KHÔNG ĐỌC danh sách gạch đầu dòng, KHÔNG dùng markdown.
+2. Trả lời cực kỳ ngắn gọn, tự nhiên như người thật đang nói chuyện.
+3. KHÔNG ĐƯỢC dùng danh sách gạch đầu dòng, KHÔNG dùng markdown.
 4. Đợi ứng viên trả lời rồi mới hỏi tiếp follow-up. Ngắt lời nếu ứng viên muốn bổ sung."""
 
 # =====================================================================
 # 4. HÀM TẠO SESSION TRỰC TIẾP VỚI PROVIDER
 # =====================================================================
 async def expire_proxy_token(token: str, delay_seconds: int = 600):
-    """Đợi hết thời gian TTL, nếu token chưa được xài thì xóa bỏ"""
+    """Đợi hết thời gian TTL, nếu token chưa được dùng thì xóa bỏ."""
     await asyncio.sleep(delay_seconds)
     if token in ACTIVE_PROXY_SESSIONS:
         del ACTIVE_PROXY_SESSIONS[token]
@@ -130,7 +130,7 @@ async def expire_proxy_token(token: str, delay_seconds: int = 600):
 async def create_openai_rt_session(model: str, instructions: str, voice: str, api_key: str) -> Dict[str, Any]:
     """
     Theo GA API, ta không lấy Ephemeral Token qua JSON nữa.
-    Chỉ lưu state nội bộ và cấp Token để Frontend dùng làm chứng chỉ gửi SDP Offer.
+    Chỉ lưu state nội bộ và cấp token để Frontend dùng làm chứng chỉ gửi SDP Offer.
     """
     internal_proxy_token = str(uuid.uuid4())
     
@@ -156,17 +156,27 @@ async def create_openai_rt_session(model: str, instructions: str, voice: str, ap
         "id": f"openai-webrtc-{uuid.uuid4().hex[:8]}"
     }
 
-async def create_gemini_proxy_session(model: str, instructions: str, voice: str, api_key: str) -> Dict[str, Any]:
+async def create_gemini_proxy_session(
+    model: str,
+    instructions: str,
+    voice: str,
+    api_key: str,
+    enable_transcript: bool,
+    language: str
+) -> Dict[str, Any]:
     """
-    Cách B: Tạo cấu hình ảo cho Proxy. 
-    Không gọi API Google ngay lúc này, chỉ cấp Token nội bộ để Frontend gọi vào Proxy của ta.
+    Cách B: Tạo cấu hình ảo cho Proxy.
+    Không gọi API Google ngay lúc này, chỉ cấp token nội bộ để Frontend gọi vào Proxy của ta.
     """
     internal_proxy_token = str(uuid.uuid4())
     
     ACTIVE_PROXY_SESSIONS[internal_proxy_token] = {
         "model": model,
         "instructions": instructions,
-        "api_key": api_key # Giữ sẵn key để lát nữa proxy gọi lên Google
+        "api_key": api_key,
+        "voice": voice if voice and voice != "default" else "Aoede",
+        "language": language or "vi",
+        "enable_transcript": bool(enable_transcript),
     }
 
     asyncio.create_task(expire_proxy_token(internal_proxy_token, 600))
@@ -180,7 +190,7 @@ async def create_gemini_proxy_session(model: str, instructions: str, voice: str,
 # 5. ORCHESTRATOR CHÍNH ĐƯỢC ROUTE GỌI TỚI
 # =====================================================================
 async def generate_realtime_session(payload: Any) -> Tuple[Dict[str, Any], str, str]:
-    """Trả về Tuple: (Session_Data_Dict, actual_provider, actual_model)"""
+    """Trả về tuple: (session_data, actual_provider, actual_model)."""
     
     # 1. Lấy danh sách model cần thử
     models_to_try = resolve_realtime_models(payload.aiModel)
@@ -198,7 +208,14 @@ async def generate_realtime_session(payload: Any) -> Tuple[Dict[str, Any], str, 
                 if provider == "openai":
                     session_res = await create_openai_rt_session(model, instructions, payload.voice, api_key)
                 else:
-                    session_res = await create_gemini_proxy_session(model, instructions, payload.voice, api_key)
+                    session_res = await create_gemini_proxy_session(
+                        model=model,
+                        instructions=instructions,
+                        voice=payload.voice,
+                        api_key=api_key,
+                        enable_transcript=payload.enableTranscript,
+                        language=payload.language
+                    )
                     
                 return session_res, provider, model
                 
@@ -206,5 +223,5 @@ async def generate_realtime_session(payload: Any) -> Tuple[Dict[str, Any], str, 
                 logger.warning(f"Failed {model} (Key attempt {attempt+1}): {str(e)}")
                 continue # Thử key tiếp theo
                 
-    # Nếu chạy hết list mà vẫn tạch
+    # Nếu chạy hết list mà vẫn thất bại
     raise Exception("SERVICE_UNAVAILABLE|Tất cả Realtime models khả dụng đều quá tải hoặc lỗi mạng.")
