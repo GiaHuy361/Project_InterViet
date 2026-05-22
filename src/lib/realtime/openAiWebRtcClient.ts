@@ -17,6 +17,7 @@ export class OpenAiWebRtcClient {
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
   private callbacks: OpenAiWebRtcClientCallbacks = {};
+  public isMuted: boolean = false;
 
   constructor(callbacks: OpenAiWebRtcClientCallbacks) {
     this.callbacks = callbacks;
@@ -123,6 +124,7 @@ export class OpenAiWebRtcClient {
           }, 20000);
 
           ws.onopen = () => {
+            console.log('[OpenAiWebRtcClient] WebSocket connected for SDP exchange');
             // Send offer as JSON payload
             try {
               ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
@@ -139,6 +141,7 @@ export class OpenAiWebRtcClient {
 
           ws.onmessage = (ev) => {
             clearTimeout(timeout);
+            console.log('[OpenAiWebRtcClient] Received SDP answer from server');
             const data = typeof ev.data === 'string' ? ev.data : null;
             if (!data) {
               ws.close();
@@ -167,10 +170,18 @@ export class OpenAiWebRtcClient {
 
           ws.onerror = (err) => {
             clearTimeout(timeout);
+            console.error('[OpenAiWebRtcClient] WebSocket error during SDP exchange:', err);
             reject(new Error('WebSocket error while exchanging SDP'));
           };
 
-          ws.onclose = () => {
+          ws.onclose = (ev) => {
+            try {
+              const code = (ev && typeof ev.code === 'number') ? ev.code : 'unknown';
+              const reason = (ev && typeof ev.reason === 'string') ? ev.reason : '';
+              console.log('[OpenAiWebRtcClient] WebSocket closed after SDP exchange', { code, reason });
+            } catch (e) {
+              console.log('[OpenAiWebRtcClient] WebSocket closed after SDP exchange');
+            }
             // nothing
           };
         });
@@ -319,6 +330,29 @@ export class OpenAiWebRtcClient {
       type: 'response.create'
     };
     this.dc.send(JSON.stringify(responseEvent));
+  }
+
+  public setMuted(muted: boolean): void {
+    this.isMuted = muted;
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach(track => {
+        track.enabled = !muted;
+      });
+    }
+  }
+
+  public endTurn(): void {
+    if (!this.dc || this.dc.readyState !== 'open') return;
+    
+    // Request response generation to interrupt VAD and force turn complete
+    const responseEvent = {
+      type: 'response.create'
+    };
+    try {
+      this.dc.send(JSON.stringify(responseEvent));
+    } catch (err) {
+      console.error('Error sending response.create:', err);
+    }
   }
 
   public disconnect(): void {

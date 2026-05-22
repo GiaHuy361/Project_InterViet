@@ -23,7 +23,8 @@ import {
   FileText,
   User,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Hand
 } from 'lucide-react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { ApiError } from '../../lib/api/apiError';
@@ -68,6 +69,9 @@ export const InterviewVoiceLivePage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [volumeLevel, setVolumeLevel] = useState(0);
+  const [isAudioSuspended, setIsAudioSuspended] = useState(false);
+  const [isPushToTalkMode, setIsPushToTalkMode] = useState(false);
+  const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
   
   // Realtime token and endpoints (kept in memory, never persisted)
   const realtimeSessionIdRef = useRef<string | null>(null);
@@ -118,6 +122,55 @@ export const InterviewVoiceLivePage: React.FC = () => {
     };
   }, [state]);
 
+  // 2b. Audio context state checker (checks if browser autoplay is blocking audio)
+  useEffect(() => {
+    let checkInterval: any;
+    if (state === 'Live' && rtcClientRef.current) {
+      checkInterval = setInterval(() => {
+        const client = rtcClientRef.current as any;
+        if (client && typeof client.isSuspended === 'function') {
+          setIsAudioSuspended(client.isSuspended());
+        }
+      }, 1000);
+    } else {
+      setIsAudioSuspended(false);
+    }
+    return () => {
+      if (checkInterval) clearInterval(checkInterval);
+    };
+  }, [state]);
+
+  // 2c. Push-to-Talk mode effect & handlers
+  useEffect(() => {
+    if (rtcClientRef.current) {
+      const client = rtcClientRef.current as any;
+      if (typeof client.setMuted === 'function') {
+        client.setMuted(isPushToTalkMode);
+      }
+    }
+  }, [isPushToTalkMode]);
+
+  const handlePttDown = () => {
+    if (!isPushToTalkMode || !rtcClientRef.current) return;
+    setIsPushToTalkActive(true);
+    const client = rtcClientRef.current as any;
+    if (typeof client.setMuted === 'function') {
+      client.setMuted(false);
+    }
+  };
+
+  const handlePttUp = () => {
+    if (!isPushToTalkMode || !rtcClientRef.current) return;
+    setIsPushToTalkActive(false);
+    const client = rtcClientRef.current as any;
+    if (typeof client.setMuted === 'function') {
+      client.setMuted(true);
+    }
+    if (typeof client.endTurn === 'function') {
+      client.endTurn();
+    }
+  };
+
   // 3. Initialize & Start Realtime session
   useEffect(() => {
     if (!id) {
@@ -135,7 +188,17 @@ export const InterviewVoiceLivePage: React.FC = () => {
         setSession(detail);
 
         // Start realtime session on backend
-        const validModels = ['gpt-4o-mini', 'gpt-4o', 'gemini-3-flash-preview', 'gemini-3.1-pro', 'standard', 'basic', 'advanced'];
+        const validModels = [
+          'gpt-4o-mini',
+          'gpt-4o',
+          'gemini-3-flash-preview',
+          'gemini-3.1-pro',
+          'gemini-3.1-flash-live-preview',
+          'gemini-2.5-flash-native-audio-preview-12-2025',
+          'standard',
+          'basic',
+          'advanced'
+        ];
         const selectedModel = (detail.aiModelRaw && validModels.includes(detail.aiModelRaw))
           ? detail.aiModelRaw
           : detail.aiModel && validModels.includes(detail.aiModel)
@@ -237,12 +300,36 @@ export const InterviewVoiceLivePage: React.FC = () => {
           rtcClientRef.current = new OpenAiWebRtcClient(callbacks);
         }
 
-        // Establish the connection
-        await rtcClientRef.current.connect(
-          startResponse.connectUrl,
-          startResponse.clientSecret,
-          startResponse.instructions
-        );
+        // Establish the connection (retry once by refreshing server-issued token if needed)
+        try {
+          await rtcClientRef.current.connect(
+            startResponse.connectUrl,
+            startResponse.clientSecret,
+            startResponse.instructions
+          );
+        } catch (connErr) {
+          console.warn('[InterviewVoiceLive] Initial realtime connect failed:', connErr);
+          // Try to refresh token by requesting a new realtime start from server
+          try {
+            const refreshResponse = await startInterviewRealtime(id, realtimePayload);
+            realtimeSessionIdRef.current = refreshResponse.realtimeSessionId;
+            clientSecretRef.current = refreshResponse.clientSecret || null;
+            connectUrlRef.current = refreshResponse.connectUrl || null;
+
+            if (!refreshResponse.connectUrl || !refreshResponse.clientSecret) {
+              throw new Error('Không thể tái cấp token kết nối realtime từ server.');
+            }
+
+            await rtcClientRef.current.connect(
+              refreshResponse.connectUrl,
+              refreshResponse.clientSecret,
+              refreshResponse.instructions
+            );
+          } catch (refreshErr) {
+            console.error('[InterviewVoiceLive] Reconnect after refresh failed:', refreshErr);
+            throw refreshErr;
+          }
+        }
 
       } catch (err: any) {
         setState('Error');
@@ -268,6 +355,14 @@ export const InterviewVoiceLivePage: React.FC = () => {
       }
     };
   }, [id, navigate]);
+
+  const handleResumeAudio = async () => {
+    const client = rtcClientRef.current as any;
+    if (client && typeof client.resumeContexts === 'function') {
+      await client.resumeContexts();
+      setIsAudioSuspended(client.isSuspended());
+    }
+  };
 
   // 4. Web Audio API analysis
   const startAudioAnalysis = (stream: MediaStream) => {
@@ -559,35 +654,99 @@ export const InterviewVoiceLivePage: React.FC = () => {
         />
 
         {/* Live Call Canvas */}
-        <Card className="relative overflow-hidden bg-slate-900 border-slate-800 text-white rounded-3xl p-8 min-h-[400px] flex flex-col justify-between items-center shadow-xl">
+        <Card 
+          onClick={() => { void handleResumeAudio(); }}
+          className="relative overflow-hidden bg-slate-900 border-slate-800 text-white rounded-3xl p-8 min-h-[400px] flex flex-col justify-between items-center shadow-xl cursor-pointer"
+        >
           {/* Header */}
           <div className="w-full flex items-center justify-between z-10">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
               <span className="text-sm font-semibold tracking-wide text-red-400">REC</span>
             </div>
+            
+            {/* Mode Toggle */}
+            <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700" onClick={(e) => e.stopPropagation()}>
+              <button
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${!isPushToTalkMode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setIsPushToTalkMode(false)}
+              >
+                Rảnh tay
+              </button>
+              <button
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${isPushToTalkMode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setIsPushToTalkMode(true)}
+              >
+                <Hand size={14} />
+                Nhấn giữ
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md">
               <Clock className="w-4 h-4 text-sky-400" />
               <span className="font-mono text-sm font-bold">{formatTime(callDuration)}</span>
             </div>
           </div>
 
+          {isAudioSuspended && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleResumeAudio();
+              }}
+              className="z-20 w-full max-w-md bg-amber-500 hover:bg-amber-600 text-slate-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer shadow-lg animate-bounce transition-all my-2"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Volume2 className="w-5 h-5 flex-shrink-0 animate-pulse" />
+                <span>Trình duyệt đang chặn âm thanh. Nhấn vào đây để bật tiếng!</span>
+              </div>
+              <span className="text-xs bg-slate-900/10 px-2.5 py-1 rounded-md font-bold uppercase">BẬT</span>
+            </div>
+          )}
+
           {/* Glowing pulsing visualizer circles */}
           <div className="relative my-8 flex items-center justify-center w-48 h-48">
-            <div
-              className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl transition-all duration-75"
-              style={{ transform: `scale(${1 + volumeLevel / 150})` }}
-            ></div>
-            <div
-              className="absolute w-36 h-36 bg-blue-600/35 rounded-full border border-blue-400/40 transition-all duration-75"
-              style={{ transform: `scale(${1 + volumeLevel / 180})` }}
-            ></div>
-            <div
-              className="absolute w-28 h-28 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-full shadow-lg flex items-center justify-center transition-all duration-75"
-              style={{ transform: `scale(${1 + volumeLevel / 220})` }}
-            ></div>
-            
-            <Mic className="relative z-10 w-10 h-10 text-white" />
+            {!isPushToTalkMode ? (
+              <>
+                <div
+                  className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl transition-all duration-75"
+                  style={{ transform: `scale(${1 + volumeLevel / 150})` }}
+                ></div>
+                <div
+                  className="absolute w-36 h-36 bg-blue-600/35 rounded-full border border-blue-400/40 transition-all duration-75"
+                  style={{ transform: `scale(${1 + volumeLevel / 180})` }}
+                ></div>
+                <div
+                  className="absolute w-28 h-28 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-full shadow-lg flex items-center justify-center transition-all duration-75"
+                  style={{ transform: `scale(${1 + volumeLevel / 220})` }}
+                ></div>
+                
+                <Mic className="relative z-10 w-10 h-10 text-white" />
+              </>
+            ) : (
+              <button
+                onMouseDown={handlePttDown}
+                onMouseUp={handlePttUp}
+                onMouseLeave={handlePttUp}
+                onTouchStart={handlePttDown}
+                onTouchEnd={handlePttUp}
+                className={`absolute w-36 h-36 rounded-full shadow-xl flex flex-col items-center justify-center transition-all duration-150 select-none ${
+                  isPushToTalkActive
+                    ? 'bg-red-500 scale-95 shadow-red-500/50'
+                    : 'bg-blue-600 hover:bg-blue-500 scale-100 shadow-blue-500/40'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isPushToTalkActive ? (
+                  <Mic className="w-10 h-10 text-white animate-pulse" />
+                ) : (
+                  <MicOff className="w-10 h-10 text-white mb-1" />
+                )}
+                <span className="text-white text-xs font-bold uppercase tracking-wider mt-1 text-center leading-tight">
+                  {isPushToTalkActive ? 'Đang nói...' : 'Giữ\\nđể nói'}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Live transcript scroll box */}

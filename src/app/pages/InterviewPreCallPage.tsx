@@ -57,6 +57,22 @@ export const InterviewPreCallPage: React.FC = () => {
       return;
     }
 
+    // Pre-initialize and resume AudioContexts in user-gesture handler
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      try {
+        const audioContext = new AudioContextClass({ sampleRate: 16000 });
+        const playbackCtx = new AudioContextClass();
+        audioContext.resume().catch(console.error);
+        playbackCtx.resume().catch(console.error);
+        (window as any).__realtimeAudioContext = audioContext;
+        (window as any).__realtimePlaybackContext = playbackCtx;
+        console.log('[PreCall] AudioContexts pre-initialized and resumed successfully on click');
+      } catch (e) {
+        console.error('[PreCall] Failed to pre-initialize AudioContexts:', e);
+      }
+    }
+
     navigate(`/phong-van-voice-live/${sessionId}`, {
       state: {
         voice,
