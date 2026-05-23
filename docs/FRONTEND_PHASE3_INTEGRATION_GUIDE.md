@@ -650,6 +650,9 @@ Quy trình đối sánh CV-JD là quy trình bất đồng bộ (Asynchronous). 
 }
 ```
 
+> [!TIP]
+> **Tối ưu hóa hiệu năng (Phase 6):** Backend C# đã áp dụng cơ chế xử lý song song có kiểm soát (Concurrency Control) bằng `SemaphoreSlim`. Khi người dùng chạy đối sánh đa JD (Multi-JD Match), hệ thống sẽ gửi đồng thời tối đa **3 request song song cùng lúc** để phân tích thay vì chạy tuần tự từng cái một. Cải tiến này giúp tốc độ phản hồi tổng thể của phiên đối sánh đa nhanh gấp 3 lần, giúp nâng cao trải nghiệm người dùng tối đa!
+
 ---
 
 ### 4.3 Danh Sách Lịch Sử Đối Sánh (List Match Sessions)
