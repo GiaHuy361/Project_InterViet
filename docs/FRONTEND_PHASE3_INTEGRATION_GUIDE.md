@@ -793,6 +793,9 @@ Kết quả nằm hoàn toàn trong mảng `targets`. Đối tượng `result` �
         "summaryText": "Sự ăn khớp xuất sắc về mặt công nghệ (.NET Core/C#) và thời gian kinh nghiệm thực tế.",
         "matchedSkillsJson": "[\"C#\", \".NET Core\", \"SQL Server\", \"Docker\"]",
         "missingSkillsJson": "[\"Kubernetes\"]",
+        "strengthsJson": "[\"Kinh nghiệm 5 năm làm backend C# vững chắc.\", \"Có kinh nghiệm với Docker.\"]",
+        "weaknessesJson": "[\"Thiếu kinh nghiệm sâu về Kubernetes.\"]",
+        "suggestionsJson": "[\"Bổ sung dự án thực tế sử dụng Kubernetes vào CV.\"]",
         "completedAt": "2026-05-22T13:59:12Z",
         "errorCode": null
       },
@@ -810,6 +813,9 @@ Kết quả nằm hoàn toàn trong mảng `targets`. Đối tượng `result` �
         "summaryText": "Ứng viên có kỹ năng nền tảng vững, nhưng thiếu chuyên môn thực tế về mảng frontend React.",
         "matchedSkillsJson": "[\"Node.js (Cơ bản)\", \"Git\"]",
         "missingSkillsJson": "[\"React.js\", \"TypeScript\", \"TailwindCSS\"]",
+        "strengthsJson": "[\"Nền tảng vững với Node.js và Git.\"]",
+        "weaknessesJson": "[\"Chưa có kinh nghiệm thực chiến với React.js và TypeScript.\"]",
+        "suggestionsJson": "[\"Tìm hiểu thêm về React Hooks, Redux Toolkit và TypeScript core.\"]",
         "completedAt": "2026-05-22T13:59:20Z",
         "errorCode": null
       }

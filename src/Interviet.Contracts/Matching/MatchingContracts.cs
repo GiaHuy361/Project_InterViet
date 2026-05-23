@@ -121,6 +121,9 @@ public sealed record MatchTargetResponse
     public string? SummaryText { get; init; }
     public string? MatchedSkillsJson { get; init; }
     public string? MissingSkillsJson { get; init; }
+    public string? StrengthsJson { get; init; }
+    public string? WeaknessesJson { get; init; }
+    public string? SuggestionsJson { get; init; }
     public DateTime? CompletedAt { get; init; }
     public string? ErrorCode { get; init; }
 }

@@ -79,7 +79,10 @@ public sealed class GetMyMatchesQueryHandler
                 LanguageScore = t.Result?.LanguageScore,
                 SummaryText = t.Result?.SummaryText,
                 MatchedSkillsJson = t.Result?.MatchedSkillsJson,
-                MissingSkillsJson = t.Result?.MissingSkillsJson
+                MissingSkillsJson = t.Result?.MissingSkillsJson,
+                StrengthsJson = t.Result?.StrengthsJson,
+                WeaknessesJson = t.Result?.WeaknessesJson,
+                SuggestionsJson = t.Result?.SuggestionsJson
             })
             .ToList();
 
