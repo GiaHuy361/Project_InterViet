@@ -21,6 +21,8 @@ import { safeParseJson } from '../../utils/safeParseJson';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
+const RESUME_PARSE_TIMEOUT_MS = 180000;
 
 function extractList(value?: string | null): string[] {
   if (!value) return [];
@@ -43,6 +45,14 @@ function getNormalizedStatus(status?: string | null): string {
 
 function isFinalMatchStatus(status?: string | null): boolean {
   return ['completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
+}
+
+function isResumeParsed(status?: string | null): boolean {
+  return getNormalizedStatus(status) === 'parsed';
+}
+
+function isResumeParseFailed(status?: string | null): boolean {
+  return ['failed', 'cancelled'].includes(getNormalizedStatus(status));
 }
 
 function getSessionFromStartResponse(response: StartSingleMatchResponse): MatchSessionDetail | null {
@@ -126,6 +136,11 @@ export const CVMatchingPage: React.FC = () => {
       return;
     }
 
+    if (error instanceof Error) {
+      toast.error(error.message);
+      return;
+    }
+
     toast.error('Có lỗi không xác định.');
   };
 
@@ -133,6 +148,26 @@ export const CVMatchingPage: React.FC = () => {
     stopPolling();
     setSessionDetail(null);
     activeSessionIdRef.current = null;
+  };
+
+  const waitForResumeParsed = async (resumeId: string): Promise<ResumeItem> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt <= RESUME_PARSE_TIMEOUT_MS) {
+      const detail = await cvMatchService.getResumeDetail(resumeId);
+
+      if (isResumeParsed(detail.parseStatus)) {
+        return detail;
+      }
+
+      if (isResumeParseFailed(detail.parseStatus)) {
+        throw new Error('AI phân tích CV thất bại. Vui lòng thử lại với file khác.');
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, RESUME_PARSE_POLL_INTERVAL_MS));
+    }
+
+    throw new Error('Hết thời gian chờ AI phân tích CV. Vui lòng thử lại sau.');
   };
 
   const resetJobDescription = () => {
@@ -167,12 +202,17 @@ export const CVMatchingPage: React.FC = () => {
     }
 
     setIsUploadingResume(true);
+    setResume(null);
     clearMatchState();
 
     try {
       const uploadedResume = await cvMatchService.uploadResume(selectedFile, cvTitle);
-      setResume(uploadedResume);
-      toast.success('Upload CV thành công.');
+      const parsedResume = isResumeParsed(uploadedResume.parseStatus)
+        ? uploadedResume
+        : await waitForResumeParsed(uploadedResume.resumeId);
+
+      setResume(parsedResume);
+      toast.success('Upload và phân tích CV thành công.');
     } catch (error) {
       handleApiError(error);
     } finally {
@@ -283,7 +323,7 @@ export const CVMatchingPage: React.FC = () => {
 
           <Button onClick={handleUploadResume} disabled={!selectedFile || isUploadingResume || isPolling}>
             <Upload className="mr-2" size={16} />
-            {isUploadingResume ? 'Đang upload CV...' : 'Upload CV'}
+            {isUploadingResume ? 'Đang upload và phân tích CV...' : 'Upload CV'}
           </Button>
         </Card>
 
@@ -333,7 +373,7 @@ export const CVMatchingPage: React.FC = () => {
               resetJobDescription();
             }}
             wrap="soft"
-            className="min-h-[180px] max-h-[420px] resize-y overflow-y-auto overflow-x-hidden break-words [overflow-wrap:anywhere]"
+            className="min-h-[180px] max-h-[420px] resize-y overflow-y-auto overflow-x-hidden break-words"
             placeholder="Nội dung JD (tối thiểu 50 ký tự)..."
           />
 
@@ -369,7 +409,7 @@ export const CVMatchingPage: React.FC = () => {
         </Card>
       )}
 
-      {getNormalizedStatus(sessionDetail?.status) === 'failed' && (
+      {getNormalizedStatus(sessionDetail?.status) === 'failed' && sessionDetail && (
         <Card className="p-4 flex items-start gap-2 border-red-300">
           <AlertCircle size={16} className="text-red-500 mt-0.5" />
           <div>
