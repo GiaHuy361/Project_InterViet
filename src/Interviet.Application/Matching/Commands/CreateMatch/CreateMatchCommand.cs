@@ -177,7 +177,7 @@ public sealed class CreateMatchCommandHandler
                     ResumeId         = capturedResumeId,
                     ResumeVersionId  = capturedVersionId,
                     JobDescriptionId = capturedJdId,
-                    MatchSessionId   = capturedSessionId,
+                    MatchSessionId   = capturedTargetId,
                     CorrelationId    = capturedCorrelationId,
                     RequestId        = capturedRequestId,
                     RawText          = capturedRawText,

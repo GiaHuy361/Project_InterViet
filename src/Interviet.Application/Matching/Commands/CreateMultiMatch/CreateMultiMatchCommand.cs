@@ -173,109 +173,119 @@ public sealed class CreateMultiMatchCommandHandler
 
         _ = Task.Run(async () =>
         {
-            // The orchestrator loops through each target
-            for (int idx = 0; idx < capturedTargets.Count; idx++)
+            var semaphore = new System.Threading.SemaphoreSlim(3);
+            var tasks = Enumerable.Range(0, capturedTargets.Count).Select(async idx =>
             {
-                var t = capturedTargets[idx];
-                var jdSnapshot = snapshotJds.First(j => j.Id == t.JdId);
-                // Per-target requestId for independent tracing; correlationId shared for the session
-                var targetRequestId = Guid.NewGuid().ToString("N");
-                var matchIndex = $"{idx + 1}/{totalTargets}";
-                
-                using var scope = capturedScopeFactory.CreateScope();
-                var sp = scope.ServiceProvider;
-                var matcher = sp.GetRequiredService<IAiMatchingClient>();
-                var bgDb    = sp.GetRequiredService<IAppDbContext>();
-                
-                var targetRecord = await bgDb.MatchTargets.FirstOrDefaultAsync(x => x.Id == t.TargetId);
-                if (targetRecord == null) continue;
-                
-                targetRecord.Status = MatchSessionStatus.Processing;
-                await bgDb.SaveChangesAsync();
-
+                await semaphore.WaitAsync();
                 try
                 {
-                    var matchRes = await matcher.MatchAsync(new AiMatchRequest
-                    {
-                        UserId           = capturedUserId,
-                        ResumeId         = capturedResumeId,
-                        ResumeVersionId  = capturedVersionId,
-                        JobDescriptionId = jdSnapshot.Id,
-                        MatchSessionId   = capturedSessionId,
-                        CorrelationId    = capturedCorrelationId,
-                        RequestId        = targetRequestId,
-                        RawText          = capturedRawText,
-                        SkillsJson       = capturedSkillsJson,
-                        ExperiencesJson  = capturedExperiencesJson,
-                        EducationsJson   = capturedEducationsJson,
-                        SectionsJson     = capturedSectionsJson,
-                        ProjectsJson     = capturedProjectsJson,
-                        CertificationsJson = capturedCertsJson,
-                        LanguagesJson    = capturedLangsJson,
-                        JobDescriptionRawText = jdSnapshot.RawText,
-                        MatchIndex       = matchIndex
-                    }, CancellationToken.None);
+                    var t = capturedTargets[idx];
+                    var jdSnapshot = snapshotJds.First(j => j.Id == t.JdId);
+                    // Per-target requestId for independent tracing; correlationId shared for the session
+                    var targetRequestId = Guid.NewGuid().ToString("N");
+                    var matchIndex = $"{idx + 1}/{totalTargets}";
+                    
+                    using var scope = capturedScopeFactory.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var matcher = sp.GetRequiredService<IAiMatchingClient>();
+                    var bgDb    = sp.GetRequiredService<IAppDbContext>();
+                    
+                    var targetRecord = await bgDb.MatchTargets.FirstOrDefaultAsync(x => x.Id == t.TargetId);
+                    if (targetRecord == null) return;
+                    
+                    targetRecord.Status = MatchSessionStatus.Processing;
+                    await bgDb.SaveChangesAsync();
 
-                    if (matchRes.IsSuccess)
+                    try
                     {
-                        bgDb.MatchResults.Add(new MatchResult
+                        var matchRes = await matcher.MatchAsync(new AiMatchRequest
                         {
-                            Id                = Guid.NewGuid(),
-                            MatchSessionId    = capturedSessionId,
-                            MatchTargetId     = t.TargetId,
-                            TotalScore        = matchRes.OverallScore ?? 0,
-                            TechnicalScore    = matchRes.SkillScore,
-                            ExperienceScore   = matchRes.ExperienceScore,
-                            EducationScore    = matchRes.EducationScore,
-                            LanguageScore     = matchRes.LanguageScore,
-                            MatchBand         = DetermineBand(matchRes.OverallScore ?? 0),
-                            SummaryText       = matchRes.SummaryText,
-                            MatchedSkillsJson = matchRes.MatchedSkillsJson,
-                            MissingSkillsJson = matchRes.MissingSkillsJson,
-                            StrengthsJson     = matchRes.StrengthsJson,
-                            WeaknessesJson    = matchRes.WeaknessesJson,
-                            SuggestionsJson   = matchRes.RecommendationsJson,
-                            RawResponseJson   = matchRes.RawResponseJson,
-                            ModelVersion      = matchRes.ModelVersion,
-                            SchemaVersion     = matchRes.SchemaVersion,
-                            CreatedAt         = DateTime.UtcNow
-                        });
-                        
-                        targetRecord.Status = MatchSessionStatus.Completed;
+                            UserId           = capturedUserId,
+                            ResumeId         = capturedResumeId,
+                            ResumeVersionId  = capturedVersionId,
+                            JobDescriptionId = jdSnapshot.Id,
+                            MatchSessionId   = t.TargetId,
+                            CorrelationId    = capturedCorrelationId,
+                            RequestId        = targetRequestId,
+                            RawText          = capturedRawText,
+                            SkillsJson       = capturedSkillsJson,
+                            ExperiencesJson  = capturedExperiencesJson,
+                            EducationsJson   = capturedEducationsJson,
+                            SectionsJson     = capturedSectionsJson,
+                            ProjectsJson     = capturedProjectsJson,
+                            CertificationsJson = capturedCertsJson,
+                            LanguagesJson    = capturedLangsJson,
+                            JobDescriptionRawText = jdSnapshot.RawText,
+                            MatchIndex       = matchIndex
+                        }, CancellationToken.None);
+
+                        if (matchRes.IsSuccess)
+                        {
+                            bgDb.MatchResults.Add(new MatchResult
+                            {
+                                Id                = Guid.NewGuid(),
+                                MatchSessionId    = capturedSessionId,
+                                MatchTargetId     = t.TargetId,
+                                TotalScore        = matchRes.OverallScore ?? 0,
+                                TechnicalScore    = matchRes.SkillScore,
+                                ExperienceScore   = matchRes.ExperienceScore,
+                                EducationScore    = matchRes.EducationScore,
+                                LanguageScore     = matchRes.LanguageScore,
+                                MatchBand         = DetermineBand(matchRes.OverallScore ?? 0),
+                                SummaryText       = matchRes.SummaryText,
+                                MatchedSkillsJson = matchRes.MatchedSkillsJson,
+                                MissingSkillsJson = matchRes.MissingSkillsJson,
+                                StrengthsJson     = matchRes.StrengthsJson,
+                                WeaknessesJson    = matchRes.WeaknessesJson,
+                                SuggestionsJson   = matchRes.RecommendationsJson,
+                                RawResponseJson   = matchRes.RawResponseJson,
+                                ModelVersion      = matchRes.ModelVersion,
+                                SchemaVersion     = matchRes.SchemaVersion,
+                                CreatedAt         = DateTime.UtcNow
+                            });
+                            
+                            targetRecord.Status = MatchSessionStatus.Completed;
+                            targetRecord.CompletedAt = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            // Python returned success=false — do NOT create MatchResult
+                            // Preserve the exact Python error code for tracing
+                            var errorCode = matchRes.ErrorCode switch
+                            {
+                                "VALIDATION_ERROR"            => "VALIDATION_ERROR",
+                                "RESUME_PARSED_DATA_REQUIRED" => "RESUME_PARSED_DATA_REQUIRED",
+                                "RATE_LIMIT_EXCEEDED"         => "RATE_LIMIT_EXCEEDED",
+                                "MATCH_FAILED"                => "MATCH_FAILED",
+                                "SERVICE_UNAVAILABLE"         => "SERVICE_UNAVAILABLE",
+                                "INTERNAL_ERROR"              => "INTERNAL_ERROR",
+                                _ => matchRes.ErrorCode ?? "MATCH_ERROR"
+                            };
+                            targetRecord.Status    = MatchSessionStatus.Failed;
+                            targetRecord.ErrorCode = errorCode;
+                            targetRecord.CompletedAt = DateTime.UtcNow;
+                            capturedLogger.LogWarning(
+                                "Target failed. TargetId={TargetId} MatchIndex={MatchIndex} ErrorCode={Code}",
+                                t.TargetId, matchIndex, errorCode);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        capturedLogger.LogError(ex, "Python matching threw exception for TargetId={TargetId}", t.TargetId);
+                        targetRecord.Status = MatchSessionStatus.Failed;
+                        targetRecord.ErrorCode = "Exception";
                         targetRecord.CompletedAt = DateTime.UtcNow;
                     }
-                    else
-                    {
-                        // Python returned success=false — do NOT create MatchResult
-                        // Preserve the exact Python error code for tracing
-                        var errorCode = matchRes.ErrorCode switch
-                        {
-                            "VALIDATION_ERROR"            => "VALIDATION_ERROR",
-                            "RESUME_PARSED_DATA_REQUIRED" => "RESUME_PARSED_DATA_REQUIRED",
-                            "RATE_LIMIT_EXCEEDED"         => "RATE_LIMIT_EXCEEDED",
-                            "MATCH_FAILED"                => "MATCH_FAILED",
-                            "SERVICE_UNAVAILABLE"         => "SERVICE_UNAVAILABLE",
-                            "INTERNAL_ERROR"              => "INTERNAL_ERROR",
-                            _ => matchRes.ErrorCode ?? "MATCH_ERROR"
-                        };
-                        targetRecord.Status    = MatchSessionStatus.Failed;
-                        targetRecord.ErrorCode = errorCode;
-                        targetRecord.CompletedAt = DateTime.UtcNow;
-                        capturedLogger.LogWarning(
-                            "Target failed. TargetId={TargetId} MatchIndex={MatchIndex} ErrorCode={Code}",
-                            t.TargetId, matchIndex, errorCode);
-                    }
+                    
+                    await bgDb.SaveChangesAsync();
                 }
-                catch (Exception ex)
+                finally
                 {
-                    capturedLogger.LogError(ex, "Python matching threw exception for TargetId={TargetId}", t.TargetId);
-                    targetRecord.Status = MatchSessionStatus.Failed;
-                    targetRecord.ErrorCode = "Exception";
-                    targetRecord.CompletedAt = DateTime.UtcNow;
+                    semaphore.Release();
                 }
-                
-                await bgDb.SaveChangesAsync();
-            }
+            });
+
+            await Task.WhenAll(tasks);
 
             // After all targets are processed, evaluate session status
             using var finalScope = capturedScopeFactory.CreateScope();
