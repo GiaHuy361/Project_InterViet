@@ -6,7 +6,11 @@
 class PCMAudioProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    this._buffer = new Float32Array(4096);
+    // Choose chunk duration ~120ms to balance latency and ASR accuracy.
+    // Use global `sampleRate` provided by the audio worklet environment.
+    const chunkMs = 120;
+    const len = Math.max(1024, Math.floor(sampleRate * (chunkMs / 1000)));
+    this._buffer = new Float32Array(len);
     this._writeIndex = 0;
   }
 
@@ -20,7 +24,7 @@ class PCMAudioProcessor extends AudioWorkletProcessor {
       this._buffer[this._writeIndex++] = channelData[i];
 
       if (this._writeIndex >= this._buffer.length) {
-        // Gửi bản sao buffer về main thread
+        // Post a copy of the buffer to the main thread
         this.port.postMessage({ audioData: this._buffer.slice(0) });
         this._writeIndex = 0;
       }

@@ -58,6 +58,7 @@ export class GeminiLiveClient {
   private userTranscriptDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingUserTranscriptText: string = '';
   private pendingUserTranscriptId: string | null = null;
+  private lastUserTranscriptAt: number | null = null;
 
   public isMuted: boolean = false;
 
@@ -165,16 +166,18 @@ export class GeminiLiveClient {
 
         const base64Audio = arrayBufferToBase64(pcmBuffer.buffer);
 
+        const sampleRate = this.audioContext ? Math.round(this.audioContext.sampleRate) : 16000;
+
         const payload = {
           realtimeInput: {
             audio: {
-              mimeType: 'audio/pcm;rate=16000',
+              mimeType: `audio/pcm;rate=${sampleRate}`,
               data: base64Audio
             }
           }
         };
 
-        console.debug('[GeminiLiveClient] Sending audio chunk (base64 len)', base64Audio.length);
+        console.debug('[GeminiLiveClient] Sending audio chunk (base64 len)', base64Audio.length, 'rate', sampleRate);
 
         this.ws.send(JSON.stringify(payload));
       };
@@ -210,16 +213,18 @@ export class GeminiLiveClient {
 
         const base64Audio = arrayBufferToBase64(pcmBuffer.buffer);
 
+        const sampleRate = this.audioContext ? Math.round(this.audioContext.sampleRate) : 16000;
+
         const payload = {
           realtimeInput: {
             audio: {
-              mimeType: 'audio/pcm;rate=16000',
+              mimeType: `audio/pcm;rate=${sampleRate}`,
               data: base64Audio
             }
           }
         };
 
-        console.debug('[GeminiLiveClient] Sending audio chunk (scriptProcessor) base64 len', base64Audio.length);
+        console.debug('[GeminiLiveClient] Sending audio chunk (scriptProcessor) base64 len', base64Audio.length, 'rate', sampleRate);
 
         this.ws.send(JSON.stringify(payload));
       };
@@ -491,26 +496,55 @@ export class GeminiLiveClient {
 
   private handleUserTranscription(text: string): void {
     if (!this.callbacks.onUserTranscript) return;
+    const now = Date.now();
 
-    if (!this.currentUserId) {
+    // If we've been silent for a while, start a new user turn.
+    const NEW_TURN_TIMEOUT_MS = 1500;
+    if (!this.currentUserId || (this.lastUserTranscriptAt && now - this.lastUserTranscriptAt > NEW_TURN_TIMEOUT_MS)) {
       this.currentUserId = 'user-' + generateUuid();
       this.accumulatedUserText = '';
     }
 
     // De-dup repeated server updates.
-    if (text === this.accumulatedUserText) return;
-
-    // Most updates are incremental revisions of the same utterance.
-    if (
-      this.accumulatedUserText &&
-      !(text.startsWith(this.accumulatedUserText) || this.accumulatedUserText.startsWith(text))
-    ) {
-      // New utterance in same stream => start a fresh turn id.
-      this.currentUserId = 'user-' + generateUuid();
+    if (text === this.accumulatedUserText) {
+      this.lastUserTranscriptAt = now;
+      return;
     }
 
-    this.accumulatedUserText = text;
-    this.emitUserTranscriptDebounced(text, this.currentUserId);
+    // If server emits very short token-like fragments rapidly, append them to the
+    // existing accumulated text instead of starting a new turn or replacing.
+    const shortFragment = text.length <= 12;
+    const rapidWindow = 900; // ms
+    if (this.accumulatedUserText && shortFragment && this.lastUserTranscriptAt && now - this.lastUserTranscriptAt < rapidWindow) {
+      this.accumulatedUserText = (this.accumulatedUserText + ' ' + text).trim();
+      this.emitUserTranscriptDebounced(this.accumulatedUserText, this.currentUserId);
+      this.lastUserTranscriptAt = now;
+      return;
+    }
+
+    // Default: merge accumulated text with incoming update to avoid losing tokens
+    const mergeText = (a: string, b: string) => {
+      if (!a) return b;
+      if (!b) return a;
+      if (a.includes(b)) return a;
+      if (b.includes(a)) return b;
+
+      // find longest suffix of a that is prefix of b
+      const maxOverlap = Math.min(a.length, b.length);
+      for (let ol = maxOverlap; ol > 0; ol--) {
+        if (a.slice(a.length - ol) === b.slice(0, ol)) {
+          return a + b.slice(ol);
+        }
+      }
+
+      // no overlap, join with space
+      return (a + ' ' + b).trim();
+    };
+
+    const merged = mergeText(this.accumulatedUserText, text);
+    this.accumulatedUserText = merged;
+    this.emitUserTranscriptDebounced(merged, this.currentUserId);
+    this.lastUserTranscriptAt = now;
   }
 
   private resetUserTurn(): void {
@@ -527,9 +561,11 @@ export class GeminiLiveClient {
       clearTimeout(this.userTranscriptDebounceTimer);
     }
 
+    // Debounce sending user transcript to UI to reduce fragmentation of short incremental updates.
+    // 500-700ms window balances responsiveness and reduces many tiny updates.
     this.userTranscriptDebounceTimer = setTimeout(() => {
       this.flushPendingUserTranscript();
-    }, 150);
+    }, 600);
   }
 
   private flushPendingUserTranscript(): void {
