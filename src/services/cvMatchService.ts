@@ -90,12 +90,14 @@ export interface MatchSessionPage {
   pageSize: number;
 }
 
-export type StartSingleMatchResponse =
+export type StartMatchResponse =
   | MatchSessionPage
   | {
       sessionId: string;
       status: MatchStatus;
     };
+
+export type StartSingleMatchResponse = StartMatchResponse;
 
 export const cvMatchService = {
   uploadResume: (file: File, title?: string) => {
@@ -119,11 +121,17 @@ export const cvMatchService = {
     postedAt?: string;
   }) => apiClient.post<JobDescriptionItem>('/job-descriptions', payload),
 
+  listJobDescriptions: () =>
+    apiClient.get<{ items: JobDescriptionItem[]; totalCount: number }>('/job-descriptions?page=1&pageSize=100'),
+
   startSingleMatch: (resumeId: string, jobDescriptionId: string) =>
-    apiClient.post<StartSingleMatchResponse>('/matches', {
+    apiClient.post<StartMatchResponse>('/matches', {
       resumeId,
       jobDescriptionId,
     }),
+
+  startMultiMatch: (payload: { resumeId: string; jobDescriptionIds: string[]; title: string }) =>
+    apiClient.post<StartMatchResponse>('/matches/multi', payload),
 
   getMatchSessionDetail: (sessionId: string) => apiClient.get<MatchSessionDetail>(`/matches/${sessionId}`),
 
