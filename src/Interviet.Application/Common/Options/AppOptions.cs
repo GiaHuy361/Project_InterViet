@@ -58,7 +58,7 @@ public sealed class AiServicesOptions
     public string? InterviewRealtimeBaseUrl { get; set; }
     public int InterviewRealtimeTokenTtlSeconds { get; set; } = 600;
     public string ApiKey { get; set; } = string.Empty;
-    public int TimeoutSeconds { get; set; } = 60;
+    public int TimeoutSeconds { get; set; } = 180;
 }
 
 public sealed class MockMerchantOptions
