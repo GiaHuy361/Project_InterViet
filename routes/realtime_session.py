@@ -36,28 +36,59 @@ async def create_session(
         # 2. Xử lý tạo session với fallback
         session_res, provider, actual_model = await generate_realtime_session(payload)
         
-        # 3. Parse Secret & ID
+        # # 3. Parse Secret & ID
+        # client_secret_val = None
+        # if "client_secret" in session_res and "value" in session_res["client_secret"]:
+        #     client_secret_val = session_res["client_secret"]["value"]
+            
+        # provider_session_id = session_res.get("id", "unknown-id")
+
+        # 3. Parse Secret & ID (Cập nhật siêu trâu bò)
         client_secret_val = None
-        if "client_secret" in session_res and "value" in session_res["client_secret"]:
-            client_secret_val = session_res["client_secret"]["value"]
+        
+        # In thẳng ra Terminal để anh em mình "nắm thóp" thằng OpenAI
+        logger.info(f"Raw OpenAI Response: {session_res}")
+
+        if "client_secret" in session_res:
+            if isinstance(session_res["client_secret"], dict):
+                client_secret_val = session_res["client_secret"].get("value")
+            else:
+                client_secret_val = session_res["client_secret"] # Đề phòng nó trả về thẳng string
+        elif "value" in session_res:
+            client_secret_val = session_res["value"]
+            
+        # Nếu vẫn không tìm thấy key nào quen thuộc, ép chuỗi JSON đẩy về Frontend để debug
+        if not client_secret_val:
+            client_secret_val = str(session_res)
             
         provider_session_id = session_res.get("id", "unknown-id")
-        
+
         # 4. Tính toán TTL
         ttl_seconds = int(os.getenv("REALTIME_SESSION_TTL_SECONDS", 600))
         expires_at = (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")
         
-        # 5. Xác định URL để Frontend kết nối tùy theo Provider (BẢN MỚI)
+        # # 5. Xác định URL để Frontend kết nối tùy theo Provider (BẢN MỚI)
+        # base_url = os.getenv("PYTHON_API_BASE_URL", "http://localhost:8002").rstrip("/")
+        
+        # if provider == "openai":
+        #     # Endpoint nhận SDP Offer (REST POST)
+        #     connect_url = f"{base_url}/ai/interviews/realtime/openai/sdp"
+        # else:
+        #     # Endpoint nhận Audio/Text (WebSocket)
+        #     ws_base_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
+        #     connect_url = f"{ws_base_url}/ws/ai/interviews/stream/{client_secret_val}"
+
+        # 5. Xác định URL để Frontend kết nối
         base_url = os.getenv("PYTHON_API_BASE_URL", "http://localhost:8002").rstrip("/")
         
         if provider == "openai":
-            # Endpoint nhận SDP Offer (REST POST)
-            connect_url = f"{base_url}/ai/interviews/realtime/openai/sdp"
+            # TRẢ LẠI URL CHUẨN CÓ THAM SỐ MODEL
+            # Đảm bảo actual_model là chuỗi có đuôi ngày tháng (vd: gpt-4o-mini-realtime-preview-2024-12-17)
+            connect_url = f"https://api.openai.com/v1/realtime?model={actual_model}"
         else:
-            # Endpoint nhận Audio/Text (WebSocket)
             ws_base_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
             connect_url = f"{ws_base_url}/ws/ai/interviews/stream/{client_secret_val}"
-
+            
         # 6. Build Response (Bổ sung connectUrl và instructions)
         data_res = RealtimeSessionData(
             providerSessionId=provider_session_id,
