@@ -1,4 +1,4 @@
-import type { PlanResponse, CurrentSubscription } from '../lib/api/phase2Types';
+import type { PlanResponse, CurrentSubscription } from '../lib/api/dashboardTypes';
 import {
   CANDIDATE_PLANS,
   type PlanConfig,

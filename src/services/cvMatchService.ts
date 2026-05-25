@@ -27,6 +27,20 @@ export interface ResumeItem {
   updatedAt: string;
 }
 
+export interface ResumeListParams {
+  page?: number;
+  pageSize?: number;
+  status?: ParseStatus | string;
+  isActive?: boolean;
+}
+
+export interface ResumeListResponse {
+  items: ResumeItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface JobDescriptionItem {
   id: string;
   title: string;
@@ -115,7 +129,15 @@ export const cvMatchService = {
     return apiClient.upload<ResumeItem>('/resumes', formData);
   },
 
-  listResumes: () => apiClient.get<{ items: ResumeItem[]; totalCount: number }>('/resumes'),
+  listResumes: (params?: ResumeListParams) => {
+    const search = new URLSearchParams();
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.pageSize != null) search.set('pageSize', String(params.pageSize));
+    if (params?.status) search.set('status', params.status);
+    if (params?.isActive != null) search.set('isActive', String(params.isActive));
+    const qs = search.toString();
+    return apiClient.get<ResumeListResponse>(`/resumes${qs ? `?${qs}` : ''}`);
+  },
 
   getResumeDetail: (resumeId: string) => apiClient.get<ResumeItem & { parsedData?: Record<string, unknown> }>(`/resumes/${resumeId}`),
 

@@ -1,7 +1,3 @@
-/**
- * Phase 2 API types — Dashboard, Profile, Plans, Subscription, Billing
- */
-
 // —— Dashboard ——
 
 export interface DashboardSummaryResponse {
@@ -45,20 +41,16 @@ export interface OnboardingStep {
 
 export interface ActivityItem {
   id?: string;
-  activityType?: string;
-  type?: string;
-  title?: string;
-  message?: string;
+  actionKey?: string;
+  entityType?: string;
+  entityId?: string;
   description?: string;
   createdAt?: string;
-  resourceType?: string;
-  resourceId?: string;
 }
 
 export interface ActivityLogResponse {
   items?: ActivityItem[];
-  activities?: ActivityItem[];
-  totalCount?: number;
+  total?: number;
   page?: number;
   pageSize?: number;
 }
@@ -91,6 +83,48 @@ export interface QuotaCounter {
 
 export interface QuotaSnapshotResponse {
   counters: QuotaCounter[];
+}
+
+export interface RecentResumesResponse {
+  resumeId: string;
+  title: string;
+  isActive: boolean;
+  versionNumber: number;
+  latestVersionId: string;
+  originalFileName: string;
+  fileExtension: string;
+  contentType: string;
+  fileSizeBytes: number;
+  storagePath: string;
+  parseStatus: string;
+  processingError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecentResumesListResponse {
+  items: RecentResumesResponse[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface RecentJobDescriptionResponse {
+  id: string;
+  userId?: string;
+  title: string;
+  companyName: string;
+  location: string;
+  rawText?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecentJobDescriptionsResponse {
+  items: RecentJobDescriptionResponse[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface DashboardActivityParams {

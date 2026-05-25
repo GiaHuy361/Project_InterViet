@@ -21,6 +21,8 @@ export * from './BillingPage';
 export * from './NetworkPage';
 export * from './NetworkProfilePage';
 export * from './MultiJDMatchingPage';
+export * from './CVHistoryPage';
+export * from './ReportsPage';
 
 // Export system pages
 export * from './system';

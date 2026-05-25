@@ -18,7 +18,7 @@ import { PlanComparisonTable } from '../components/plans/PlanComparisonTable';
 import { UpgradePlanCard } from '../components/plans/UpgradePlanCard';
 import * as subscriptionService from '../../services/subscriptionService';
 import * as plansService from '../../services/plansService';
-import type { CurrentSubscription, PlanResponse } from '../../lib/api/phase2Types';
+import type { CurrentSubscription, PlanResponse } from '../../lib/api/dashboardTypes';
 import { ApiError, createApiError } from '../../lib/api/apiError';
 import { formatLocalDateShort } from '../../utils/formatters';
 import { isDevBillingEnabled, DEV_PLAN_KEYS } from '../../config/devBilling';
