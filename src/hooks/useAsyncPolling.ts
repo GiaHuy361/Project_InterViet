@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-type FinalStatus = 'completed' | 'failed' | 'cancelled' | 'parsed';
+type FinalStatus = 'completed' | 'partially_completed' | 'failed' | 'cancelled' | 'parsed';
 
 interface PollingOptions<T> {
   fetchFn: () => Promise<T>;
@@ -25,8 +25,32 @@ export function useAsyncPolling<T>({
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const isTickingRef = useRef(false);
+  const pollRunIdRef = useRef(0);
+  const fetchFnRef = useRef(fetchFn);
+  const getStatusFnRef = useRef(getStatusFn);
+  const onSuccessRef = useRef(onSuccess);
+  const onFailureRef = useRef(onFailure);
+
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
+
+  useEffect(() => {
+    getStatusFnRef.current = getStatusFn;
+  }, [getStatusFn]);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onFailureRef.current = onFailure;
+  }, [onFailure]);
 
   const stopPolling = useCallback(() => {
+    pollRunIdRef.current += 1;
+    isTickingRef.current = false;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -39,38 +63,54 @@ export function useAsyncPolling<T>({
     setError(null);
     setIsPolling(true);
     startTimeRef.current = Date.now();
+    const runId = ++pollRunIdRef.current;
 
     const tick = async () => {
+      if (pollRunIdRef.current !== runId || isTickingRef.current) return;
+
+      isTickingRef.current = true;
+
       if (Date.now() - startTimeRef.current > timeoutMs) {
+        isTickingRef.current = false;
         stopPolling();
-        const timeoutError = new Error('H?t th?i gian ch? x? lý. Vui lòng th? l?i.');
+        const timeoutError = new Error('H?t th?i gian ch? x? lï¿½. Vui lï¿½ng th? l?i.');
         setError(timeoutError);
-        onFailure?.(timeoutError);
+        onFailureRef.current?.(timeoutError);
         return;
       }
 
       try {
-        const response = await fetchFn();
+        const response = await fetchFnRef.current();
+        if (pollRunIdRef.current !== runId) return;
         setData(response);
 
-        const status = getStatusFn(response).trim().toLowerCase();
-        if ((['completed', 'parsed'] as FinalStatus[]).includes(status as FinalStatus)) {
+        const status = getStatusFnRef.current(response).trim().toLowerCase();
+        if ((['completed', 'partially_completed', 'parsed'] as FinalStatus[]).includes(status as FinalStatus)) {
+          isTickingRef.current = false;
           stopPolling();
-          onSuccess?.(response);
+          onSuccessRef.current?.(response);
           return;
         }
 
         if ((['failed', 'cancelled'] as FinalStatus[]).includes(status as FinalStatus)) {
+          isTickingRef.current = false;
           stopPolling();
-          const finalError = new Error('Ti?n trình x? lý dã th?t b?i. Vui lòng th? l?i.');
+          const finalError = new Error('Ti?n trï¿½nh x? lï¿½ dï¿½ th?t b?i. Vui lï¿½ng th? l?i.');
           setError(finalError);
-          onFailure?.(finalError);
+          onFailureRef.current?.(finalError);
+          return;
         }
       } catch (err: any) {
+        if (pollRunIdRef.current !== runId) return;
         if (err?.status === 401 || err?.status === 404 || err?.response?.status === 401 || err?.response?.status === 404) {
+          isTickingRef.current = false;
           stopPolling();
           setError(err);
-          onFailure?.(err);
+          onFailureRef.current?.(err);
+        }
+      } finally {
+        if (pollRunIdRef.current === runId) {
+          isTickingRef.current = false;
         }
       }
     };
@@ -79,7 +119,7 @@ export function useAsyncPolling<T>({
     timerRef.current = setInterval(() => {
       void tick();
     }, intervalMs);
-  }, [fetchFn, getStatusFn, intervalMs, onFailure, onSuccess, stopPolling, timeoutMs]);
+  }, [intervalMs, stopPolling, timeoutMs]);
 
   useEffect(() => stopPolling, [stopPolling]);
 
@@ -91,3 +131,4 @@ export function useAsyncPolling<T>({
     stopPolling,
   };
 }
+

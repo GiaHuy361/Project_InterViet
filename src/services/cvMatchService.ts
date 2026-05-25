@@ -6,11 +6,13 @@ export type MatchStatus =
   | 'Pending'
   | 'Processing'
   | 'Completed'
+  | 'PartiallyCompleted'
   | 'Failed'
   | 'Cancelled'
   | 'pending'
   | 'processing'
   | 'completed'
+  | 'partially_completed'
   | 'failed'
   | 'cancelled';
 
@@ -61,6 +63,12 @@ export interface MatchTarget {
   summaryText?: string | null;
   matchedSkillsJson?: string | null;
   missingSkillsJson?: string | null;
+  strengthsJson?: string | null;
+  weaknessesJson?: string | null;
+  suggestionsJson?: string | null;
+  completedAt?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface MatchSessionDetail {
@@ -107,7 +115,7 @@ export const cvMatchService = {
     return apiClient.upload<ResumeItem>('/resumes', formData);
   },
 
-  listResumes: () => apiClient.get<{ items: ResumeItem[]; totalCount: number }>('/resumes?page=1&pageSize=20'),
+  listResumes: () => apiClient.get<{ items: ResumeItem[]; totalCount: number }>('/resumes'),
 
   getResumeDetail: (resumeId: string) => apiClient.get<ResumeItem & { parsedData?: Record<string, unknown> }>(`/resumes/${resumeId}`),
 

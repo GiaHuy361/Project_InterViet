@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -17,12 +17,29 @@ import {
   type StartSingleMatchResponse,
 } from '../../services/cvMatchService';
 import { useAsyncPolling } from '../../hooks/useAsyncPolling';
+import {
+  type PollingSessionSnapshot,
+  clearPollingSessionSnapshot,
+  readPollingSessionSnapshot,
+  writePollingSessionSnapshot,
+} from '../../utils/pollingSessionStorage';
 import { safeParseJson } from '../../utils/safeParseJson';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
 const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
 const RESUME_PARSE_TIMEOUT_MS = 180000;
+const CV_MATCH_POLLING_STORAGE_KEY = 'interviet.cv-matching.polling-state';
+
+type CVMatchPollingSnapshot = PollingSessionSnapshot<MatchSessionDetail> & {
+  cvTitle: string;
+  selectedResumeId: string | null;
+  jobDescription: JobDescriptionItem | null;
+  jdTitle: string;
+  companyName: string;
+  location: string;
+  jdRawText: string;
+};
 
 function extractList(value?: string | null): string[] {
   if (!value) return [];
@@ -44,7 +61,7 @@ function getNormalizedStatus(status?: string | null): string {
 }
 
 function isFinalMatchStatus(status?: string | null): boolean {
-  return ['completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
+  return ['completed', 'partially_completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
 }
 
 function isResumeParsed(status?: string | null): boolean {
@@ -79,11 +96,17 @@ export const CVMatchingPage: React.FC = () => {
   const [location, setLocation] = useState('');
   const [jdRawText, setJdRawText] = useState('');
 
-  const [resume, setResume] = useState<ResumeItem | null>(null);
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState<JobDescriptionItem | null>(null);
   const [sessionDetail, setSessionDetail] = useState<MatchSessionDetail | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [lastNotifiedStatus, setLastNotifiedStatus] = useState<string | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
   const activeSessionIdRef = useRef<string | null>(null);
+  const selectedResumeIdRef = useRef<string | null>(null);
 
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [isCreatingJd, setIsCreatingJd] = useState(false);
   const [isStartingMatch, setIsStartingMatch] = useState(false);
@@ -93,12 +116,29 @@ export const CVMatchingPage: React.FC = () => {
     return cvMatchService.getMatchSessionDetail(activeSessionIdRef.current);
   }, []);
 
+  const setCurrentSessionId = useCallback((sessionId: string | null) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
+
+  const notifyFinalStatus = useCallback((status: string) => {
+    if (['failed', 'cancelled'].includes(status)) {
+      toast.error('Phiên so khớp thất bại. Vui lòng thử lại.');
+      return;
+    }
+
+    toast.success('Phân tích hoàn tất.');
+  }, []);
+
   const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
     fetchFn: fetchMatchSession,
     getStatusFn: (data) => data.status,
     onSuccess: (data) => {
       setSessionDetail(data);
-      toast.success('Phân tích hoàn tất.');
+      setCurrentSessionId(null);
+      const status = getNormalizedStatus(data.status);
+      setLastNotifiedStatus(status);
+      notifyFinalStatus(status);
     },
     onFailure: (error) => {
       const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
@@ -117,8 +157,14 @@ export const CVMatchingPage: React.FC = () => {
   ].filter((item): item is { label: string; value: number } => typeof item.value === 'number');
   const missingSkills = useMemo(() => extractList(primaryMatch?.missingSkillsJson), [primaryMatch]);
   const matchedSkills = useMemo(() => extractList(primaryMatch?.matchedSkillsJson), [primaryMatch]);
-  const suggestions = useMemo(() => extractList(sessionDetail?.result?.suggestionsJson), [sessionDetail]);
-  const canStartMatch = Boolean(resume?.resumeId && jobDescription?.id);
+  const strengths = useMemo(() => extractList(primaryMatch?.strengthsJson), [primaryMatch]);
+  const weaknesses = useMemo(() => extractList(primaryMatch?.weaknessesJson), [primaryMatch]);
+  const suggestions = useMemo(() => extractList(primaryMatch?.suggestionsJson), [primaryMatch]);
+  const selectedResume = useMemo(
+    () => resumes.find((item) => item.resumeId === selectedResumeId) ?? null,
+    [resumes, selectedResumeId]
+  );
+  const canStartMatch = Boolean(selectedResume?.resumeId && jobDescription?.id);
 
   const handleApiError = (error: unknown) => {
     if (error instanceof ApiError) {
@@ -147,8 +193,159 @@ export const CVMatchingPage: React.FC = () => {
   const clearMatchState = () => {
     stopPolling();
     setSessionDetail(null);
-    activeSessionIdRef.current = null;
+    setLastNotifiedStatus(null);
+    setCurrentSessionId(null);
+    clearPollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY);
   };
+  const loadResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
+    try {
+      const response = await cvMatchService.listResumes();
+      const items = response.items ?? [];
+      setResumes(items);
+      const currentSelectedResumeId = selectedResumeIdRef.current;
+      if (currentSelectedResumeId && !items.some((item) => item.resumeId === currentSelectedResumeId)) {
+        setSelectedResumeId(null);
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    selectedResumeIdRef.current = selectedResumeId;
+  }, [selectedResumeId]);
+
+  useEffect(() => {
+    void loadResumes();
+  }, [loadResumes]);
+
+  useEffect(() => {
+    const restorePollingState = async () => {
+      const snapshot = readPollingSessionSnapshot<MatchSessionDetail>(CV_MATCH_POLLING_STORAGE_KEY) as CVMatchPollingSnapshot | null;
+
+      if (!snapshot) {
+        setIsRestored(true);
+        return;
+      }
+
+      setCvTitle(snapshot.cvTitle ?? '');
+      setSelectedResumeId(snapshot.selectedResumeId ?? null);
+      setJobDescription(snapshot.jobDescription ?? null);
+      setJdTitle(snapshot.jdTitle ?? '');
+      setCompanyName(snapshot.companyName ?? '');
+      setLocation(snapshot.location ?? '');
+      setJdRawText(snapshot.jdRawText ?? '');
+      setSessionDetail(snapshot.sessionDetail ?? null);
+      setLastNotifiedStatus(snapshot.lastNotifiedStatus ?? null);
+      setCurrentSessionId(snapshot.activeSessionId ?? null);
+
+      const savedStatus = getNormalizedStatus(snapshot.sessionDetail?.status);
+      if (snapshot.sessionDetail && isFinalMatchStatus(savedStatus)) {
+        if (snapshot.lastNotifiedStatus !== savedStatus) {
+          notifyFinalStatus(savedStatus);
+          setLastNotifiedStatus(savedStatus);
+        }
+        setCurrentSessionId(null);
+        setIsRestored(true);
+        return;
+      }
+
+      if (snapshot.activeSessionId) {
+        try {
+          const refreshedDetail = await cvMatchService.getMatchSessionDetail(snapshot.activeSessionId);
+          setSessionDetail(refreshedDetail);
+
+          const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+          if (isFinalMatchStatus(refreshedStatus)) {
+            setCurrentSessionId(null);
+            if (snapshot.lastNotifiedStatus !== refreshedStatus) {
+              notifyFinalStatus(refreshedStatus);
+              setLastNotifiedStatus(refreshedStatus);
+            }
+          } else {
+            startPolling();
+          }
+        } catch (error) {
+          handleApiError(error);
+        }
+      }
+
+      setIsRestored(true);
+    };
+
+    void restorePollingState();
+  }, [notifyFinalStatus, startPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    writePollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY, {
+      activeSessionId,
+      sessionDetail,
+      lastNotifiedStatus,
+      cvTitle,
+      selectedResumeId,
+      jobDescription,
+      jdTitle,
+      companyName,
+      location,
+      jdRawText,
+    });
+  }, [
+    activeSessionId,
+    companyName,
+    cvTitle,
+    isRestored,
+    jdRawText,
+    jdTitle,
+    jobDescription,
+    lastNotifiedStatus,
+    location,
+    selectedResumeId,
+    sessionDetail,
+  ]);
+
+  const refreshPollingState = useCallback(async () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      const refreshedDetail = await cvMatchService.getMatchSessionDetail(sessionId);
+      setSessionDetail(refreshedDetail);
+
+      const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+      if (isFinalMatchStatus(refreshedStatus)) {
+        stopPolling();
+        setCurrentSessionId(null);
+        if (lastNotifiedStatus !== refreshedStatus) {
+          notifyFinalStatus(refreshedStatus);
+          setLastNotifiedStatus(refreshedStatus);
+        }
+      } else if (!isPolling) {
+        startPolling();
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
+  }, [isPolling, lastNotifiedStatus, notifyFinalStatus, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!activeSessionIdRef.current) return;
+      if (isFinalMatchStatus(sessionDetail?.status)) return;
+
+      void refreshPollingState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRestored, refreshPollingState, sessionDetail?.status]);
 
   const waitForResumeParsed = async (resumeId: string): Promise<ResumeItem> => {
     const startedAt = Date.now();
@@ -191,7 +388,6 @@ export const CVMatchingPage: React.FC = () => {
     }
 
     setSelectedFile(file);
-    setResume(null);
     clearMatchState();
   };
 
@@ -202,7 +398,6 @@ export const CVMatchingPage: React.FC = () => {
     }
 
     setIsUploadingResume(true);
-    setResume(null);
     clearMatchState();
 
     try {
@@ -211,7 +406,8 @@ export const CVMatchingPage: React.FC = () => {
         ? uploadedResume
         : await waitForResumeParsed(uploadedResume.resumeId);
 
-      setResume(parsedResume);
+      setSelectedResumeId(parsedResume.resumeId);
+      await loadResumes();
       toast.success('Upload và phân tích CV thành công.');
     } catch (error) {
       handleApiError(error);
@@ -247,8 +443,8 @@ export const CVMatchingPage: React.FC = () => {
   };
 
   const handleStartMatch = async () => {
-    if (!resume || !jobDescription) {
-      toast.error('Vui lòng upload CV và tạo JD trước khi so khớp.');
+    if (!selectedResume?.resumeId || !jobDescription) {
+      toast.error('Vui lòng chọn 1 CV và tạo JD trước khi so khớp.');
       return;
     }
 
@@ -256,7 +452,7 @@ export const CVMatchingPage: React.FC = () => {
     clearMatchState();
 
     try {
-      const matchResponse = await cvMatchService.startSingleMatch(resume.resumeId, jobDescription.id);
+      const matchResponse = await cvMatchService.startSingleMatch(selectedResume.resumeId, jobDescription.id);
       const matchSession = getSessionFromStartResponse(matchResponse);
 
       if (!matchSession?.sessionId) {
@@ -265,12 +461,15 @@ export const CVMatchingPage: React.FC = () => {
       }
 
       activeSessionIdRef.current = matchSession.sessionId;
+      setCurrentSessionId(matchSession.sessionId);
       setSessionDetail(matchSession);
 
       if (isFinalMatchStatus(matchSession.status)) {
         if (getNormalizedStatus(matchSession.status) === 'completed') {
-          toast.success('Phân tích hoàn tất.');
+          setLastNotifiedStatus(getNormalizedStatus(matchSession.status));
+          notifyFinalStatus(getNormalizedStatus(matchSession.status));
         }
+        setCurrentSessionId(null);
         return;
       }
 
@@ -278,6 +477,10 @@ export const CVMatchingPage: React.FC = () => {
       setSessionDetail(initialDetail);
 
       if (isFinalMatchStatus(initialDetail.status)) {
+        setCurrentSessionId(null);
+        const status = getNormalizedStatus(initialDetail.status);
+        setLastNotifiedStatus(status);
+        notifyFinalStatus(status);
         return;
       }
 
@@ -302,8 +505,8 @@ export const CVMatchingPage: React.FC = () => {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <Label>Upload CV</Label>
-            {resume && (
+            <Label>Chọn CV</Label>
+            {selectedResume && (
               <Badge className="bg-green-100 text-green-800">
                 <CheckCircle2 className="mr-1" size={14} />
                 Đã upload
@@ -311,13 +514,48 @@ export const CVMatchingPage: React.FC = () => {
             )}
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">Danh sách CV từ hệ thống</p>
+              <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
+                Tải lại
+              </Button>
+            </div>
+
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {isLoadingResumes && <p className="text-sm text-gray-500">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500">Chưa có CV nào.</p>}
+              {resumes.map((item) => (
+                <label
+                  key={item.resumeId}
+                  className="flex items-start gap-3 rounded-md border p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="selected-resume-single"
+                    checked={selectedResumeId === item.resumeId}
+                    onChange={() => {
+                      setSelectedResumeId(item.resumeId);
+                      clearMatchState();
+                    }}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600">{item.originalFileName}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <Input value={cvTitle} onChange={(event) => setCvTitle(event.target.value)} placeholder="Tiêu đề CV (tùy chọn)" />
           <Input type="file" onChange={onFileChange} />
           <p className="text-xs text-gray-500">Hỗ trợ: .pdf, .docx, .jpg, .jpeg, .png | Tối đa 10MB</p>
 
-          {resume && (
+          {selectedResume && (
             <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              {resume.title} ({resume.originalFileName})
+              {selectedResume.title} ({selectedResume.originalFileName})
             </div>
           )}
 
@@ -393,7 +631,7 @@ export const CVMatchingPage: React.FC = () => {
       <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-semibold">So khớp CV và JD</p>
-          <p className="text-sm text-gray-500">Cần upload CV và tạo JD thành công trước khi gọi API matching.</p>
+          <p className="text-sm text-gray-500">Chọn một CV và tạo JD để bắt đầu so khớp</p>
         </div>
         <Button onClick={handleStartMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
           <Link2 className="mr-2" size={16} />
@@ -419,14 +657,56 @@ export const CVMatchingPage: React.FC = () => {
         </Card>
       )}
 
-      {getNormalizedStatus(sessionDetail?.status) === 'completed' && primaryMatch && (
+      {['completed', 'partially_completed'].includes(getNormalizedStatus(sessionDetail?.status)) && primaryMatch && (
         <div className="space-y-4">
           <Card className="p-6">
             <p className="text-sm text-gray-500">Điểm tổng</p>
             <p className="text-4xl font-bold text-blue-600">{totalScore.toFixed(2)}%</p>
             <p className="mt-2 text-sm text-gray-700">{primaryMatch.summaryText || 'Không có tóm tắt.'}</p>
-            {resume && <p className="mt-3 text-xs text-gray-500">CV: {resume.title} ({resume.originalFileName})</p>}
+            {selectedResume && (
+              <p className="mt-3 text-xs text-gray-500">
+                CV: {selectedResume.title} ({selectedResume.originalFileName})
+              </p>
+            )}
           </Card>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Trạng thái session</p>
+              <p className="text-lg font-semibold">{sessionDetail?.status ?? 'Unknown'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume ID</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume Version</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeVersionId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Target count</p>
+              <p className="text-2xl font-semibold">{sessionDetail?.targetCount ?? 0}</p>
+            </Card>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Hoàn thành</p>
+              <p className="text-2xl font-semibold text-emerald-600">{sessionDetail?.completedCount ?? 0}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Thất bại</p>
+              <p className="text-2xl font-semibold text-red-600">{sessionDetail?.failedCount ?? 0}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm cao nhất</p>
+              <p className="text-2xl font-semibold text-emerald-600">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm trung bình</p>
+              <p className="text-2xl font-semibold text-blue-600">{(sessionDetail?.averageScore ?? 0).toFixed(2)}%</p>
+            </Card>
+          </div>
 
           {scoreBreakdown.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -438,6 +718,24 @@ export const CVMatchingPage: React.FC = () => {
               ))}
             </div>
           )}
+
+          <Card className="p-6 space-y-3">
+            <p className="font-semibold">Điểm mạnh</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+              {strengths.length === 0 && <li>Không có dữ liệu</li>}
+              {strengths.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+
+            <p className="font-semibold pt-2">Điểm yếu</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+              {weaknesses.length === 0 && <li>Không có dữ liệu</li>}
+              {weaknesses.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </Card>
 
           <Card className="p-6 space-y-3">
             <p className="font-semibold">Kỹ năng phù hợp</p>
@@ -473,3 +771,8 @@ export const CVMatchingPage: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+

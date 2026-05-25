@@ -17,12 +17,26 @@ import {
   type StartMatchResponse,
 } from '../../services/cvMatchService';
 import { useAsyncPolling } from '../../hooks/useAsyncPolling';
+import {
+  type PollingSessionSnapshot,
+  clearPollingSessionSnapshot,
+  readPollingSessionSnapshot,
+  writePollingSessionSnapshot,
+} from '../../utils/pollingSessionStorage';
 import { safeParseJson } from '../../utils/safeParseJson';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
 const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
 const RESUME_PARSE_TIMEOUT_MS = 180000;
+const MULTI_JD_MATCH_POLLING_STORAGE_KEY = 'interviet.multi-jd-matching.polling-state';
+
+type MultiJDMatchPollingSnapshot = PollingSessionSnapshot<MatchSessionDetail> & {
+  cvTitle: string;
+  selectedResumeId: string | null;
+  matchTitle: string;
+  selectedJobDescriptionIds: string[];
+};
 
 function extractList(value?: string | null): string[] {
   if (!value) return [];
@@ -44,7 +58,7 @@ function getNormalizedStatus(status?: string | null): string {
 }
 
 function isFinalMatchStatus(status?: string | null): boolean {
-  return ['completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
+  return ['completed', 'partially_completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
 }
 
 function isResumeParsed(status?: string | null): boolean {
@@ -78,10 +92,16 @@ export const MultiJDMatchingPage: React.FC = () => {
   const [jobDescriptions, setJobDescriptions] = useState<JobDescriptionItem[]>([]);
   const [selectedJobDescriptionIds, setSelectedJobDescriptionIds] = useState<string[]>([]);
 
-  const [resume, setResume] = useState<ResumeItem | null>(null);
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [sessionDetail, setSessionDetail] = useState<MatchSessionDetail | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [lastNotifiedStatus, setLastNotifiedStatus] = useState<string | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
   const activeSessionIdRef = useRef<string | null>(null);
+  const selectedResumeIdRef = useRef<string | null>(null);
 
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isLoadingJds, setIsLoadingJds] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [isStartingMatch, setIsStartingMatch] = useState(false);
@@ -91,12 +111,34 @@ export const MultiJDMatchingPage: React.FC = () => {
     return cvMatchService.getMatchSessionDetail(activeSessionIdRef.current);
   }, []);
 
+  const setCurrentSessionId = useCallback((sessionId: string | null) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
+
+  const notifyFinalStatus = useCallback((status: string) => {
+    if (['failed', 'cancelled'].includes(status)) {
+      toast.error('Phiên so khớp thất bại. Vui lòng thử lại.');
+      return;
+    }
+
+    toast.success('Phân tích đa JD hoàn tất.');
+  }, []);
+
+  const selectedResume = useMemo(
+    () => resumes.find((item) => item.resumeId === selectedResumeId) ?? null,
+    [resumes, selectedResumeId]
+  );
+
   const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
     fetchFn: fetchMatchSession,
     getStatusFn: (data) => data.status,
     onSuccess: (data) => {
       setSessionDetail(data);
-      toast.success('Phân tích đa JD hoàn tất.');
+      setCurrentSessionId(null);
+      const status = getNormalizedStatus(data.status);
+      setLastNotifiedStatus(status);
+      notifyFinalStatus(status);
     },
     onFailure: (error) => {
       const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
@@ -105,7 +147,7 @@ export const MultiJDMatchingPage: React.FC = () => {
   });
 
   const selectedJdCount = selectedJobDescriptionIds.length;
-  const canStartMatch = Boolean(resume?.resumeId && selectedJdCount > 0);
+  const canStartMatch = Boolean(selectedResume?.resumeId && selectedJdCount > 0);
 
   const sortedTargets = useMemo(() => {
     const targets = sessionDetail?.targets ?? [];
@@ -117,6 +159,10 @@ export const MultiJDMatchingPage: React.FC = () => {
     const total = sortedTargets.reduce((sum, item) => sum + (item.totalScore ?? 0), 0);
     return total / sortedTargets.length;
   }, [sortedTargets]);
+
+  const totalTargets = sessionDetail?.targetCount ?? sortedTargets.length;
+  const completedTargets = sessionDetail?.completedCount ?? 0;
+  const failedTargets = sessionDetail?.failedCount ?? 0;
 
   const handleApiError = (error: unknown) => {
     if (error instanceof ApiError) {
@@ -145,8 +191,26 @@ export const MultiJDMatchingPage: React.FC = () => {
   const clearMatchState = () => {
     stopPolling();
     setSessionDetail(null);
-    activeSessionIdRef.current = null;
+    setLastNotifiedStatus(null);
+    setCurrentSessionId(null);
+    clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
   };
+  const loadResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
+    try {
+      const response = await cvMatchService.listResumes();
+      const items = response.items ?? [];
+      setResumes(items);
+      const currentSelectedResumeId = selectedResumeIdRef.current;
+      if (currentSelectedResumeId && !items.some((item) => item.resumeId === currentSelectedResumeId)) {
+        setSelectedResumeId(null);
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  }, []);
 
   const loadJobDescriptions = useCallback(async () => {
     setIsLoadingJds(true);
@@ -161,8 +225,129 @@ export const MultiJDMatchingPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    void loadResumes();
     void loadJobDescriptions();
-  }, [loadJobDescriptions]);
+  }, [loadResumes, loadJobDescriptions]);
+
+  useEffect(() => {
+    selectedResumeIdRef.current = selectedResumeId;
+  }, [selectedResumeId]);
+
+  useEffect(() => {
+    const restorePollingState = async () => {
+      const snapshot = readPollingSessionSnapshot<MatchSessionDetail>(MULTI_JD_MATCH_POLLING_STORAGE_KEY) as MultiJDMatchPollingSnapshot | null;
+
+      if (!snapshot) {
+        setIsRestored(true);
+        return;
+      }
+
+      setCvTitle(snapshot.cvTitle ?? '');
+      setSelectedResumeId(snapshot.selectedResumeId ?? null);
+      setMatchTitle(snapshot.matchTitle ?? '');
+      setSelectedJobDescriptionIds(snapshot.selectedJobDescriptionIds ?? []);
+      setSessionDetail(snapshot.sessionDetail ?? null);
+      setLastNotifiedStatus(snapshot.lastNotifiedStatus ?? null);
+      setCurrentSessionId(snapshot.activeSessionId ?? null);
+
+      const savedStatus = getNormalizedStatus(snapshot.sessionDetail?.status);
+      if (snapshot.sessionDetail && isFinalMatchStatus(savedStatus)) {
+        if (snapshot.lastNotifiedStatus !== savedStatus) {
+          notifyFinalStatus(savedStatus);
+          setLastNotifiedStatus(savedStatus);
+        }
+        setCurrentSessionId(null);
+        setIsRestored(true);
+        return;
+      }
+
+      if (snapshot.activeSessionId) {
+        try {
+          const refreshedDetail = await cvMatchService.getMatchSessionDetail(snapshot.activeSessionId);
+          setSessionDetail(refreshedDetail);
+
+          const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+          if (isFinalMatchStatus(refreshedStatus)) {
+            setCurrentSessionId(null);
+            if (snapshot.lastNotifiedStatus !== refreshedStatus) {
+              notifyFinalStatus(refreshedStatus);
+              setLastNotifiedStatus(refreshedStatus);
+            }
+          } else {
+            startPolling();
+          }
+        } catch (error) {
+          handleApiError(error);
+        }
+      }
+
+      setIsRestored(true);
+    };
+
+    void restorePollingState();
+  }, [notifyFinalStatus, startPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    writePollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY, {
+      activeSessionId,
+      sessionDetail,
+      lastNotifiedStatus,
+      cvTitle,
+      selectedResumeId,
+      matchTitle,
+      selectedJobDescriptionIds,
+    });
+  }, [
+    activeSessionId,
+    cvTitle,
+    isRestored,
+    lastNotifiedStatus,
+    matchTitle,
+    selectedJobDescriptionIds,
+    selectedResumeId,
+    sessionDetail,
+  ]);
+
+  const refreshPollingState = useCallback(async () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      const refreshedDetail = await cvMatchService.getMatchSessionDetail(sessionId);
+      setSessionDetail(refreshedDetail);
+
+      const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+      if (isFinalMatchStatus(refreshedStatus)) {
+        stopPolling();
+        setCurrentSessionId(null);
+        if (lastNotifiedStatus !== refreshedStatus) {
+          notifyFinalStatus(refreshedStatus);
+          setLastNotifiedStatus(refreshedStatus);
+        }
+      } else if (!isPolling) {
+        startPolling();
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
+  }, [isPolling, lastNotifiedStatus, notifyFinalStatus, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!activeSessionIdRef.current) return;
+      if (isFinalMatchStatus(sessionDetail?.status)) return;
+
+      void refreshPollingState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRestored, refreshPollingState, sessionDetail?.status]);
 
   const waitForResumeParsed = async (resumeId: string): Promise<ResumeItem> => {
     const startedAt = Date.now();
@@ -200,7 +385,6 @@ export const MultiJDMatchingPage: React.FC = () => {
     }
 
     setSelectedFile(file);
-    setResume(null);
     clearMatchState();
   };
 
@@ -216,7 +400,6 @@ export const MultiJDMatchingPage: React.FC = () => {
     }
 
     setIsUploadingResume(true);
-    setResume(null);
     clearMatchState();
 
     try {
@@ -225,7 +408,8 @@ export const MultiJDMatchingPage: React.FC = () => {
         ? uploadedResume
         : await waitForResumeParsed(uploadedResume.resumeId);
 
-      setResume(parsedResume);
+      setSelectedResumeId(parsedResume.resumeId);
+      await loadResumes();
       toast.success('Upload và phân tích CV thành công.');
     } catch (error) {
       handleApiError(error);
@@ -235,8 +419,8 @@ export const MultiJDMatchingPage: React.FC = () => {
   };
 
   const handleStartMultiMatch = async () => {
-    if (!resume?.resumeId || selectedJobDescriptionIds.length === 0) {
-      toast.error('Vui lòng upload CV và chọn ít nhất 1 JD trước khi so khớp.');
+    if (!selectedResume?.resumeId || selectedJobDescriptionIds.length === 0) {
+      toast.error('Vui lòng chọn 1 CV và chọn ít nhất 1 JD trước khi so khớp.');
       return;
     }
 
@@ -245,7 +429,7 @@ export const MultiJDMatchingPage: React.FC = () => {
 
     try {
       const response = await cvMatchService.startMultiMatch({
-        resumeId: resume.resumeId,
+        resumeId: selectedResume.resumeId,
         jobDescriptionIds: selectedJobDescriptionIds,
         title: matchTitle.trim() || `Multi JD Match - ${new Date().toLocaleString('vi-VN')}`,
       });
@@ -257,12 +441,16 @@ export const MultiJDMatchingPage: React.FC = () => {
       }
 
       activeSessionIdRef.current = matchSession.sessionId;
+      setCurrentSessionId(matchSession.sessionId);
       setSessionDetail(matchSession);
 
       if (isFinalMatchStatus(matchSession.status)) {
-        if (getNormalizedStatus(matchSession.status) === 'completed') {
-          toast.success('Phân tích đa JD hoàn tất.');
+        if (['completed', 'partially_completed'].includes(getNormalizedStatus(matchSession.status))) {
+          const status = getNormalizedStatus(matchSession.status);
+          setLastNotifiedStatus(status);
+          notifyFinalStatus(status);
         }
+        setCurrentSessionId(null);
         return;
       }
 
@@ -270,6 +458,10 @@ export const MultiJDMatchingPage: React.FC = () => {
       setSessionDetail(initialDetail);
 
       if (isFinalMatchStatus(initialDetail.status)) {
+        setCurrentSessionId(null);
+        const status = getNormalizedStatus(initialDetail.status);
+        setLastNotifiedStatus(status);
+        notifyFinalStatus(status);
         return;
       }
 
@@ -285,6 +477,8 @@ export const MultiJDMatchingPage: React.FC = () => {
   const renderTargetCard = (target: MatchTarget) => {
     const matchedSkills = extractList(target.matchedSkillsJson);
     const missingSkills = extractList(target.missingSkillsJson);
+    const strengths = extractList(target.strengthsJson);
+    const weaknesses = extractList(target.weaknessesJson);
     const jd = jobDescriptions.find((item) => item.id === target.jobDescriptionId);
 
     return (
@@ -319,6 +513,22 @@ export const MultiJDMatchingPage: React.FC = () => {
               </Badge>
             ))}
           </div>
+
+          <p className="text-sm font-medium pt-1">Điểm mạnh</p>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            {strengths.length === 0 && <li>Không có dữ liệu</li>}
+            {strengths.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+
+          <p className="text-sm font-medium pt-1">Điểm yếu</p>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            {weaknesses.length === 0 && <li>Không có dữ liệu</li>}
+            {weaknesses.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
       </Card>
     );
@@ -336,22 +546,57 @@ export const MultiJDMatchingPage: React.FC = () => {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <Label>Upload CV</Label>
-            {resume && (
+            <Label>Chọn CV</Label>
+            {selectedResume && (
               <Badge className="bg-green-100 text-green-800">
                 <CheckCircle2 className="mr-1" size={14} />
-                Đã upload
+                Đã chọn
               </Badge>
             )}
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">Danh sách CV từ hệ thống</p>
+              <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
+                Tải lại
+              </Button>
+            </div>
+            <div className="max-h-44 overflow-y-auto space-y-2 pr-1">
+              {isLoadingResumes && <p className="text-sm text-gray-500">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500">Chưa có CV nào.</p>}
+              {resumes.map((item) => (
+                <label
+                  key={item.resumeId}
+                  className="flex items-start gap-3 rounded-md border p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="selected-resume-multi"
+                    checked={selectedResumeId === item.resumeId}
+                    onChange={() => {
+                      setSelectedResumeId(item.resumeId);
+                      clearMatchState();
+                    }}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600">{item.originalFileName}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Label>Upload CV mới (tùy chọn)</Label>
           <Input value={cvTitle} onChange={(event) => setCvTitle(event.target.value)} placeholder="Tiêu đề CV (tùy chọn)" />
           <Input type="file" onChange={onFileChange} />
           <p className="text-xs text-gray-500">Hỗ trợ: .pdf, .docx, .jpg, .jpeg, .png | Tối đa 10MB</p>
 
-          {resume && (
+          {selectedResume && (
             <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              {resume.title} ({resume.originalFileName})
+              {selectedResume.title} ({selectedResume.originalFileName})
             </div>
           )}
 
@@ -408,7 +653,7 @@ export const MultiJDMatchingPage: React.FC = () => {
       <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-semibold">Bắt đầu so khớp đa JD</p>
-          <p className="text-sm text-gray-500">Cần upload CV và chọn ít nhất 1 JD trước khi gọi API matching.</p>
+          <p className="text-sm text-gray-500">Cần chọn đúng 1 CV và chọn ít nhất 1 JD trước khi gọi API matching.</p>
         </div>
         <Button onClick={handleStartMultiMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
           <Link2 className="mr-2" size={16} />
@@ -434,12 +679,12 @@ export const MultiJDMatchingPage: React.FC = () => {
         </Card>
       )}
 
-      {getNormalizedStatus(sessionDetail?.status) === 'completed' && (
+      {['completed', 'partially_completed'].includes(getNormalizedStatus(sessionDetail?.status)) && (
         <div className="space-y-4">
           <div className="grid sm:grid-cols-3 gap-3">
             <Card className="p-4">
               <p className="text-xs text-gray-500">Số JD đã so khớp</p>
-              <p className="text-2xl font-semibold">{sortedTargets.length}</p>
+              <p className="text-2xl font-semibold">{totalTargets}</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs text-gray-500">Điểm trung bình</p>
@@ -447,9 +692,33 @@ export const MultiJDMatchingPage: React.FC = () => {
             </Card>
             <Card className="p-4">
               <p className="text-xs text-gray-500">Điểm cao nhất</p>
-              <p className="text-2xl font-semibold text-emerald-600">{(sessionDetail.bestScore ?? 0).toFixed(2)}%</p>
+              <p className="text-2xl font-semibold text-emerald-600">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
             </Card>
           </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume ID</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume Version</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeVersionId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Hoàn thành</p>
+              <p className="text-2xl font-semibold text-emerald-600">{completedTargets}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Thất bại</p>
+              <p className="text-2xl font-semibold text-red-600">{failedTargets}</p>
+            </Card>
+          </div>
+
+          <Card className="p-4">
+            <p className="text-xs text-gray-500">Trạng thái session</p>
+            <p className="text-lg font-semibold">{sessionDetail?.status ?? 'Unknown'}</p>
+          </Card>
 
           {sortedTargets.length === 0 && (
             <Card className="p-6 text-sm text-gray-600">Không có target nào trong kết quả session.</Card>
@@ -459,12 +728,16 @@ export const MultiJDMatchingPage: React.FC = () => {
         </div>
       )}
 
-      {resume && (
+      {selectedResume && (
         <Card className="p-4 text-xs text-gray-500 flex items-center gap-2">
           <FileText size={14} />
-          CV hiện tại: {resume.title} ({resume.originalFileName})
+          CV hiện tại: {selectedResume.title} ({selectedResume.originalFileName})
         </Card>
       )}
     </div>
   );
 };
+
+
+
+

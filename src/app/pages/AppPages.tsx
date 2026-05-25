@@ -13,9 +13,19 @@ import { getFeedback } from '../components/FeedbackModal';
 import { ContactSupportModal } from '../components/ContactSupportModal';
 import { DowngradeConfirmModal } from '../components/DowngradeConfirmModal';
 import {
-  Download, Share2, Target,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
+import {
+  Download, ArrowLeft, Share2, Target,
   Bell, Mail, Activity, Trash2, AlertCircle, CheckCircle,
-  FileText, BarChart3, MessageSquare, HelpCircle, Check, X
+  FileText, BarChart3, MessageSquare, HelpCircle, Check, X, Sparkles
 } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
 import { 
@@ -38,6 +48,54 @@ import {
   type InterviewSession,
   type InterviewStatsResponse,
 } from '../../services/interviewService';
+
+interface InvoiceItem {
+  id: string;
+  date: string;
+  amount: number;
+  status: string;
+}
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  confirmVariant?: string;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}
+
+const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+  open,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel = 'Hủy',
+  onOpenChange,
+  onConfirm,
+}) => {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600"
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 
 // CV History Page
 export const CVHistoryPage: React.FC = () => {
@@ -102,6 +160,20 @@ export const InterviewReportPage: React.FC = () => {
   const [report, setReport] = useState<InterviewReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteInterview = async () => {
+    if (!id) return;
+
+    try {
+      await deleteInterview(id);
+      toast.success('Đã xóa phiên phỏng vấn.');
+      navigate('/bao-cao');
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      toast.error(apiErr?.getUserMessage() || 'Không thể xóa phiên phỏng vấn.');
+    }
+  };
 
   useEffect(() => {
     if (!id) {
@@ -149,9 +221,15 @@ export const InterviewReportPage: React.FC = () => {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" className="hover-lift" onClick={() => navigate('/bao-cao')}>
-              <Download className="mr-2" size={16} />
-              Lịch sử
+              <ArrowLeft className="mr-2" size={16} />
+              Quay lại danh sách báo cáo
             </Button>
+            {id && (
+              <Button variant="outline" className="hover-lift text-red-600 hover:text-red-700" onClick={() => setShowDeleteConfirm(true)}>
+                <Trash2 className="mr-2" size={16} />
+                Xóa
+              </Button>
+            )}
             {id && (
               <Button variant="outline" className="hover-lift" onClick={() => navigate(`/phong-van-chi-tiet/${id}`)}>
                 <Share2 className="mr-2" size={16} />
@@ -189,160 +267,253 @@ export const InterviewReportPage: React.FC = () => {
 
       {report && (
         <>
-          <Card className="glass-card rounded-2xl p-8">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-4">Điểm tổng thể</h3>
-              <div className="text-6xl font-bold text-blue-600 mb-4">
-                {overallScore ?? '—'}
-              </div>
-              <Badge variant={normalizedScore != null && normalizedScore >= 8 ? 'default' : 'secondary'} className="text-lg px-4 py-1">
-                {scoreLabel}
-              </Badge>
+          <Card className="glass-card rounded-2xl p-8 text-center bg-gradient-to-b from-blue-50/50 to-white">
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center justify-center gap-2">
+              <Sparkles className="text-yellow-500" size={20} />
+              Điểm tổng thể từ AI
+            </h3>
+            <div className="text-7xl font-extrabold text-blue-600 mb-4 animate-bounce">
+              {overallScore ?? '—'}
             </div>
+            <Badge className="text-lg px-6 py-1.5 bg-blue-600">
+              {scoreLabel}
+            </Badge>
           </Card>
 
           <Card className="p-6">
-            <h3 className="font-bold mb-4">Điểm chi tiết</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Confidence</span>
-                <strong>{report.confidenceScore ?? 'Chưa có dữ liệu'}</strong>
+            <h3 className="font-bold text-lg mb-4 text-gray-800">Điểm số chi tiết</h3>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 font-medium">Confidence (Tự tin)</span>
+                <div className="text-2xl font-bold text-slate-800">
+                  {report.confidenceScore ?? '—'}
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span>Clarity</span>
-                <strong>{report.clarityScore ?? 'Chưa có dữ liệu'}</strong>
+              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 font-medium">Clarity (Mạch lạc)</span>
+                <div className="text-2xl font-bold text-slate-800">
+                  {report.clarityScore ?? '—'}
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span>Relevance</span>
-                <strong>{report.relevanceScore ?? 'Chưa có dữ liệu'}</strong>
+              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 font-medium">Relevance (Liên quan)</span>
+                <div className="text-2xl font-bold text-slate-800">
+                  {report.relevanceScore ?? '—'}
+                </div>
               </div>
             </div>
           </Card>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card className="p-6">
-              <h3 className="font-bold mb-3">Strengths</h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 border-green-100 bg-green-50/20">
+              <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+                👍 Ưu điểm (Strengths)
+              </h3>
               {report.strengths && report.strengths.length > 0 ? (
                 <ul className="space-y-2 text-sm text-gray-700">
                   {report.strengths.map((item, index) => (
-                    <li key={`strength-${index}`}>• {item}</li>
+                    <li key={`strength-${index}`} className="flex items-start gap-1">
+                      <span className="text-green-600">•</span>
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
               )}
             </Card>
-            <Card className="p-6">
-              <h3 className="font-bold mb-3">Weaknesses</h3>
+
+            <Card className="p-6 border-red-100 bg-red-50/20">
+              <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+                👎 Điểm yếu (Weaknesses)
+              </h3>
               {report.weaknesses && report.weaknesses.length > 0 ? (
                 <ul className="space-y-2 text-sm text-gray-700">
                   {report.weaknesses.map((item, index) => (
-                    <li key={`weakness-${index}`}>• {item}</li>
+                    <li key={`weakness-${index}`} className="flex items-start gap-1">
+                      <span className="text-red-500">•</span>
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
               )}
             </Card>
-            <Card className="p-6">
-              <h3 className="font-bold mb-3">Recommendations</h3>
+
+            <Card className="p-6 border-amber-100 bg-amber-50/20">
+              <h3 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
+                💡 Lời khuyên (Recommendations)
+              </h3>
               {report.recommendations && report.recommendations.length > 0 ? (
                 <ul className="space-y-2 text-sm text-gray-700">
                   {report.recommendations.map((item, index) => (
-                    <li key={`recommend-${index}`}>• {item}</li>
+                    <li key={`recommend-${index}`} className="flex items-start gap-1">
+                      <span className="text-amber-600">•</span>
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
               )}
             </Card>
           </div>
 
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Score breakdowns</h3>
+          <Card className="p-6 space-y-4">
+            <h3 className="font-bold text-lg text-gray-800">Chi tiết các tiêu chí</h3>
             {report.scoreBreakdowns && report.scoreBreakdowns.length > 0 ? (
-              <div className="space-y-3">
-                {report.scoreBreakdowns.map((item, index) => (
-                  <div key={`breakdown-${index}`} className="flex flex-col gap-1 text-sm">
-                    <div className="flex items-center justify-between">
-                      <strong>{item.dimension}</strong>
-                      <span>
-                        {item.score ?? '—'} / {item.maxScore ?? '—'}
-                      </span>
-                    </div>
-                    {item.comment && <span className="text-gray-600">{item.comment}</span>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
-            )}
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Feedback</h3>
-            {report.feedbackItems && report.feedbackItems.length > 0 ? (
-              <div className="space-y-3">
-                {report.feedbackItems.map((item, index) => (
-                  <div key={`feedback-${index}`} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <strong>{item.title}</strong>
-                      <span className="text-gray-500">{item.category}</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
-            )}
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Thông tin mô hình</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Model version</span>
-                <strong>{report.modelVersion ?? 'Chưa có dữ liệu'}</strong>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Schema version</span>
-                <strong>{report.schemaVersion ?? 'Chưa có dữ liệu'}</strong>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Tổng hợp câu hỏi & trả lời</h3>
-            {session?.questions && session.questions.length > 0 ? (
               <div className="space-y-4">
-                {session.questions.map((q) => {
-                  const answer = session.answers?.find((a) => a.questionId === q.questionId);
-                  return (
-                    <div key={q.questionId} className="border rounded-lg p-3">
-                      <p className="font-semibold">{q.questionNumber}. {q.questionText}</p>
-                      <p className="text-sm text-gray-600 mt-2">
-                        {answer?.answerText || 'Chưa có câu trả lời'}
-                      </p>
+                {report.scoreBreakdowns.map((item, index) => (
+                  <div key={`breakdown-${index}`} className="border-b pb-3 last:border-0 last:pb-0 space-y-1 text-sm">
+                    <div className="flex justify-between items-center font-semibold text-gray-800">
+                      <span>{item.dimension}</span>
+                      <span>{item.score ?? '—'} / {item.maxScore ?? '—'}</span>
                     </div>
-                  );
-                })}
+                    {item.comment && <p className="text-gray-600 text-xs italic">{item.comment}</p>}
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+              <p className="text-sm text-gray-500">Chưa có đánh giá</p>
             )}
           </Card>
+
+          <Card className="p-6 space-y-4">
+            <h3 className="font-bold text-lg text-gray-800">Ý kiến phản hồi từ AI</h3>
+            {report.feedbackItems && report.feedbackItems.length > 0 ? (
+              <div className="grid gap-3">
+                {report.feedbackItems.map((item, index) => (
+                  <div key={`feedback-${index}`} className="p-3 border rounded-xl bg-slate-50/50 space-y-1">
+                    <div className="flex justify-between items-center text-sm font-semibold">
+                      <span>{item.title}</span>
+                      <Badge variant="secondary" className="text-[10px]">{item.category}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Chưa có đánh giá</p>
+            )}
+          </Card>
+
+            <Card className="p-6 space-y-4">
+              <h3 className="font-bold text-lg text-gray-800">Thông tin phiên phỏng vấn</h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Trạng thái</span>
+                  <strong>{session?.status ?? 'N/A'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Mode</span>
+                  <strong>{session?.mode || 'N/A'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Interview mode</span>
+                  <strong>{session?.interviewerMode || 'N/A'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">AI model</span>
+                  <strong>{session?.aiModelRaw || session?.aiModel || 'N/A'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Số câu hỏi dự kiến</span>
+                  <strong>{session?.totalExpectedQuestions ?? 0}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Đã trả lời</span>
+                  <strong>{session?.answeredCount ?? 0}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Ngày tạo</span>
+                  <strong>{session?.createdAt ? new Date(session.createdAt).toLocaleString('vi-VN') : 'N/A'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Ngày hoàn tất</span>
+                  <strong>{session?.completedAt ? new Date(session.completedAt).toLocaleString('vi-VN') : 'Chưa hoàn tất'}</strong>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <h3 className="font-bold text-lg text-gray-800">Chi tiết kỹ thuật</h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                {/* <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Pace score</span>
+                  <strong>{report.paceScore ?? '—'}</strong>
+                </div> */}
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Model version</span>
+                  <strong>{report.modelVersion ?? 'Chưa có dữ liệu'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Schema version</span>
+                  <strong>{report.schemaVersion ?? 'Chưa có dữ liệu'}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
+                  <span className="text-gray-500">Session ID</span>
+                  <strong className="break-all text-right">{session?.id ?? id ?? 'N/A'}</strong>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <h3 className="font-bold text-lg text-gray-800">Tổng hợp câu hỏi & trả lời</h3>
+              {session?.questions && session.questions.length > 0 ? (
+                <div className="max-h-[520px] overflow-y-auto pr-2 space-y-4">
+                  {session.questions.map((q) => {
+                    const answer = session.answers?.find((a) => a.questionId === q.questionId);
+                    return (
+                      <div key={q.questionId} className="border rounded-xl p-4 bg-slate-50/40 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="font-semibold">
+                              {q.questionNumber}. {q.questionText}
+                            </p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {q.questionType} • {q.difficulty} • {answer ? 'Đã trả lời' : 'Chưa trả lời'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {q.expectedAnswerPoints && q.expectedAnswerPoints.length > 0 && (
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {q.expectedAnswerPoints.map((point, index) => (
+                              <li key={`${q.questionId}-point-${index}`}>• {point}</li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div className="rounded-lg border bg-white p-3 text-sm text-gray-700">
+                          <p className="font-medium mb-1">Câu trả lời</p>
+                          <p>{answer?.answerText || 'Chưa có câu trả lời'}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+              )}
+            </Card>
 
           <div className="flex gap-3">
             <Button onClick={() => navigate('/phong-van-setup')}>
               Luyện lại
             </Button>
-            <Button variant="outline" onClick={() => navigate('/bao-cao')}>
-              Xem lịch sử
-            </Button>
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Xóa phiên phỏng vấn"
+        description="Bạn có chắc chắn muốn xóa phiên phỏng vấn này? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa"
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={() => void handleDeleteInterview()}
+      />
     </div>
   );
 };
@@ -354,6 +525,7 @@ export const ReportsPage: React.FC = () => {
   const [stats, setStats] = useState<InterviewStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const formatLabel = (value?: string) =>
     value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : '';
@@ -390,10 +562,12 @@ export const ReportsPage: React.FC = () => {
   }, []);
 
   const handleDelete = async (interviewId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa phiên phỏng vấn này?')) return;
     try {
       await deleteInterview(interviewId);
       setInterviews((prev) => prev.filter((item) => item.id !== interviewId));
+      if (deleteTargetId === interviewId) {
+        setDeleteTargetId(null);
+      }
       toast.success('Đã xóa phiên phỏng vấn.');
     } catch (err) {
       const apiErr = err instanceof ApiError ? err : null;
@@ -462,40 +636,102 @@ export const ReportsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {interviews.map((interview) => (
-            <Card key={interview.id} className="glass-card hover-lift p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="font-bold mb-1">{interview.position}</h3>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                    <span>{formatLabel(interview.level)}</span>
-                    <span>•</span>
-                    <span>{formatLabel(interview.interviewType)}</span>
-                    <span>•</span>
-                    <span>{new Date(interview.createdAt).toLocaleDateString('vi-VN')}</span>
+            <Card key={interview.id} className="glass-card hover-lift p-6 space-y-5">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div className="space-y-3 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={interview.status === 'completed' ? 'default' : 'secondary'}>
+                      {statusLabelMap[interview.status] || interview.status}
+                    </Badge>
+                    <Badge variant="outline">{interview.mode.toUpperCase()}</Badge>
+                    <Badge variant="secondary">{formatLabel(interview.level)}</Badge>
+                    <Badge variant="secondary">{formatLabel(interview.interviewType)}</Badge>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-bold mb-1 truncate">{interview.position}</h3>
+                    <p className="text-sm text-gray-600">
+                      AI model: <span className="font-medium">{interview.aiModelRaw || interview.aiModel || 'N/A'}</span>
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs text-gray-500">Số câu hỏi</p>
+                      <p className="font-semibold text-gray-900">{interview.totalExpectedQuestions ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs text-gray-500">Đã trả lời</p>
+                      <p className="font-semibold text-gray-900">{interview.answeredCount ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs text-gray-500">Điểm tổng</p>
+                      <p className="font-semibold text-blue-600">{interview.overallScore ?? '—'}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs text-gray-500">Tỷ lệ hoàn thành</p>
+                      <p className="font-semibold text-gray-900">
+                        {interview.totalExpectedQuestions
+                          ? `${Math.round(((interview.answeredCount ?? 0) / interview.totalExpectedQuestions) * 100)}%`
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3 text-xs text-gray-600">
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-gray-500 mb-1">Ngày tạo</p>
+                      <p className="font-medium text-gray-900">{new Date(interview.createdAt).toLocaleString('vi-VN')}</p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-gray-500 mb-1">Bắt đầu</p>
+                      <p className="font-medium text-gray-900">
+                        {interview.startedAt ? new Date(interview.startedAt).toLocaleString('vi-VN') : 'Chưa bắt đầu'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-gray-500 mb-1">Hoàn tất</p>
+                      <p className="font-medium text-gray-900">
+                        {interview.completedAt ? new Date(interview.completedAt).toLocaleString('vi-VN') : 'Chưa hoàn tất'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+
+                <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 lg:gap-4 shrink-0">
                   <div className="text-right">
-                    <div className="text-2xl font-bold">{interview.report?.overallScore ?? '—'}</div>
+                    <div className="text-3xl font-extrabold text-blue-600">{interview.overallScore ?? '—'}</div>
                     <div className="text-xs text-gray-600">điểm</div>
                   </div>
-                  <Badge variant={interview.status === 'completed' ? 'default' : 'secondary'}>
-                    {statusLabelMap[interview.status] || interview.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/phong-van-report/${interview.id}`)}>
-                    Xem báo cáo
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(interview.id)}>
-                    <Trash2 size={16} />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/phong-van-report/${interview.id}`)}>
+                      Xem báo cáo
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTargetId(interview.id)}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        title="Xóa phiên phỏng vấn"
+        description="Bạn có chắc chắn muốn xóa phiên phỏng vấn này? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa"
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            void handleDelete(deleteTargetId);
+          }
+        }}
+      />
     </div>
   );
 };
@@ -1073,7 +1309,7 @@ export const SubscriptionPage: React.FC = () => {
 
 // Invoices Page
 export const InvoicesPage: React.FC = () => {
-  const invoices: never[] = [];
+  const invoices: InvoiceItem[] = [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -1231,6 +1467,7 @@ export const CancelSubscriptionPage: React.FC = () => {
   const navigate = useNavigate();
   const [planName, setPlanName] = useState('gói hiện tại');
   const [loading, setLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   React.useEffect(() => {
     import('../../services/subscriptionService').then(({ getCurrentSubscription }) => {
@@ -1241,7 +1478,6 @@ export const CancelSubscriptionPage: React.FC = () => {
   }, []);
 
   const handleCancel = async () => {
-    if (!confirm(`Bạn có chắc chắn muốn hủy ${planName}?`)) return;
     setLoading(true);
     try {
       const { cancelSubscription } = await import('../../services/subscriptionService');
@@ -1264,13 +1500,22 @@ export const CancelSubscriptionPage: React.FC = () => {
         Sau đó tài khoản sẽ chuyển về gói Miễn phí.
       </p>
       <div className="flex gap-3">
-        <Button variant="destructive" onClick={() => void handleCancel()} disabled={loading}>
+        <Button variant="destructive" onClick={() => setShowCancelConfirm(true)} disabled={loading}>
           {loading ? 'Đang xử lý...' : 'Xác nhận hủy'}
         </Button>
         <Button variant="outline" onClick={() => navigate('/goi-dich-vu')}>
           Quay lại
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title={`Hủy ${planName}`}
+        description={`Bạn có chắc chắn muốn hủy ${planName}? Bạn sẽ vẫn sử dụng được gói này đến hết kỳ thanh toán hiện tại.`}
+        confirmLabel="Xác nhận hủy"
+        onOpenChange={setShowCancelConfirm}
+        onConfirm={() => void handleCancel()}
+      />
     </Card>
   );
 };
