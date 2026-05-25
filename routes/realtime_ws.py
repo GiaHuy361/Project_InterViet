@@ -17,6 +17,7 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
     
     # 1. Xác thực vé vào cửa
     await websocket.accept()
+    is_active = True
     session_data = ACTIVE_PROXY_SESSIONS.get(proxy_token)
     
     if not session_data:
@@ -60,31 +61,33 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
             # 3. Chạy 2 luồng song song (bidi-directional forwarding)
             
             async def frontend_to_gemini():
-                """Hứng audio/text từ Frontend rồi chuyển cho Gemini."""
+                nonlocal is_active
                 try:
-                    while True:
+                    while is_active:
                         data = await websocket.receive_text()
-                        # Pass-through nguyên vẹn
                         await gemini_ws.send(data)
-                except WebSocketDisconnect:
-                    logger.info("[WS_PROXY] Frontend ngắt kết nối.")
-                except Exception as e:
-                    logger.error(f"[WS_PROXY] Lỗi luồng Frontend->Gemini: {str(e)}")
+                except Exception:
+                    is_active = False # Đóng luồng
 
             async def gemini_to_frontend():
                 """Hứng audio/text từ Gemini rồi chuyển về Frontend."""
+                nonlocal is_active
                 try:
-                    while True:
-                        data = await gemini_ws.recv()
-                        # Pass-through nguyên vẹn
-                        await websocket.send_text(data)
-                except websockets.exceptions.ConnectionClosed:
-                    logger.info("[WS_PROXY] Gemini ngắt kết nối.")
+                    while is_active:
+                        msg = await gemini_ws.recv()
+                        if is_active: # Chỉ gửi nếu chưa đóng
+                            await websocket.send_text(msg)
                 except Exception as e:
-                    logger.error(f"[WS_PROXY] Lỗi luồng Gemini->Frontend: {str(e)}")
+                    logger.error(f"Lỗi đẩy về Front: {e}")
+                finally:
+                    is_active = False # Đánh dấu đóng
 
             # Gộp 2 luồng chạy đồng thời
             await asyncio.gather(frontend_to_gemini(), gemini_to_frontend())
+
+            # Dọn dẹp
+            is_active = False
+            await websocket.close()
 
     except Exception as e:
         logger.error(f"[WS_PROXY] Lỗi khởi tạo Proxy tới Gemini: {str(e)}")
