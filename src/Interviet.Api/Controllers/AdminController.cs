@@ -455,6 +455,63 @@ public sealed class AdminController : ApiControllerBase
     }
 
     /// <summary>
+    /// Updates a user's role (enforces single-role rule).
+    /// Route: PATCH /api/v1/admin/users/{id}/roles
+    /// </summary>
+    [HttpPatch("users/{id:guid}/roles")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> AssignUserRoles(Guid id, AssignUserRolesRequest req)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        // Single role checks
+        if (req.Roles == null || req.Roles.Count != 1)
+        {
+            return BadRequest(new { message = "Only one role is supported in current version." });
+        }
+
+        var newRole = req.Roles.First().Trim().ToLowerInvariant();
+        if (newRole == "user")
+        {
+            newRole = RoleCodes.Candidate;
+        }
+
+        var validRoles = new[] { RoleCodes.Admin, RoleCodes.Support, RoleCodes.Mentor, RoleCodes.Candidate };
+        if (!validRoles.Contains(newRole))
+        {
+            return BadRequest(new { message = $"Invalid role code. Must be one of: {string.Join(", ", validRoles)}" });
+        }
+
+        // Protect the last admin from stripping
+        if (user.RoleCode == RoleCodes.Admin && newRole != RoleCodes.Admin)
+        {
+            var adminCount = await _context.Users.CountAsync(u => u.RoleCode == RoleCodes.Admin);
+            if (adminCount <= 1)
+            {
+                return BadRequest(new { message = "Không thể xóa quyền Admin của tài khoản Admin cuối cùng trong hệ thống." });
+            }
+        }
+
+        var prevRole = user.RoleCode;
+        user.RoleCode = newRole;
+
+        await _context.SaveChangesAsync();
+
+        await _auditLogService.LogAsync(
+            action: "role_updated",
+            resource: "User",
+            resourceId: user.Id.ToString(),
+            metadata: new { email = user.Email, previousRole = prevRole, newRole = user.RoleCode }
+        );
+
+        return Ok(new { message = "User role updated successfully.", email = user.Email, previousRole = prevRole, newRole = user.RoleCode });
+    }
+
+    /// <summary>
     /// Gets all payment transaction logs.
     /// Route: GET /api/v1/admin/billing/payments
     /// </summary>

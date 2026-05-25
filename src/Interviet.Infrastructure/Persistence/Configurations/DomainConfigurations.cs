@@ -361,13 +361,20 @@ public class MentorProfileConfiguration : IEntityTypeConfiguration<MentorProfile
     {
         b.ToTable("MentorProfiles");
         b.HasKey(x => x.Id);
+        b.Property(x => x.UserId);
+        b.Property(x => x.IsVerified).HasDefaultValue(false);
         b.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         b.Property(x => x.Headline).HasMaxLength(250);
         b.Property(x => x.AvatarUrl).HasMaxLength(500);
         b.Property(x => x.Bio).HasMaxLength(2000);
+        b.Property(x => x.ExpertiseJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.IndustriesJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.LanguagesJson).HasColumnType("nvarchar(max)");
         b.Property(x => x.YearsOfExperience).HasColumnType("decimal(4,1)");
         b.Property(x => x.RatingAverage).HasColumnType("decimal(3,2)");
         b.Property(x => x.Status).HasMaxLength(30).IsRequired();
+
+        b.HasIndex(x => x.UserId).IsUnique().HasFilter("[UserId] IS NOT NULL");
 
         b.HasMany(x => x.AvailabilitySlots).WithOne(s => s.Mentor).HasForeignKey(s => s.MentorId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(x => x.Bookings).WithOne(bk => bk.Mentor).HasForeignKey(bk => bk.MentorId).OnDelete(DeleteBehavior.Restrict);

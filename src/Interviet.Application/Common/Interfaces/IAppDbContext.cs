@@ -112,6 +112,13 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<AdminActionLog> AdminActionLogs { get; }
     Microsoft.EntityFrameworkCore.DbSet<AuditLog> AuditLogs { get; }
 
+    // Phase 15 - Public Content & Help Center
+    Microsoft.EntityFrameworkCore.DbSet<PublicStat> PublicStats { get; }
+    Microsoft.EntityFrameworkCore.DbSet<Testimonial> Testimonials { get; }
+    Microsoft.EntityFrameworkCore.DbSet<FaqItem> FaqItems { get; }
+    Microsoft.EntityFrameworkCore.DbSet<PublicContactRequest> PublicContactRequests { get; }
+    Microsoft.EntityFrameworkCore.DbSet<BlogArticle> BlogArticles { get; }
+
 
     // Dashboard & AI
     Microsoft.EntityFrameworkCore.DbSet<OnboardingProgress> OnboardingProgress { get; }

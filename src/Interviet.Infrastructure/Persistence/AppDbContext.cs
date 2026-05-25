@@ -116,6 +116,13 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<AdminActionLog> AdminActionLogs => Set<AdminActionLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    // Phase 15 - Public Content & Help Center
+    public DbSet<PublicStat> PublicStats => Set<PublicStat>();
+    public DbSet<Testimonial> Testimonials => Set<Testimonial>();
+    public DbSet<FaqItem> FaqItems => Set<FaqItem>();
+    public DbSet<PublicContactRequest> PublicContactRequests => Set<PublicContactRequest>();
+    public DbSet<BlogArticle> BlogArticles => Set<BlogArticle>();
+
 
     // ── Dashboard & AI ──────────────────────────────────────────────────────
     public DbSet<OnboardingProgress> OnboardingProgress => Set<OnboardingProgress>();

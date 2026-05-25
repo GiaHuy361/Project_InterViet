@@ -96,8 +96,18 @@ try
     {
         options.AddPolicy("AdminOnly", policy =>
             policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Admin));
+        options.AddPolicy("SupportOnly", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Support));
+        options.AddPolicy("MentorOnly", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Mentor));
         options.AddPolicy("AdminOrSupport", policy =>
             policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Admin, Interviet.Domain.Identity.RoleCodes.Support));
+        options.AddPolicy("AdminOrMentor", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Admin, Interviet.Domain.Identity.RoleCodes.Mentor));
+        options.AddPolicy("SupportOrAdmin", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Support, Interviet.Domain.Identity.RoleCodes.Admin));
+        options.AddPolicy("MentorOrAdmin", policy =>
+            policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Mentor, Interviet.Domain.Identity.RoleCodes.Admin));
     });
 
     // ── Controllers ───────────────────────────────────────────────────────
@@ -240,6 +250,10 @@ try
         var passwordHasher = scope.ServiceProvider.GetRequiredService<Interviet.Application.Common.Interfaces.IPasswordHasher>();
         await Interviet.Infrastructure.Persistence.DbSeeder.SeedAdminUserAsync(db, passwordHasher);
         Log.Information("Admin user hienngochuy3@gmail.com seeded successfully.");
+
+        // Phase 15 - Seed public content
+        await Interviet.Infrastructure.Persistence.DbSeeder.SeedPublicContentAsync(db);
+        Log.Information("Public content (stats, testimonials, FAQs, blog) seeded successfully.");
     }
 
     // ── Middleware pipeline (ORDER MATTERS) ───────────────────────────────

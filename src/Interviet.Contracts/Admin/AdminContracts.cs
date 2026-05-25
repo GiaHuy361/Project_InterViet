@@ -196,3 +196,7 @@ public sealed record BroadcastNotificationRequest(
     string Priority,
     string Target
 );
+
+public sealed record AssignUserRolesRequest(
+    List<string> Roles
+);

@@ -6,10 +6,15 @@ namespace Interviet.Domain.Mentors;
 
 public class MentorProfile : AuditableEntity
 {
+    public Guid? UserId { get; set; }
+    public bool IsVerified { get; set; } = false;
     public string FullName { get; set; } = string.Empty;
     public string? Headline { get; set; }
     public string? AvatarUrl { get; set; }
     public string? Bio { get; set; }
+    public string? ExpertiseJson { get; set; }
+    public string? IndustriesJson { get; set; }
+    public string? LanguagesJson { get; set; }
     public decimal YearsOfExperience { get; set; }
     public decimal RatingAverage { get; set; }
     public int RatingCount { get; set; }
