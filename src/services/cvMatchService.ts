@@ -21,10 +21,33 @@ export interface ResumeItem {
   title: string;
   originalFileName: string;
   fileSizeBytes: number;
-  parseStatus: ParseStatus;
+  parseStatus: ParseStatus | string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ResumeParseJob {
+  jobId: string;
+  resumeId: string;
+  status: string;
+  provider?: string;
+  correlationId?: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+  requestedAt?: string;
+  completedAt?: string | null;
+}
+
+export interface ResumeDetail extends ResumeItem {
+  versionNumber?: number;
+  latestVersionId?: string;
+  fileExtension?: string;
+  contentType?: string;
+  processingError?: string | null;
+  latestParseJob?: ResumeParseJob | null;
+  parsedData?: Record<string, unknown>;
 }
 
 export interface ResumeListParams {
@@ -139,7 +162,7 @@ export const cvMatchService = {
     return apiClient.get<ResumeListResponse>(`/resumes${qs ? `?${qs}` : ''}`);
   },
 
-  getResumeDetail: (resumeId: string) => apiClient.get<ResumeItem & { parsedData?: Record<string, unknown> }>(`/resumes/${resumeId}`),
+  getResumeDetail: (resumeId: string) => apiClient.get<ResumeDetail>(`/resumes/${resumeId}`),
 
   createJobDescription: (payload: {
     title: string;

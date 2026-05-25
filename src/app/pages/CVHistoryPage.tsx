@@ -1,11 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronLeft, ChevronRight, FileText, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, FileText, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card, CardHeader } from '../components/ui/card';
+import { Card } from '../components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { formatLocalDate } from '../../utils/formatters';
-import { cvMatchService, type ParseStatus, type ResumeItem } from '../../services/cvMatchService';
+import {
+  cvMatchService,
+  type ParseStatus,
+  type ResumeDetail,
+  type ResumeItem,
+} from '../../services/cvMatchService';
 
 type ActiveFilter = 'all' | 'true' | 'false';
 
@@ -18,8 +24,14 @@ const STATUS_OPTIONS: Array<{ value: 'all' | ParseStatus; label: string }> = [
   { value: 'Failed', label: 'Failed' },
 ];
 
-function formatStatusLabel(status: ParseStatus): string {
-  return status;
+function formatStatusLabel(status?: string): string {
+  if (!status) return 'Unknown';
+  return status
+    .replace(/_/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function formatFileSize(bytes: number): string {
@@ -42,6 +54,10 @@ export const CVHistoryPage: React.FC = () => {
   const [isActive, setIsActive] = useState<ActiveFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [resumeDetail, setResumeDetail] = useState<ResumeDetail | null>(null);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [pageSize, totalCount]);
 
@@ -93,6 +109,22 @@ export const CVHistoryPage: React.FC = () => {
     setPage(1);
   };
 
+  const handleViewDetail = useCallback(async (resumeId: string) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError(null);
+    setResumeDetail(null);
+
+    try {
+      const data = await cvMatchService.getResumeDetail(resumeId);
+      setResumeDetail(data);
+    } catch {
+      setDetailError('Không tải được chi tiết CV.');
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   return (
     <div className="space-y-6 pb-12">
       <AppPageHeader
@@ -101,7 +133,13 @@ export const CVHistoryPage: React.FC = () => {
         icon={FileText}
         iconGradient="from-blue-500 to-cyan-500"
         actions={
-          <Button onClick={() => navigate('/cv-matching')}>Tối ưu CV mới</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Quay lại
+            </Button>
+            <Button onClick={() => navigate('/cv-matching')}>Tối ưu CV mới</Button>
+          </div>
         }
       />
 
@@ -206,7 +244,7 @@ export const CVHistoryPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <Button variant="outline" size="sm" onClick={() => navigate('/cv-matching')}>
+                  <Button variant="outline" size="sm" onClick={() => void handleViewDetail(resume.resumeId)}>
                     Xem chi tiết
                   </Button>
                 </div>
@@ -243,9 +281,76 @@ export const CVHistoryPage: React.FC = () => {
           </Card>
         </div>
       )}
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Chi tiết CV</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết CV: {resumeDetail?.title || '—'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
+            {detailLoading ? (
+              <p className="text-sm text-slate-500">Đang tải chi tiết CV...</p>
+            ) : detailError ? (
+              <p className="text-sm text-red-600">{detailError}</p>
+            ) : resumeDetail ? (
+              <>
+                <div className="grid gap-3 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700">
+                  <DetailRow label="Tiêu đề" value={resumeDetail.title} />
+                  <DetailRow label="Tên file gốc" value={resumeDetail.originalFileName} />
+                  <DetailRow label="Version" value={String(resumeDetail.versionNumber ?? '—')} />
+                  <DetailRow label="Trạng thái parse" value={formatStatusLabel(resumeDetail.parseStatus)} />
+                  <DetailRow label="Active" value={getActiveLabel(resumeDetail.isActive)} />
+                  <DetailRow label="Định dạng file" value={resumeDetail.fileExtension ?? '—'} />
+                  <DetailRow label="Kích thước" value={formatFileSize(resumeDetail.fileSizeBytes)} />
+                  <DetailRow label="Tạo lúc" value={formatLocalDate(resumeDetail.createdAt)} />
+                  <DetailRow label="Cập nhật lúc" value={formatLocalDate(resumeDetail.updatedAt)} />
+                  <DetailRow label="Lỗi xử lý" value={resumeDetail.processingError ?? '—'} />
+                </div>
+
+                {resumeDetail.latestParseJob && (
+                  <div className="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Latest Parse Job
+                    </h4>
+                    <div className="grid gap-2 text-sm">
+                      <DetailRow label="Status" value={formatStatusLabel(resumeDetail.latestParseJob.status)} />
+                      <DetailRow label="Error code" value={resumeDetail.latestParseJob.errorCode ?? '—'} />
+                      <DetailRow label="Error message" value={resumeDetail.latestParseJob.errorMessage ?? '—'} />
+                      <DetailRow label="Retry count" value={String(resumeDetail.latestParseJob.retryCount ?? 0)} />
+                      <DetailRow label="Requested at" value={formatLocalDate(resumeDetail.latestParseJob.requestedAt)} />
+                      <DetailRow label="Completed at" value={formatLocalDate(resumeDetail.latestParseJob.completedAt)} />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Không có dữ liệu chi tiết.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+const DetailRow: React.FC<{
+  label: string;
+  value: string;
+  mono?: boolean;
+}> = ({ label, value, mono = false }) => (
+  <div className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:items-start">
+    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      {label}
+    </span>
+    <span className={`break-all text-slate-800 dark:text-slate-100 ${mono ? 'font-mono text-xs' : 'text-sm'}`}>
+      {value}
+    </span>
+  </div>
+);
 
 const FilterSelect: React.FC<{
   label: string;
