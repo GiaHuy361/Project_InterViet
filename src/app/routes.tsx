@@ -9,6 +9,7 @@ import { AppLayout } from './layouts/AppLayout';
 // Route guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicOnlyRoute } from './components/auth/PublicOnlyRoute';
+import { RoleGuard } from './components/auth/RoleGuard';
 
 // Import all pages from index
 import * as Pages from './pages';
@@ -125,6 +126,58 @@ export const router = createBrowserRouter([
 
           // System management
           { path: 'system/data', Component: Pages.DataManagementPage },
+
+          // ─── Admin routes (admin only) ────────────────────
+          {
+            path: 'admin/dashboard',
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Pages.AdminDashboardPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'admin/users',
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Pages.AdminDashboardPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'admin/billing',
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Pages.AdminDashboardPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'admin/audit-logs',
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Pages.AdminDashboardPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'admin/health',
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Pages.AdminDashboardPage />
+              </RoleGuard>
+            ),
+          },
+
+          // ─── Support routes (admin + support) ─────────────
+          {
+            path: 'support/tickets',
+            element: (
+              <RoleGuard allowedRoles={['admin', 'support']}>
+                <Pages.SupportTicketsPage />
+              </RoleGuard>
+            ),
+          },
         ],
       },
       {
@@ -133,4 +186,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+]);

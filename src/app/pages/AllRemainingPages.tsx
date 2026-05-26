@@ -386,16 +386,70 @@ export const NotFoundPage: React.FC = () => {
   );
 };
 
-export const MaintenancePage: React.FC = () => (
-  <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
-    <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
-      <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600" style={{ animationDuration: '3s' }} />
-      <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
-      <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
-      <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>
-    </Card>
-  </div>
-);
+export const MaintenancePage: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Read feature gate context from query params (set by apiClient on 503 Feature Gate)
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const featureParam = searchParams.get('feature'); // 'admin' | 'support' | null
+  const codeParam = searchParams.get('code'); // 'Admin.Disabled' | 'Support.Disabled' | null
+
+  const isFeatureGate = !!featureParam;
+
+  // Feature-specific labels
+  const featureLabels: Record<string, { title: string; description: string; icon: typeof Settings }> = {
+    admin: {
+      title: 'Tính năng Quản trị tạm ngưng',
+      description: 'Tính năng quản trị hệ thống hiện đang bị tắt bởi quản trị viên. Vui lòng liên hệ quản trị viên để biết thêm thông tin.',
+      icon: Shield,
+    },
+    support: {
+      title: 'Tính năng Hỗ trợ tạm ngưng',
+      description: 'Tính năng hỗ trợ khách hàng hiện đang bị tắt bởi quản trị viên. Vui lòng liên hệ quản trị viên để biết thêm thông tin.',
+      icon: AlertCircle,
+    },
+  };
+
+  const featureInfo = featureParam ? featureLabels[featureParam] : null;
+
+  if (isFeatureGate && featureInfo) {
+    const FeatureIcon = featureInfo.icon;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-6">
+        <Card className="glass-card max-w-lg rounded-2xl p-12 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-100">
+            <FeatureIcon className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="mb-4 text-3xl font-bold text-gray-900">{featureInfo.title}</h1>
+          <p className="mb-3 text-slate-600">{featureInfo.description}</p>
+          <p className="mb-6 text-sm text-slate-400">
+            Trạng thái này chỉ thay đổi khi quản trị viên cập nhật cấu hình hệ thống. Không cần tải lại trang liên tục.
+          </p>
+          {codeParam && (
+            <p className="mb-6 rounded-lg bg-gray-50 px-3 py-2 text-xs font-mono text-gray-400">
+              Mã lỗi: {codeParam}
+            </p>
+          )}
+          <Button className="rounded-xl" onClick={() => navigate('/dashboard')}>
+            Quay lại Dashboard
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // General maintenance (non-feature-gate 503)
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
+      <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
+        <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600" style={{ animationDuration: '3s' }} />
+        <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
+        <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
+        <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>
+      </Card>
+    </div>
+  );
+};
 
 export const AccountLockedPage: React.FC = () => {
   const navigate = useNavigate();

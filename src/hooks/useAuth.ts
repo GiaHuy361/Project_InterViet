@@ -6,6 +6,7 @@
  */
 
 import { useApp } from '../app/contexts/AppContext';
+import type { SystemRole } from '../lib/auth/jwtDecode';
 
 export const useAuth = () => {
   const {
@@ -18,6 +19,8 @@ export const useAuth = () => {
     resendVerificationEmail,
   } = useApp();
 
+  const systemRole: SystemRole = state.user?.systemRole || 'user';
+
   return {
     // Auth state
     isAuthenticated: state.isAuthenticated,
@@ -27,6 +30,15 @@ export const useAuth = () => {
     refreshToken: state.refreshToken,
     accessTokenExpiry: state.accessTokenExpiry,
     refreshTokenExpiry: state.refreshTokenExpiry,
+
+    // System role (decoded from JWT)
+    systemRole,
+    /** True if user has 'admin' role */
+    isAdmin: systemRole === 'admin',
+    /** True if user has 'support' role */
+    isSupport: systemRole === 'support',
+    /** True if user has 'admin' or 'support' role (matches backend AdminOrSupport policy) */
+    isAdminOrSupport: systemRole === 'admin' || systemRole === 'support',
 
     // Auth actions
     login,

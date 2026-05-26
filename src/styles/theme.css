@@ -224,4 +224,8 @@
     opacity: 0;
     transform: translateX(1.25rem) scale(0.96);
   }
+  
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

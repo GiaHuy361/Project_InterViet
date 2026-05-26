@@ -30,6 +30,9 @@ export * from './SharedReportPage';
 // Export system pages
 export * from './system';
 
+// Export admin pages
+export * from './admin';
+
 // Export from batch files
 export * from './AllRemainingPages';
 export * from './AppPages';

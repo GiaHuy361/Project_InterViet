@@ -15,6 +15,10 @@ import {
   saveAuthFromResponse,
   loadAuthFromStorage,
 } from '../auth/tokenStorage';
+import {
+  getFeatureGateFromErrorCode,
+  markFeatureDisabled,
+} from '../featureGate';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -143,8 +147,19 @@ class ApiClient {
         window.location.href = '/forbidden';
       }
 
-      if (response.status === 503 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/bao-tri')) {
-        window.location.href = '/bao-tri';
+      // ─── 503 Feature Gate Detection ───────────────────────
+      // Check if 503 is a feature gate (Admin.Disabled / Support.Disabled)
+      // vs. a general maintenance 503. Feature gates must NOT be auto-retried.
+      if (response.status === 503 && typeof window !== 'undefined') {
+        const featureGateResult = await this.handleFeatureGate503(response.clone());
+        if (featureGateResult) {
+          // Feature gate — throw immediately, no retry
+          throw featureGateResult;
+        }
+        // General 503 — redirect to maintenance page
+        if (!window.location.pathname.startsWith('/bao-tri')) {
+          window.location.href = '/bao-tri';
+        }
       }
 
       return this.parseResponse<T>(response, rawResponse);
@@ -309,6 +324,72 @@ class ApiClient {
       details: details.errors,
       requestId: details.traceId,
     });
+  }
+
+  /**
+   * Handle 503 responses that may be Feature Gate errors.
+   *
+   * Reads the response body to detect feature gate error codes
+   * (Admin.Disabled, Support.Disabled). If detected:
+   * - Marks the feature as disabled in the feature gate cache
+   * - Redirects to maintenance page with feature context
+   * - Returns an ApiError (caller should throw it, NOT retry)
+   *
+   * Returns null if this is NOT a feature gate 503 (i.e., general maintenance).
+   */
+  private async handleFeatureGate503(response: Response): Promise<ApiError | null> {
+    try {
+      const text = await response.text();
+      if (!text) return null;
+
+      let data: unknown;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        return null;
+      }
+
+      // Extract error code from envelope or flat response
+      let errorCode: string | null = null;
+      let errorMessage = 'Tính năng tạm thời không khả dụng.';
+
+      if (this.isApiEnvelope(data) && data.error?.code) {
+        errorCode = data.error.code;
+        errorMessage = data.error.message || errorMessage;
+      } else if (typeof data === 'object' && data !== null && 'code' in data) {
+        errorCode = (data as { code?: string }).code || null;
+        if ('message' in data && typeof (data as { message?: string }).message === 'string') {
+          errorMessage = (data as { message: string }).message;
+        }
+      }
+
+      if (!errorCode) return null;
+
+      const featureId = getFeatureGateFromErrorCode(errorCode);
+      if (!featureId) return null;
+
+      // Mark feature as disabled in cache
+      markFeatureDisabled(featureId, errorMessage);
+
+      // Redirect to maintenance page with feature context
+      if (!window.location.pathname.startsWith('/bao-tri')) {
+        const params = new URLSearchParams({
+          feature: featureId,
+          code: errorCode,
+        });
+        window.location.href = `/bao-tri?${params.toString()}`;
+      }
+
+      // Return error for the caller to throw (NO retry)
+      return new ApiError({
+        status: 503,
+        code: errorCode,
+        message: errorMessage,
+      });
+    } catch {
+      // If reading the body fails, treat as general 503
+      return null;
+    }
   }
 
   private async handleTokenRefresh(): Promise<string | null> {

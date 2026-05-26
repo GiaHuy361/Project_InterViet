@@ -10,6 +10,8 @@ import {
   saveAuthFromResponse,
   updateEmailVerified,
 } from '../../lib/auth/tokenStorage';
+import { getRoleFromToken } from '../../lib/auth/jwtDecode';
+import type { SystemRole } from '../../lib/auth/jwtDecode';
 
 export type UserRole = 'visitor' | 'free' | 'trial' | 'premium' | 'expired' | 'cancelled' | 'suspended';
 export type SubscriptionPlan = 'free' | 'monthly' | 'quarterly' | 'yearly';
@@ -20,6 +22,8 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  /** System role decoded from JWT: 'user' | 'support' | 'admin' */
+  systemRole: SystemRole;
   subscriptionPlan: SubscriptionPlan;
   trialEndsAt?: Date;
   subscriptionEndsAt?: Date;
@@ -123,11 +127,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const STORAGE_KEY = 'interviet_app_state';
 
 function buildUserFromAuthResponse(response: AuthResponse): User {
+  // Decode JWT to extract system role (user/support/admin)
+  const systemRole = getRoleFromToken(response.accessToken);
+
   return {
     id: response.userId,
     email: response.email,
     name: response.fullName || response.email.split('@')[0],
     role: response.status as UserRole,
+    systemRole,
     subscriptionPlan: 'free',
     cvOptimizations: 0,
     cvOptimizationsDaily: 0,
@@ -323,6 +331,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 email: stored.authUser.email,
                 name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
                 role: stored.authUser.status as UserRole,
+                systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'user'),
                 subscriptionPlan: 'free',
                 cvOptimizations: 0,
                 cvOptimizationsDaily: 0,

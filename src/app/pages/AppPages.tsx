@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useApp } from '../contexts/AppContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -40,6 +40,15 @@ import { toast } from 'sonner';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { ApiError } from '../../lib/api/apiError';
 import { notificationService, type NotificationItem, type NotificationPreferences } from '../../services/notificationService';
+import {
+  closeSupportTicket,
+  getSupportTicketDetail,
+  listSupportTickets,
+  sendSupportTicketMessage,
+  type SupportTicket,
+  type SupportTicketMessage,
+  type SupportTicketStatus,
+} from '../../services/supportTicketService';
 import {
   deleteInterview,
   getInterview,
@@ -1447,101 +1456,380 @@ export const CancelSubscriptionPage: React.FC = () => {
 
 // Help Center Page (internal - no external redirect)
 export const HelpCenterPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const { state } = useApp();
-  
-  const helpCategories = [
-    {
-      title: 'Tối ưu CV',
-      icon: FileText,
-      articles: [
-        'Cách tải CV lên hệ thống',
-        'Làm thế nào để so khớp CV với JD?',
-        'Hiểu điểm matching và cách cải thiện',
-        'Xuất CV đã tối ưu'
-      ]
-    },
-    {
-      title: 'Phỏng vấn AI',
-      icon: MessageSquare,
-      articles: [
-        'Bắt đầu buổi phỏng vấn đầu tiên',
-        'Chọn mô hình AI phù hợp',
-        'Sử dụng microphone hiệu quả',
-        'Đọc và hiểu báo cáo phỏng vấn'
-      ]
-    },
-    {
-      title: 'Báo cáo & Thống kê',
-      icon: BarChart3,
-      articles: [
-        'Xem lịch sử báo cáo',
-        'So sánh với trung bình ngành',
-        'Xuất báo cáo PDF (Gói trả phí)',
-        'Theo dõi tiến độ cải thiện'
-      ]
-    },
-    {
-      title: 'Gói dịch vụ',
-      icon: Target,
-      articles: [
-        'So sánh các gói dịch vụ',
-        'Dùng thử 7 ngày miễn phí',
-        'Nâng cấp và thanh toán',
-        'Hủy gói dịch vụ'
-      ]
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [isClosingTicket, setIsClosingTicket] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [totalTickets, setTotalTickets] = useState(0);
+  const queryTicketId = new URLSearchParams(location.search).get('ticketId');
+
+  const totalPages = Math.max(1, Math.ceil(totalTickets / pageSize));
+
+  const statusLabel: Record<string, string> = {
+    open: 'Mới',
+    in_progress: 'Đang xử lý',
+    resolved: 'Đã xử lý',
+    closed: 'Đã đóng',
+  };
+
+  const statusBadgeClass: Record<string, string> = {
+    open: 'bg-blue-100 text-blue-700',
+    in_progress: 'bg-amber-100 text-amber-700',
+    resolved: 'bg-emerald-100 text-emerald-700',
+    closed: 'bg-gray-100 text-gray-700',
+  };
+
+  const toPublicOnlyMessages = (messages: SupportTicketMessage[]): SupportTicketMessage[] =>
+    messages.filter((message) => !message.isInternalNote);
+
+  const normalizeTicket = (ticket: SupportTicket): SupportTicket => ({
+    ...ticket,
+    messages: toPublicOnlyMessages(ticket.messages || []),
+  });
+
+  const selectTicket = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    navigate(`${location.pathname}?ticketId=${encodeURIComponent(ticketId)}`, { replace: true });
+  };
+
+  const fetchTickets = async () => {
+    setIsLoadingTickets(true);
+    setListError(null);
+    try {
+      const data = await listSupportTickets({ page, pageSize });
+      setTickets(data.items);
+      setTotalTickets(data.total);
+
+      if (data.items.length === 0) {
+        setSelectedTicketId(null);
+        setSelectedTicket(null);
+        navigate(location.pathname, { replace: true });
+        return;
+      }
+
+      setSelectedTicketId((current) => {
+        if (queryTicketId) {
+          return queryTicketId;
+        }
+        if (current && data.items.some((item) => item.id === current)) {
+          return current;
+        }
+        return data.items[0].id;
+      });
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      setListError(apiErr?.getUserMessage() || 'Không thể tải danh sách ticket.');
+    } finally {
+      setIsLoadingTickets(false);
     }
-  ];
+  };
+
+  const fetchTicketDetail = async (ticketId: string) => {
+    setIsLoadingDetail(true);
+    setDetailError(null);
+    try {
+      const detail = await getSupportTicketDetail(ticketId);
+      setSelectedTicket(normalizeTicket(detail));
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      setDetailError(apiErr?.getUserMessage() || 'Không thể tải chi tiết ticket.');
+      setSelectedTicket(null);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  useEffect(() => {
+    if (queryTicketId) {
+      setSelectedTicketId(queryTicketId);
+    }
+  }, [queryTicketId]);
+
+  useEffect(() => {
+    void fetchTickets();
+  }, [page]);
+
+  useEffect(() => {
+    if (!selectedTicketId) {
+      setSelectedTicket(null);
+      return;
+    }
+    void fetchTicketDetail(selectedTicketId);
+  }, [selectedTicketId]);
+
+  const handleTicketCreated = async (ticket: SupportTicket) => {
+    if (page !== 1) {
+      setPage(1);
+      return;
+    }
+
+    await fetchTickets();
+    selectTicket(ticket.id);
+    await fetchTicketDetail(ticket.id);
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyMessage.trim()) {
+      return;
+    }
+
+    try {
+      setIsSendingReply(true);
+      await sendSupportTicketMessage(selectedTicket.id, {
+        messageBody: replyMessage.trim(),
+      });
+      setReplyMessage('');
+      toast.success('Đã gửi phản hồi.');
+      await fetchTicketDetail(selectedTicket.id);
+      await fetchTickets();
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      toast.error(apiErr?.getUserMessage() || 'Không thể gửi phản hồi.');
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) {
+      return;
+    }
+
+    try {
+      setIsClosingTicket(true);
+      await closeSupportTicket(selectedTicket.id);
+      toast.success('Đã đóng ticket.');
+      await fetchTicketDetail(selectedTicket.id);
+      await fetchTickets();
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      toast.error(apiErr?.getUserMessage() || 'Không thể đóng ticket.');
+    } finally {
+      setIsClosingTicket(false);
+    }
+  };
+
+  const formatDateTime = (value: string | null | undefined): string => {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--';
+    return date.toLocaleString('vi-VN');
+  };
+
+  const canCloseTicket =
+    selectedTicket != null &&
+    selectedTicket.status !== 'closed';
 
   return (
     <div className="space-y-8 pb-12">
       <AppPageHeader
         title="Trung tâm trợ giúp"
-        subtitle="Tìm câu trả lời cho các thắc mắc thường gặp"
+        subtitle="Tạo và theo dõi ticket hỗ trợ cá nhân"
         icon={HelpCircle}
         iconGradient="from-blue-500 to-cyan-500"
         actions={
-          <Button variant="outline" className="hover-lift" onClick={() => navigate('/dashboard')}>
-            Quay lại Dashboard
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="hover-lift" onClick={() => void fetchTickets()}>
+              Làm mới
+            </Button>
+            <Button variant="outline" className="hover-lift" onClick={() => navigate('/dashboard')}>
+              Quay lại Dashboard
+            </Button>
+          </div>
         }
       />
 
-      <Card className="glass-card p-6">
-        <div className="relative">
-          <Input 
-            placeholder="Tìm kiếm bài viết hỗ trợ..." 
-            className="pl-10"
-          />
-          <HelpCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        </div>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+        <Card className="glass-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Ticket của tôi</h3>
+            <Badge variant="outline">{totalTickets}</Badge>
+          </div>
 
-      {/* Categories */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {helpCategories.map((category, idx) => {
-          const Icon = category.icon;
-          return (
-            <Card key={idx} className="glass-card hover-lift p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-white" />
+          {isLoadingTickets && (
+            <p className="py-8 text-center text-sm text-gray-500">Đang tải danh sách ticket...</p>
+          )}
+
+          {!isLoadingTickets && listError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {listError}
+            </div>
+          )}
+
+          {!isLoadingTickets && !listError && tickets.length === 0 && (
+            <div className="rounded-xl border border-dashed border-gray-300 p-5 text-sm text-gray-500">
+              Bạn chưa có ticket nào. Bấm "Liên hệ hỗ trợ" để tạo ticket mới.
+            </div>
+          )}
+
+          {!isLoadingTickets && !listError && tickets.length > 0 && (
+            <div className="space-y-2">
+              {tickets.map((ticket) => (
+                <button
+                  key={ticket.id}
+                  type="button"
+                  onClick={() => selectTicket(ticket.id)}
+                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                    selectedTicketId === ticket.id
+                      ? 'border-blue-300 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="line-clamp-1 text-sm font-semibold text-gray-900">{ticket.subject}</p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        statusBadgeClass[ticket.status] || 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {statusLabel[ticket.status] || ticket.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">#{ticket.ticketNumber}</p>
+                  <p className="mt-1 text-xs text-gray-500">{formatDateTime(ticket.createdAt)}</p>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || isLoadingTickets}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            >
+              Trang trước
+            </Button>
+            <span className="text-xs text-gray-500">Trang {page}/{totalPages}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || isLoadingTickets}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Trang sau
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="glass-card p-6">
+          {!selectedTicketId && (
+            <p className="py-10 text-center text-sm text-gray-500">
+              Chọn một ticket để xem chi tiết.
+            </p>
+          )}
+
+          {selectedTicketId && isLoadingDetail && (
+            <p className="py-10 text-center text-sm text-gray-500">Đang tải chi tiết ticket...</p>
+          )}
+
+          {selectedTicketId && !isLoadingDetail && detailError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {detailError}
+            </div>
+          )}
+
+          {selectedTicket && !isLoadingDetail && !detailError && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{selectedTicket.subject}</h3>
+                  <p className="text-sm text-gray-500">#{selectedTicket.ticketNumber}</p>
                 </div>
-                <h3 className="text-xl font-bold">{category.title}</h3>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    statusBadgeClass[selectedTicket.status] || 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {statusLabel[selectedTicket.status] || selectedTicket.status}
+                </span>
               </div>
-              <ul className="space-y-2">
-                {category.articles.map((article, i) => (
-                  <li key={i}>
-                    <button className="text-sm text-blue-600 hover:text-blue-800 text-left hover:underline">
-                      {article}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          );
-        })}
+
+              <div className="grid gap-2 rounded-xl bg-gray-50 p-4 text-sm text-gray-600 md:grid-cols-2">
+                <p>Danh mục: <span className="font-medium text-gray-800">{selectedTicket.category}</span></p>
+                <p>Ưu tiên: <span className="font-medium text-gray-800">{selectedTicket.priority}</span></p>
+                <p>Tạo lúc: <span className="font-medium text-gray-800">{formatDateTime(selectedTicket.createdAt)}</span></p>
+                <p>Cập nhật: <span className="font-medium text-gray-800">{formatDateTime(selectedTicket.lastMessageAt || selectedTicket.createdAt)}</span></p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">Mô tả ban đầu</p>
+                <p className="whitespace-pre-wrap text-sm text-gray-700">{selectedTicket.description}</p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-800">Trao đổi công khai</p>
+                <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3">
+                  {selectedTicket.messages.length === 0 ? (
+                    <p className="text-sm text-gray-500">Chưa có phản hồi nào.</p>
+                  ) : (
+                    selectedTicket.messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`rounded-lg p-3 ${
+                          message.senderType === 'user'
+                            ? 'bg-blue-50'
+                            : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            {message.senderType === 'user' ? 'Bạn' : 'Hỗ trợ'}
+                          </p>
+                          <p className="text-xs text-gray-500">{formatDateTime(message.createdAt)}</p>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm text-gray-800">{message.messageBody}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-gray-200 p-4">
+                <Label htmlFor="support-reply">Phản hồi thêm</Label>
+                <textarea
+                  id="support-reply"
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Nhập tin nhắn của bạn..."
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canCloseTicket || isClosingTicket}
+                    onClick={() => void handleCloseTicket()}
+                  >
+                    {isClosingTicket ? 'Đang đóng...' : 'Đóng ticket'}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isSendingReply || replyMessage.trim().length === 0}
+                    onClick={() => void handleSendReply()}
+                  >
+                    {isSendingReply ? 'Đang gửi...' : 'Gửi phản hồi'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* Contact Support */}
@@ -1566,8 +1854,7 @@ export const HelpCenterPage: React.FC = () => {
       <ContactSupportModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
-        userEmail={state.user?.email}
-        sourcePage="/tro-giup"
+        onCreated={(ticket) => void handleTicketCreated(ticket)}
       />
     </div>
   );
