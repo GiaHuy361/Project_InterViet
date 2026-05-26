@@ -7,6 +7,7 @@ import { Bell, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { eventTracker } from '../utils/eventTracker';
+import { notificationService, type NotificationItem } from '../../services/notificationService';
 
 export const NotificationDropdown: React.FC = () => {
   const { state, markNotificationRead, markAllNotificationsRead } = useApp();
@@ -14,14 +15,28 @@ export const NotificationDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifTab, setNotifTab] = useState<'all' | 'unread'>('all');
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [remoteNotifications, setRemoteNotifications] = useState<NotificationItem[] | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const unreadNotifications = state.notifications.filter(n => !n.read);
-  const unreadCount = unreadNotifications.length;
+  const unreadCount = remoteNotifications ? remoteNotifications.filter(n => !n.isRead).length : unreadNotifications.length;
 
-  const displayedNotifications = notifTab === 'all' 
-    ? state.notifications 
-    : unreadNotifications;
+  const displayedNotifications = remoteNotifications
+    ? (notifTab === 'all' ? remoteNotifications : remoteNotifications.filter(n => !n.isRead))
+    : (notifTab === 'all' ? state.notifications : unreadNotifications);
+
+  const loadRemoteNotifications = async () => {
+    setSyncing(true);
+    try {
+      const response = await notificationService.listNotifications({ page: 1, pageSize: 10 });
+      setRemoteNotifications(response.items || []);
+    } catch {
+      setRemoteNotifications(null);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Calculate dropdown position
   useEffect(() => {
@@ -32,6 +47,11 @@ export const NotificationDropdown: React.FC = () => {
         left: rect.right - 384, // 384px = w-96
       });
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void loadRemoteNotifications();
   }, [isOpen]);
 
   // Close on ESC key
@@ -61,11 +81,21 @@ export const NotificationDropdown: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleNotificationClick = (notif: any) => {
-    markNotificationRead(notif.id);
+  const handleNotificationClick = (notif: NotificationItem | (typeof state.notifications)[number]) => {
+    if (remoteNotifications) {
+      void notificationService.markRead(notif.id).catch(() => undefined);
+      setRemoteNotifications((prev) => prev?.map((item) => (item.id === notif.id ? { ...item, isRead: true } : item)) || null);
+    } else {
+      markNotificationRead(notif.id);
+    }
     setIsOpen(false);
     
     // Navigate based on notification type/content
+    if ('actionUrl' in notif && notif.actionUrl) {
+      navigate(notif.actionUrl);
+      return;
+    }
+
     if (notif.title.includes('Báo cáo') || notif.title.includes('báo cáo')) {
       navigate('/bao-cao');
     } else if (notif.title.includes('giới hạn') || notif.title.includes('hết lượt')) {
@@ -76,7 +106,12 @@ export const NotificationDropdown: React.FC = () => {
   };
 
   const handleMarkAllRead = () => {
-    markAllNotificationsRead();
+    if (remoteNotifications) {
+      void notificationService.markAllRead().catch(() => undefined);
+      setRemoteNotifications((prev) => prev?.map((item) => ({ ...item, isRead: true })) || null);
+    } else {
+      markAllNotificationsRead();
+    }
     eventTracker.track('notification_mark_all_read');
     toast.success('Đã đánh dấu tất cả là đã đọc');
   };
@@ -120,6 +155,9 @@ export const NotificationDropdown: React.FC = () => {
         }}
         className="w-96 bg-white rounded-lg shadow-2xl border border-gray-200"
       >
+          {syncing && (
+            <div className="border-b px-3 py-2 text-xs text-gray-500">Đang đồng bộ thông báo...</div>
+          )}
         <div className="p-3 border-b">
           <h3 className="font-semibold text-base mb-3">Thông báo</h3>
           <div className="flex gap-2">
@@ -162,25 +200,25 @@ export const NotificationDropdown: React.FC = () => {
                 <div 
                   key={notification.id}
                   className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors ${
-                    !notification.read ? 'bg-blue-50/50' : ''
+                    !('isRead' in notification ? notification.isRead : notification.read) ? 'bg-blue-50/50' : ''
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 mt-1">
-                      {!notification.read && (
+                      {!('isRead' in notification ? notification.isRead : notification.read) && (
                         <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm mb-1 ${!notification.read ? 'font-bold' : 'font-medium'}`}>
+                      <p className={`text-sm mb-1 ${!('isRead' in notification ? notification.isRead : notification.read) ? 'font-bold' : 'font-medium'}`}>
                         {notification.title}
                       </p>
                       <p className="text-xs text-gray-600 mb-1 line-clamp-2">
                         {notification.message}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {getTimeAgo(notification.createdAt)}
+                        {getTimeAgo(new Date(notification.createdAt))}
                       </p>
                     </div>
                   </div>

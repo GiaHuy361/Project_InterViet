@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { BarChart3, Trash2 } from 'lucide-react';
+import { BarChart3, Copy, Download, Share2, Trash2 } from 'lucide-react';
 import {
   deleteInterview,
   getInterview,
@@ -17,7 +17,12 @@ import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { ConfirmDialog } from './AppPages';
+import { reportShareService, type ReportShareItem } from '../../services/reportShareService';
 
 export const ReportsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +31,14 @@ export const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<InterviewSession | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareResult, setShareResult] = useState<ReportShareItem | null>(null);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareDescription, setShareDescription] = useState('');
+  const [shareExpiresAt, setShareExpiresAt] = useState('');
+  const [allowPdfDownload, setAllowPdfDownload] = useState(true);
 
   const formatLabel = (value?: string) =>
     value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : '';
@@ -61,6 +74,22 @@ export const ReportsPage: React.FC = () => {
     void load();
   }, []);
 
+  const defaultShareExpiry = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().slice(0, 10);
+  }, []);
+
+  useEffect(() => {
+    if (!shareTarget) return;
+    setShareTitle(`Chia sẻ báo cáo phỏng vấn - ${shareTarget.position}`);
+    setShareDescription('Gửi cho nhà tuyển dụng hoặc đồng nghiệp để tham khảo kết quả phỏng vấn.');
+    setShareExpiresAt(defaultShareExpiry);
+    setAllowPdfDownload(true);
+    setShareResult(null);
+    setShareError(null);
+  }, [shareTarget, defaultShareExpiry]);
+
   const handleDelete = async (interviewId: string) => {
     try {
       await deleteInterview(interviewId);
@@ -73,6 +102,35 @@ export const ReportsPage: React.FC = () => {
       const apiErr = err instanceof ApiError ? err : null;
       toast.error(apiErr?.getUserMessage() || 'Không thể xóa phiên phỏng vấn.');
     }
+  };
+
+  const handleCreateShare = async () => {
+    if (!shareTarget) return;
+
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      const payload = {
+        title: shareTitle.trim(),
+        description: shareDescription.trim(),
+        expiresAt: new Date(`${shareExpiresAt}T23:59:59.999Z`).toISOString(),
+        allowPdfDownload,
+      };
+      const result = await reportShareService.createInterviewReportShare(shareTarget.id, payload);
+      setShareResult(result);
+    } catch (err) {
+      const apiErr = err instanceof ApiError ? err : null;
+      setShareError(apiErr?.getUserMessage() || 'Không thể tạo link chia sẻ.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyShareUrl = async () => {
+    const url = shareResult?.shareUrl || shareResult?.apiUrl;
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    toast.success('Đã sao chép link chia sẻ');
   };
 
   return (
@@ -207,6 +265,10 @@ export const ReportsPage: React.FC = () => {
                     <Button variant="outline" size="sm" onClick={() => navigate(`/phong-van-report/${interview.id}`)}>
                       Xem báo cáo
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShareTarget(interview)}>
+                      <Share2 className="mr-2" size={14} />
+                      Chia sẻ
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTargetId(interview.id)}>
                       <Trash2 size={16} />
                     </Button>
@@ -232,6 +294,75 @@ export const ReportsPage: React.FC = () => {
           }
         }}
       />
+
+      <Dialog open={Boolean(shareTarget)} onOpenChange={(open) => !open && setShareTarget(null)}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Tạo link chia sẻ báo cáo</DialogTitle>
+            <DialogDescription>
+              Tạo một liên kết công khai cho báo cáo phỏng vấn này.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {shareError ? <p className="text-sm text-red-600">{shareError}</p> : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="share-title">Tiêu đề</Label>
+                <Input id="share-title" value={shareTitle} onChange={(e) => setShareTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="share-description">Mô tả</Label>
+                <Textarea id="share-description" value={shareDescription} onChange={(e) => setShareDescription(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="share-expires">Hết hạn</Label>
+                <Input id="share-expires" type="date" value={shareExpiresAt} onChange={(e) => setShareExpiresAt(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="share-pdf">PDF</Label>
+                <select
+                  id="share-pdf"
+                  value={allowPdfDownload ? 'true' : 'false'}
+                  onChange={(e) => setAllowPdfDownload(e.target.value === 'true')}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value="true">Cho phép tải PDF</option>
+                  <option value="false">Không cho phép tải PDF</option>
+                </select>
+              </div>
+            </div>
+
+            {shareResult ? (
+              <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <div className="space-y-2">
+                  <Label>Share URL</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={shareResult.shareUrl || ''} />
+                    <Button variant="outline" onClick={() => void copyShareUrl()}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Sao chép
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-sm text-slate-600">
+                  Token: <span className="font-mono">{shareResult.shareToken || shareResult.tokenPreview || '—'}</span>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShareTarget(null)}>
+                Đóng
+              </Button>
+              <Button onClick={() => void handleCreateShare()} disabled={shareLoading}>
+                {shareLoading ? 'Đang tạo...' : 'Tạo link'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

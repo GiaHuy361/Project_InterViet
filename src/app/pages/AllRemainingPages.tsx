@@ -408,3 +408,17 @@ export const AccountLockedPage: React.FC = () => {
     </Card>
   );
 };
+
+export const AccessDeniedPage: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <Card className="glass-card w-full max-w-md rounded-2xl p-8 text-center">
+      <Shield className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+      <h1 className="mb-2 text-3xl font-bold">Không có quyền truy cập</h1>
+      <p className="mb-6 text-slate-600">
+        Tài khoản của bạn không có đủ quyền để truy cập khu vực này.
+      </p>
+      <Button className="rounded-xl" onClick={() => navigate('/dashboard')}>Về dashboard</Button>
+    </Card>
+  );
+};

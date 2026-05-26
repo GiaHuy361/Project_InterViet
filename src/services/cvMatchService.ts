@@ -35,9 +35,24 @@ export interface ResumeParseJob {
   correlationId?: string;
   errorCode?: string | null;
   errorMessage?: string | null;
+  salaryText?: string | null;
+  sourceUrl?: string | null;
+  postedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   retryCount?: number;
   requestedAt?: string;
   completedAt?: string | null;
+}
+
+export interface JobDescriptionPayload {
+  title: string;
+  companyName: string;
+  location: string;
+  salaryText: string;
+  sourceUrl: string;
+  rawText: string;
+  postedAt: string;
 }
 
 export interface ResumeDetail extends ResumeItem {
@@ -70,6 +85,11 @@ export interface JobDescriptionItem {
   companyName: string;
   location: string;
   rawText: string;
+  salaryText?: string | null;
+  sourceUrl?: string | null;
+  postedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MatchResult {
@@ -173,6 +193,12 @@ export const cvMatchService = {
     salaryText?: string;
     postedAt?: string;
   }) => apiClient.post<JobDescriptionItem>('/job-descriptions', payload),
+
+  updateJobDescription: (jobDescriptionId: string, payload: JobDescriptionPayload) =>
+    apiClient.put<JobDescriptionItem>(`/job-descriptions/${jobDescriptionId}`, payload),
+
+  deleteJobDescription: (jobDescriptionId: string) =>
+    apiClient.delete<void>(`/job-descriptions/${jobDescriptionId}`),
 
   listJobDescriptions: () =>
     apiClient.get<{ items: JobDescriptionItem[]; totalCount: number }>('/job-descriptions?page=1&pageSize=100'),

@@ -39,6 +39,7 @@ import {
 import { toast } from 'sonner';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { ApiError } from '../../lib/api/apiError';
+import { notificationService, type NotificationItem, type NotificationPreferences } from '../../services/notificationService';
 import {
   deleteInterview,
   getInterview,
@@ -468,6 +469,120 @@ export const InterviewReportPage: React.FC = () => {
 // Notifications Page
 export const NotificationsPage: React.FC = () => {
   const { state, markNotificationRead } = useApp();
+  const [remoteNotifications, setRemoteNotifications] = useState<NotificationItem[]>([]);
+  const [hasRemoteData, setHasRemoteData] = useState(false);
+  const [remoteTotalPages, setRemoteTotalPages] = useState(1);
+  const [remoteTotalItems, setRemoteTotalItems] = useState(0);
+  const [remoteUnreadCount, setRemoteUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+
+  const fetchNotifications = async (showSpinner = false) => {
+    try {
+      if (showSpinner) setLoading(true);
+      else setSyncing(true);
+      const [listResponse, prefsResponse, unreadResponse] = await Promise.all([
+        notificationService.listNotifications({ page, pageSize, unreadOnly }),
+        notificationService.getPreferences().catch(() => null),
+        notificationService.getUnreadCount().catch(() => null),
+      ]);
+      setRemoteNotifications(listResponse.items || []);
+      setRemoteTotalItems(listResponse.totalItems || 0);
+      setRemoteTotalPages(listResponse.totalPages || 1);
+      setRemoteUnreadCount(unreadResponse?.unreadCount ?? listResponse.items.filter((item) => !item.isRead).length);
+      setHasRemoteData(true);
+      setPreferences(prefsResponse);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.getUserMessage() : 'Không thể tải thông báo.');
+      setHasRemoteData(false);
+    } finally {
+      setLoading(false);
+      setSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchNotifications(true);
+    const timer = window.setInterval(() => {
+      void fetchNotifications(false);
+    }, 45000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, unreadOnly]);
+
+  const notifications = hasRemoteData
+    ? remoteNotifications
+    : state.notifications.map((item) => ({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: item.type,
+        priority: item.type,
+        isRead: item.read,
+        createdAt: item.createdAt.toISOString(),
+      }));
+
+  const unreadCount = hasRemoteData ? remoteUnreadCount : state.notifications.filter((item) => !item.read).length;
+
+  const totalPages = hasRemoteData ? remoteTotalPages : Math.max(1, Math.ceil(notifications.length / pageSize));
+  const totalItems = hasRemoteData ? remoteTotalItems : notifications.length;
+  const pagedNotifications = hasRemoteData ? remoteNotifications : notifications.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [unreadOnly, pageSize]);
+
+  const handleMarkRead = async (notificationId: string) => {
+    if (!hasRemoteData) {
+      markNotificationRead(notificationId);
+      return;
+    }
+
+    try {
+      await notificationService.markRead(notificationId);
+      setRemoteNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, isRead: true } : item)));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể cập nhật thông báo.');
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!hasRemoteData) {
+      state.notifications.forEach((item) => markNotificationRead(item.id));
+      toast.success('Đã đánh dấu tất cả là đã đọc');
+      return;
+    }
+
+    try {
+      await notificationService.markAllRead();
+      setRemoteNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      toast.success('Đã đánh dấu tất cả là đã đọc');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể đánh dấu đã đọc.');
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    if (!preferences) return;
+
+    setSavingPreferences(true);
+    try {
+      const updated = await notificationService.updatePreferences(preferences);
+      setPreferences(updated);
+      toast.success('Đã lưu tùy chọn thông báo');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể lưu tùy chọn thông báo.');
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
@@ -476,9 +591,43 @@ export const NotificationsPage: React.FC = () => {
         subtitle="Cập nhật hoạt động và nhắc nhở từ hệ thống"
         icon={Bell}
         iconGradient="from-sky-500 to-blue-600"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => void fetchNotifications(false)} disabled={syncing}>
+              {syncing ? 'Đang cập nhật...' : 'Làm mới'}
+            </Button>
+            <Button variant="outline" onClick={() => void handleMarkAllRead()} disabled={unreadCount === 0}>
+              Đánh dấu tất cả đã đọc
+            </Button>
+          </div>
+        }
       />
 
-      {state.notifications.length === 0 ? (
+      <Card className="glass-card p-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Bộ lọc</p>
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Switch checked={unreadOnly} onCheckedChange={setUnreadOnly} />
+              <span>Chỉ hiện chưa đọc</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Số mục/trang</p>
+            <Input type="number" min={5} max={50} value={pageSize} onChange={(e) => setPageSize(Math.max(5, Math.min(50, Number(e.target.value) || 10)))} className="w-28" />
+          </div>
+          <div className="space-y-1 text-sm text-slate-600">
+            <p>Tổng: {totalItems}</p>
+            <p>Chưa đọc: {unreadCount}</p>
+          </div>
+        </div>
+      </Card>
+
+      {loading ? (
+        <Card className="glass-card p-12 text-center">
+          <p className="text-gray-600">Đang tải thông báo...</p>
+        </Card>
+      ) : notifications.length === 0 ? (
         <Card className="glass-card p-12 text-center">
           <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Không có thông báo</h3>
@@ -486,11 +635,11 @@ export const NotificationsPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-3">
-          {state.notifications.map(notification => (
+          {pagedNotifications.map(notification => (
             <Card 
               key={notification.id} 
-              className={`p-6 cursor-pointer ${!notification.read ? 'bg-blue-50 border-blue-200' : ''}`}
-              onClick={() => markNotificationRead(notification.id)}
+              className={`p-6 cursor-pointer ${!notification.isRead ? 'bg-blue-50 border-blue-200' : ''}`}
+              onClick={() => void handleMarkRead(notification.id)}
             >
               <div className="flex items-start gap-3">
                 <Bell className="flex-shrink-0 mt-1" size={20} />
@@ -498,10 +647,10 @@ export const NotificationsPage: React.FC = () => {
                   <h3 className="font-bold mb-1">{notification.title}</h3>
                   <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
                   <p className="text-xs text-gray-500">
-                    {notification.createdAt.toLocaleDateString('vi-VN')} {notification.createdAt.toLocaleTimeString('vi-VN')}
+                    {new Date(notification.createdAt).toLocaleDateString('vi-VN')} {new Date(notification.createdAt).toLocaleTimeString('vi-VN')}
                   </p>
                 </div>
-                {!notification.read && (
+                {!notification.isRead && (
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                 )}
               </div>
@@ -509,9 +658,56 @@ export const NotificationsPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-3">
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+            Trang trước
+          </Button>
+          <p className="text-sm text-slate-600">Trang {page} / {totalPages}</p>
+          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+            Trang sau
+          </Button>
+        </div>
+      )}
+
+      <Card className="glass-card p-6 space-y-4">
+        <h3 className="font-bold">Tùy chọn thông báo</h3>
+        {preferences ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <ToggleRow label="Thông báo trong app" checked={preferences.inAppEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, inAppEnabled: checked })} />
+            <ToggleRow label="Email thông báo" checked={preferences.emailEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, emailEnabled: checked })} />
+            <ToggleRow label="Nhắc mention" checked={preferences.mentionEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, mentionEnabled: checked })} />
+            <ToggleRow label="Báo cáo" checked={preferences.reportEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, reportEnabled: checked })} />
+            <ToggleRow label="Thanh toán" checked={preferences.billingEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, billingEnabled: checked })} />
+            <div className="md:col-span-2 flex justify-end">
+              <Button onClick={() => void handleSavePreferences()} disabled={savingPreferences}>
+                {savingPreferences ? 'Đang lưu...' : 'Lưu tùy chọn'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Không tải được cấu hình thông báo từ server, đang dùng chế độ cục bộ.</p>
+        )}
+      </Card>
+
+      {error && (
+        <Card className="border-amber-200 bg-amber-50 p-4 text-amber-800">
+          {error}
+        </Card>
+      )}
     </div>
   );
 };
+
+const ToggleRow: React.FC<{ label: string; checked: boolean; onCheckedChange: (checked: boolean) => void }> = ({ label, checked, onCheckedChange }) => (
+  <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-4">
+    <div>
+      <p className="font-medium">{label}</p>
+    </div>
+    <Switch checked={checked} onCheckedChange={onCheckedChange} />
+  </div>
+);
 
 // Settings Page
 export const SettingsPage: React.FC = () => {

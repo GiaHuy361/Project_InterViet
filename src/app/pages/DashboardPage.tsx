@@ -522,7 +522,7 @@ export const DashboardPage: React.FC = () => {
                     icon={FileText}
                     loading={resumeLoading}
                     empty="Chưa có CV nào được thêm."
-                    actionLabel="Mở CV History"
+                    actionLabel="Quản lý CV"
                     onViewAll={() => navigate('/cv-history')}
                   >
                     {resumes.slice(0, 5).map((item) => (
@@ -559,8 +559,8 @@ export const DashboardPage: React.FC = () => {
                     icon={FileSearch}
                     loading={jobDescriptionLoading}
                     empty="Chưa có JD nào được thêm."
-                    actionLabel="Mở CV Matching"
-                    onViewAll={() => navigate('/cv-matching')}
+                    actionLabel="Quản lý JD"
+                    onViewAll={() => navigate('/jd-history')}
                   >
                     {jobDescriptions.slice(0, 5).map((item) => (
                       <div

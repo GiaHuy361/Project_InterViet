@@ -37,6 +37,8 @@ export const router = createBrowserRouter([
           { path: 'chinh-sach-bao-mat', Component: Pages.PrivacyPage },
           { path: 'he-thong', Component: Pages.StatusPage },
           { path: 'bao-tri', Component: Pages.MaintenancePage },
+          { path: 'forbidden', Component: Pages.AccessDeniedPage },
+          { path: 'shared-reports/:token', Component: Pages.SharedReportPage },
         ],
       },
       {
@@ -97,7 +99,9 @@ export const router = createBrowserRouter([
           { path: 'dashboard', Component: Pages.DashboardPage },
           { path: 'cv-matching', Component: Pages.CVMatchingPage },
           { path: 'cv-history', Component: Pages.CVHistoryPage },
+          { path: 'jd-history', Component: Pages.JDHistoryPage },
           { path: 'multi-jd-matching', Component: Pages.MultiJDMatchingPage },
+          { path: 'matches/:sessionId', Component: Pages.MatchDetailPage },
           { path: 'network', Component: Pages.NetworkPage },
           { path: 'network/:id', Component: Pages.NetworkProfilePage },
           { path: 'phong-van-setup', Component: Pages.InterviewSetupPage },

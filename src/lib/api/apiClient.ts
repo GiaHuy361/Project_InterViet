@@ -139,6 +139,14 @@ class ApiClient {
         });
       }
 
+      if (response.status === 403 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/forbidden')) {
+        window.location.href = '/forbidden';
+      }
+
+      if (response.status === 503 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/bao-tri')) {
+        window.location.href = '/bao-tri';
+      }
+
       return this.parseResponse<T>(response, rawResponse);
     } catch (error) {
       if (error instanceof ApiError) {

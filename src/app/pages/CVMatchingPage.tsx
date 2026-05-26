@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { AlertCircle, BriefcaseBusiness, CheckCircle2, FileText, Link2, Sparkles, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '../../lib/api/apiError';
+import { useApp } from '../contexts/AppContext';
 import {
   cvMatchService,
   type JobDescriptionItem,
@@ -27,6 +28,7 @@ import { safeParseJson } from '../../utils/safeParseJson';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const MATCH_POLL_INTERVAL_MS = 5000;
 const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
 const RESUME_PARSE_TIMEOUT_MS = 180000;
 const CV_MATCH_POLLING_STORAGE_KEY = 'interviet.cv-matching.polling-state';
@@ -89,6 +91,7 @@ function getSessionFromStartResponse(response: StartSingleMatchResponse): MatchS
 }
 
 export const CVMatchingPage: React.FC = () => {
+  const { addNotification, syncNotifications } = useApp();
   const [cvTitle, setCvTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jdTitle, setJdTitle] = useState('');
@@ -127,12 +130,26 @@ export const CVMatchingPage: React.FC = () => {
       return;
     }
 
+    addNotification({
+      title: 'CV + JD: Kết quả đối sánh đã sẵn sàng',
+      message: 'Phiên so khớp CV và JD đã hoàn tất. Mở lại trang CV Matching để xem chi tiết.',
+      type: 'success',
+      read: false,
+      actionUrl: '/cv-matching',
+      metadata: {
+        source: 'cv-matching',
+        status,
+      },
+    });
     toast.success('Phân tích hoàn tất.');
-  }, []);
+    // Sync notifications to ensure badge/inbox reflect server state
+    void syncNotifications().catch(() => undefined);
+  }, [addNotification]);
 
   const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
     fetchFn: fetchMatchSession,
     getStatusFn: (data) => data.status,
+    intervalMs: MATCH_POLL_INTERVAL_MS,
     onSuccess: (data) => {
       setSessionDetail(data);
       setCurrentSessionId(null);

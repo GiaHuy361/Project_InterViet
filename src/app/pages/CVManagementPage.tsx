@@ -128,8 +128,8 @@ export const CVHistoryPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <AppPageHeader
-        title="Lịch sử CV"
-        subtitle="Xem, lọc và quản lý các CV đã tải lên theo trạng thái xử lý"
+        title="Quản lý CV"
+        subtitle="Xem, lọc và quản lý các CV đã tải lên."
         icon={FileText}
         iconGradient="from-blue-500 to-cyan-500"
         actions={
@@ -156,7 +156,7 @@ export const CVHistoryPage: React.FC = () => {
                     Bộ lọc CV
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Lọc theo trạng thái parse, active và số dòng hiển thị
+                    Lọc và quản lý các CV đã tải lên của bạn
                   </p>
                 </div>
               </div>
@@ -308,7 +308,9 @@ export const CVHistoryPage: React.FC = () => {
                   <DetailRow label="Kích thước" value={formatFileSize(resumeDetail.fileSizeBytes)} />
                   <DetailRow label="Tạo lúc" value={formatLocalDate(resumeDetail.createdAt)} />
                   <DetailRow label="Cập nhật lúc" value={formatLocalDate(resumeDetail.updatedAt)} />
-                  <DetailRow label="Lỗi xử lý" value={resumeDetail.processingError ?? '—'} />
+                  {resumeDetail.processingError && (
+                    <DetailRow label="Lỗi xử lý" value={resumeDetail.processingError} />
+                  )}
                 </div>
 
                 {resumeDetail.latestParseJob && (
@@ -317,12 +319,18 @@ export const CVHistoryPage: React.FC = () => {
                       Latest Parse Job
                     </h4>
                     <div className="grid gap-2 text-sm">
-                      <DetailRow label="Status" value={formatStatusLabel(resumeDetail.latestParseJob.status)} />
-                      <DetailRow label="Error code" value={resumeDetail.latestParseJob.errorCode ?? '—'} />
-                      <DetailRow label="Error message" value={resumeDetail.latestParseJob.errorMessage ?? '—'} />
-                      <DetailRow label="Retry count" value={String(resumeDetail.latestParseJob.retryCount ?? 0)} />
-                      <DetailRow label="Requested at" value={formatLocalDate(resumeDetail.latestParseJob.requestedAt)} />
-                      <DetailRow label="Completed at" value={formatLocalDate(resumeDetail.latestParseJob.completedAt)} />
+                      <DetailRow label="Trạng thái" value={formatStatusLabel(resumeDetail.latestParseJob.status)} />
+                      {resumeDetail.latestParseJob.errorCode && (
+                        <DetailRow label="Mã lỗi" value={resumeDetail.latestParseJob.errorCode} />
+                      )}
+                      {resumeDetail.latestParseJob.errorMessage && (
+                        <DetailRow label="Thông báo lỗi" value={resumeDetail.latestParseJob.errorMessage} />
+                      )}
+                      {resumeDetail.latestParseJob.retryCount !== undefined && (
+                        <DetailRow label="Số lần thử lại" value={String(resumeDetail.latestParseJob.retryCount)} />
+                      )}
+                      <DetailRow label="Yêu cầu lúc" value={formatLocalDate(resumeDetail.latestParseJob.requestedAt)} />
+                      <DetailRow label="Hoàn thành lúc" value={formatLocalDate(resumeDetail.latestParseJob.completedAt)} />
                     </div>
                   </div>
                 )}

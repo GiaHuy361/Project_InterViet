@@ -3,6 +3,7 @@ import { eventTracker } from '../utils/eventTracker';
 import { getSubscriptionLimits } from '../utils/subscriptionLimits';
 import { apiClient } from '../../lib/api/apiClient';
 import * as authService from '../../services/authService';
+import { notificationService } from '../../services/notificationService';
 import type { AuthResponse } from '../../lib/api/apiTypes';
 import {
   loadAuthFromStorage,
@@ -53,6 +54,7 @@ export interface AppState {
   // App state
   theme: 'light' | 'dark';
   cookiesAccepted: boolean;
+  unreadCount: number;
   notifications: Notification[];
   cvVersions: CVVersion[];
   interviewReports: InterviewReport[];
@@ -83,6 +85,8 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   read: boolean;
   createdAt: Date;
+  actionUrl?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface AppContextType {
@@ -101,6 +105,7 @@ interface AppContextType {
   cancelSubscription: () => void;
   downgradePlan: (newPlan: SubscriptionPlan) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
+  syncNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   addCVVersion: (version: Omit<CVVersion, 'id' | 'createdAt'>) => void;
@@ -157,6 +162,30 @@ function applyAuthResponseToState(
   };
 }
 
+function mapBackendNotificationType(type?: string): Notification['type'] {
+  const normalized = (type || '').toLowerCase();
+
+  if (normalized.includes('success') || normalized.includes('completed') || normalized.includes('ready')) {
+    return 'success';
+  }
+
+  if (normalized.includes('warning') || normalized.includes('expired') || normalized.includes('limit')) {
+    return 'warning';
+  }
+
+  if (normalized.includes('error') || normalized.includes('failed')) {
+    return 'error';
+  }
+
+  return 'info';
+}
+
+function mergeNotifications(existing: Notification[], incoming: Notification[]): Notification[] {
+  // Do not merge local and incoming notifications. Treat backend as source of truth
+  // and replace the local list with the incoming list (sorted newest first).
+  return [...(incoming || [])].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+}
+
 const defaultState: AppState = {
   // Auth state
   isAuthenticated: false,
@@ -172,6 +201,7 @@ const defaultState: AppState = {
   // App state
   theme: 'light',
   cookiesAccepted: false,
+  unreadCount: 0,
   notifications: [],
   cvVersions: [],
   interviewReports: [],
@@ -196,6 +226,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ...n,
           createdAt: new Date(n.createdAt)
         }));
+        parsed.unreadCount = parsed.notifications.filter((n: any) => !n.read).length;
       }
       if (parsed.cvVersions) {
         parsed.cvVersions = parsed.cvVersions.map((v: any) => ({
@@ -214,10 +245,59 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return defaultState;
   });
 
+  const setNotificationsInState = (notifications: Notification[]) => {
+    setState(prev => ({
+      ...prev,
+      notifications,
+      // compute unread count
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      unreadCount: notifications.filter(n => !n.read).length,
+    }));
+  };
+
   // Persist state to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+
+  useEffect(() => {
+    if (!state.isAuthenticated || !state.accessToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncNotifications = async () => {
+      try {
+        const response = await notificationService.listNotifications({ page: 1, pageSize: 20 });
+        if (cancelled) return;
+
+        const backendNotifications: Notification[] = (response.items || []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          type: mapBackendNotificationType(item.type || item.priority),
+          read: Boolean(item.isRead),
+          createdAt: new Date(item.createdAt),
+        }));
+
+        setNotificationsInState(mergeNotifications(state.notifications, backendNotifications));
+      } catch {
+        if (cancelled) return;
+      }
+    };
+
+    void syncNotifications();
+    const timer = window.setInterval(() => {
+      void syncNotifications();
+    }, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [state.isAuthenticated, state.accessToken]);
 
   // Restore auth from token storage on mount
   useEffect(() => {
@@ -521,7 +601,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev.user, 
         role: 'free',
         subscriptionPlan: newPlan,
-        subscriptionEndsAt: null
+        subscriptionEndsAt: undefined
       } : null
     }));
   };
@@ -532,25 +612,55 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date(),
     };
-    setState(prev => ({
-      ...prev,
-      notifications: [newNotification, ...prev.notifications]
-    }));
+    setState(prev => {
+      const newNotifications = [newNotification, ...prev.notifications];
+      return {
+        ...prev,
+        notifications: newNotifications,
+        unreadCount: newNotifications.filter(n => !n.read).length,
+      };
+    });
   };
 
+  const syncNotifications = async () => {
+    if (!state.isAuthenticated || !state.accessToken) return;
+    try {
+      const response = await notificationService.listNotifications({ page: 1, pageSize: 50 });
+      const backendNotifications: Notification[] = (response.items || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: mapBackendNotificationType(item.type || item.priority),
+        read: Boolean(item.isRead),
+        createdAt: new Date(item.createdAt),
+        actionUrl: item.actionUrl ?? undefined,
+        metadata: item.data ?? undefined,
+      }));
+
+      setNotificationsInState(backendNotifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+    } catch (err) {
+      // ignore sync errors
+    }
+  };
+
+  
+
   const markNotificationRead = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      )
-    }));
+    setState(prev => {
+      const newNotifications = prev.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+      return {
+        ...prev,
+        notifications: newNotifications,
+        unreadCount: newNotifications.filter(n => !n.read).length,
+      };
+    });
   };
 
   const markAllNotificationsRead = () => {
     setState(prev => ({
       ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true }))
+      notifications: prev.notifications.map(n => ({ ...n, read: true })),
+      unreadCount: 0,
     }));
   };
 
@@ -760,6 +870,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cancelSubscription,
       downgradePlan,
       addNotification,
+      syncNotifications,
       markNotificationRead,
       markAllNotificationsRead,
       addCVVersion,

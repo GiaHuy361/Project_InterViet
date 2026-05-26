@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { AlertCircle, CheckCircle2, FileText, Link2, Sparkles, Target, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '../../lib/api/apiError';
+import { useApp } from '../contexts/AppContext';
 import {
   cvMatchService,
   type JobDescriptionItem,
@@ -27,10 +28,10 @@ import { safeParseJson } from '../../utils/safeParseJson';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const MATCH_POLL_INTERVAL_MS = 5000;
 const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
 const RESUME_PARSE_TIMEOUT_MS = 180000;
 const MULTI_JD_MATCH_POLLING_STORAGE_KEY = 'interviet.multi-jd-matching.polling-state';
-
 type MultiJDMatchPollingSnapshot = PollingSessionSnapshot<MatchSessionDetail> & {
   cvTitle: string;
   selectedResumeId: string | null;
@@ -86,6 +87,8 @@ function getSessionFromStartResponse(response: StartMatchResponse): MatchSession
 }
 
 export const MultiJDMatchingPage: React.FC = () => {
+  const hasRestoredPollingRef = useRef(false);
+  const { addNotification, syncNotifications } = useApp();
   const [cvTitle, setCvTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [matchTitle, setMatchTitle] = useState('');
@@ -122,8 +125,21 @@ export const MultiJDMatchingPage: React.FC = () => {
       return;
     }
 
+    addNotification({
+      title: 'Nhiều JD: Kết quả so khớp đã sẵn sàng',
+      message: 'Phiên so khớp nhiều JD đã hoàn tất. Mở lại trang Multi JD Matching để xem chi tiết.',
+      type: 'success',
+      read: false,
+      actionUrl: '/multi-jd-matching',
+      metadata: {
+        source: 'multi-jd-matching',
+        status,
+      },
+    });
     toast.success('Phân tích đa JD hoàn tất.');
-  }, []);
+    // Sync notifications from backend so badge/inbox reflect server-side notifications
+    void syncNotifications().catch(() => undefined);
+  }, [addNotification]);
 
   const selectedResume = useMemo(
     () => resumes.find((item) => item.resumeId === selectedResumeId) ?? null,
@@ -133,14 +149,22 @@ export const MultiJDMatchingPage: React.FC = () => {
   const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
     fetchFn: fetchMatchSession,
     getStatusFn: (data) => data.status,
+    intervalMs: MATCH_POLL_INTERVAL_MS,
     onSuccess: (data) => {
       setSessionDetail(data);
       setCurrentSessionId(null);
+
       const status = getNormalizedStatus(data.status);
       setLastNotifiedStatus(status);
+
+      clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
+
       notifyFinalStatus(status);
     },
     onFailure: (error) => {
+      setCurrentSessionId(null);
+      clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
+
       const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
       toast.error(message);
     },
@@ -234,8 +258,14 @@ export const MultiJDMatchingPage: React.FC = () => {
   }, [selectedResumeId]);
 
   useEffect(() => {
+    if (hasRestoredPollingRef.current) return;
+    hasRestoredPollingRef.current = true;
+
     const restorePollingState = async () => {
-      const snapshot = readPollingSessionSnapshot<MatchSessionDetail>(MULTI_JD_MATCH_POLLING_STORAGE_KEY) as MultiJDMatchPollingSnapshot | null;
+      const snapshot =
+        readPollingSessionSnapshot<MatchSessionDetail>(
+          MULTI_JD_MATCH_POLLING_STORAGE_KEY,
+        ) as MultiJDMatchPollingSnapshot | null;
 
       if (!snapshot) {
         setIsRestored(true);
@@ -251,11 +281,13 @@ export const MultiJDMatchingPage: React.FC = () => {
       setCurrentSessionId(snapshot.activeSessionId ?? null);
 
       const savedStatus = getNormalizedStatus(snapshot.sessionDetail?.status);
+
       if (snapshot.sessionDetail && isFinalMatchStatus(savedStatus)) {
         if (snapshot.lastNotifiedStatus !== savedStatus) {
           notifyFinalStatus(savedStatus);
           setLastNotifiedStatus(savedStatus);
         }
+
         setCurrentSessionId(null);
         setIsRestored(true);
         return;
@@ -263,12 +295,19 @@ export const MultiJDMatchingPage: React.FC = () => {
 
       if (snapshot.activeSessionId) {
         try {
-          const refreshedDetail = await cvMatchService.getMatchSessionDetail(snapshot.activeSessionId);
+          activeSessionIdRef.current = snapshot.activeSessionId;
+
+          const refreshedDetail = await cvMatchService.getMatchSessionDetail(
+            snapshot.activeSessionId,
+          );
+
           setSessionDetail(refreshedDetail);
 
           const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+
           if (isFinalMatchStatus(refreshedStatus)) {
             setCurrentSessionId(null);
+
             if (snapshot.lastNotifiedStatus !== refreshedStatus) {
               notifyFinalStatus(refreshedStatus);
               setLastNotifiedStatus(refreshedStatus);
@@ -285,7 +324,7 @@ export const MultiJDMatchingPage: React.FC = () => {
     };
 
     void restorePollingState();
-  }, [notifyFinalStatus, startPolling]);
+  }, [notifyFinalStatus, startPolling, setCurrentSessionId]);
 
   useEffect(() => {
     if (!isRestored) return;
@@ -326,7 +365,7 @@ export const MultiJDMatchingPage: React.FC = () => {
           notifyFinalStatus(refreshedStatus);
           setLastNotifiedStatus(refreshedStatus);
         }
-      } else if (!isPolling) {
+      } else {
         startPolling();
       }
     } catch (error) {
@@ -389,7 +428,6 @@ export const MultiJDMatchingPage: React.FC = () => {
   };
 
   const toggleJobDescription = (id: string) => {
-    clearMatchState();
     setSelectedJobDescriptionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
 
