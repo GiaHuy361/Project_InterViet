@@ -99,12 +99,12 @@ export const AppLayout: React.FC = () => {
   }, [navigate, startTrial]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-[100dvh] overflow-hidden flex-col bg-slate-50 dark:bg-slate-950">
       {/* Header spans full width */}
       <AppHeader onOpenFeedback={() => setFeedbackOpen(true)} />
 
       {/* Main area: sidebar on left, content on right */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
 
         <main className="relative flex-1 overflow-y-auto p-6 lg:p-8">

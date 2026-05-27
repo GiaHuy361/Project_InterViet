@@ -43,19 +43,19 @@ const tabMeta: Record<BillingTab, { label: string; icon: React.ComponentType<{ c
 };
 
 const paymentStatusBadge: Record<string, string> = {
-  succeeded: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  paid: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  failed: 'bg-red-100 text-red-700 border-red-200',
-  pending: 'bg-amber-100 text-amber-700 border-amber-200',
-  open: 'bg-amber-100 text-amber-700 border-amber-200',
-  draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  void: 'bg-slate-100 text-slate-700 border-slate-200',
-  active: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  expired: 'bg-amber-100 text-amber-700 border-amber-200',
-  cancelled: 'bg-red-100 text-red-700 border-red-200',
-  confirmed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  pending_payment: 'bg-amber-100 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  succeeded: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  paid: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  failed: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  pending: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  open: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  draft: 'bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800',
+  void: 'bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800',
+  active: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  expired: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  cancelled: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  confirmed: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  pending_payment: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  completed: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
 };
 
 const formatCurrency = (amount?: number, currencyCode = 'VND') =>
@@ -288,17 +288,17 @@ export const AdminBillingPage: React.FC = () => {
   ]);
 
   const renderStatusBadge = (value: string) => {
-    const className = paymentStatusBadge[value] || 'bg-slate-100 text-slate-700 border-slate-200';
+    const className = paymentStatusBadge[value] || 'bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800';
     return <Badge variant="outline" className={className}>{value}</Badge>;
   };
 
   const renderEmptyState = (message: string) => (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 text-amber-600 shadow-sm">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 text-amber-600 dark:text-amber-400 shadow-sm">
         <BarChart3 className="h-6 w-6" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-gray-900">Không có dữ liệu phù hợp</h3>
-      <p className="mt-2 max-w-md text-sm leading-6 text-gray-500">{message}</p>
+      <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-slate-100">Không có dữ liệu phù hợp</h3>
+      <p className="mt-2 max-w-md text-sm leading-6 text-gray-500 dark:text-slate-400">{message}</p>
       {hasActiveFilters ? (
         <Button
           variant="outline"
@@ -493,16 +493,16 @@ export const AdminBillingPage: React.FC = () => {
               <TableCell className="font-medium text-center">{item.shareId}</TableCell>
               <TableCell className="text-center">
                 <div>
-                  <p className="font-medium text-gray-900">{item.ownerFullName}</p>
-                  <p className="text-xs text-gray-500">{item.ownerEmail}</p>
+                  <p className="font-medium text-gray-900 dark:text-slate-100">{item.ownerFullName}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{item.ownerEmail}</p>
                 </div>
               </TableCell>
               <TableCell className="text-center">{item.reportType}</TableCell>
               <TableCell className="max-w-[260px] truncate text-center">{item.title}</TableCell>
-              <TableCell className="text-center">{item.isActive ? <Badge className="bg-emerald-100 text-emerald-700">Active</Badge> : <Badge className="bg-slate-100 text-slate-700">Inactive</Badge>}</TableCell>
+              <TableCell className="text-center">{item.isActive ? <Badge className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">Active</Badge> : <Badge className="bg-slate-100 text-slate-700 dark:text-slate-300">Inactive</Badge>}</TableCell>
               <TableCell className="text-center">{item.viewCount}</TableCell>
               <TableCell className="text-center">
-                <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">••••••••{item.tokenPreview}</span>
+                <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 dark:text-slate-300">••••••••{item.tokenPreview}</span>
               </TableCell>
               <TableCell className="text-center">{formatDateTime(item.createdAt)}</TableCell>
             </TableRow>
@@ -575,33 +575,33 @@ export const AdminBillingPage: React.FC = () => {
     );
   };
 
-  const fieldSelectClass = 'flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
+  const fieldSelectClass = 'flex h-10 w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
   return (
     <div className="space-y-8">
-      <div className="overflow-hidden rounded-[28px] border border-amber-100 bg-gradient-to-br from-white via-amber-50/70 to-orange-50/70 p-6 shadow-sm">
+      <div className="overflow-hidden rounded-[28px] border border-amber-100 dark:border-amber-800/50 bg-gradient-to-br from-white via-amber-50/70 to-orange-50/70 dark:from-slate-900 dark:via-amber-900/20 dark:to-orange-900/20 p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 shadow-lg shadow-amber-200">
               <CreditCard className="h-7 w-7 text-white" />
             </div>
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 shadow-sm">
                 <Sparkles className="h-3.5 w-3.5" />
                 Phase 14 billing reconciliation
               </div>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900">Admin Billing Records</h1>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Admin Billing Records</h1>
+              <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
                 Đối soát giao dịch thanh toán, hóa đơn, subscription, mentor booking và report share trong một màn hình.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={() => void window.history.back()} className="rounded-xl bg-white/80">
+            <Button variant="outline" onClick={() => void window.history.back()} className="rounded-xl bg-white dark:bg-slate-900/80">
               Quay lại
             </Button>
-            <Badge variant="outline" className="rounded-full border-amber-200 bg-white px-3 py-1 text-amber-700">
+            <Badge variant="outline" className="rounded-full border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 px-3 py-1 text-amber-700 dark:text-amber-400">
               {tabMeta[activeTab].label}
             </Badge>
           </div>
@@ -618,13 +618,13 @@ export const AdminBillingPage: React.FC = () => {
           ].map((stat) => {
             const Icon = stat.icon;
             return (
-              <div key={stat.label} className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm backdrop-blur">
+              <div key={stat.label} className="rounded-2xl border border-white/70 bg-white dark:bg-slate-900/90 p-4 shadow-sm backdrop-blur">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500">{stat.label}</p>
-                    <p className="mt-2 text-lg font-semibold text-gray-900">{stat.value}</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">{stat.label}</p>
+                    <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">{stat.value}</p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
                     <Icon className="h-4 w-4" />
                   </div>
                 </div>
@@ -645,14 +645,14 @@ export const AdminBillingPage: React.FC = () => {
                 setActiveTab(tab);
                 setPage(1);
               }}
-              className={`group rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${activeTab === tab ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm' : 'border-gray-100 bg-white'}`}
+              className={`group rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${activeTab === tab ? 'border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/40 dark:to-slate-900 shadow-sm' : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900'}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">{meta.label}</p>
-                  <p className="text-xs leading-5 text-gray-500">{meta.description}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{meta.label}</p>
+                  <p className="text-xs leading-5 text-gray-500 dark:text-slate-400">{meta.description}</p>
                 </div>
-                <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${activeTab === tab ? 'bg-amber-100 text-amber-700' : 'bg-gray-50 text-gray-500 group-hover:bg-amber-50 group-hover:text-amber-600'}`}>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${activeTab === tab ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-gray-50 dark:bg-slate-950 text-gray-500 dark:text-slate-400 group-hover:bg-amber-50 dark:bg-amber-900/30 group-hover:text-amber-600 dark:text-amber-400'}`}>
                   <Icon className="h-4 w-4" />
                 </div>
               </div>
@@ -664,25 +664,25 @@ export const AdminBillingPage: React.FC = () => {
         })}
       </div>
 
-      <Card className="border-gray-100 p-6 shadow-sm">
+      <Card className="border-gray-100 dark:border-slate-800 p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Bộ lọc</h2>
-            <p className="text-sm text-gray-500">Tùy theo tab hiện tại, các query params sẽ được gửi đúng endpoint. {visibleCountLabel}</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Bộ lọc</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Tùy theo tab hiện tại, các query params sẽ được gửi đúng endpoint. {visibleCountLabel}</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => void setPage(1)} disabled={loading}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Làm mới
             </Button>
-            <Badge variant="outline" className="rounded-full bg-slate-50 px-3 py-1 text-slate-700">
+            <Badge variant="outline" className="rounded-full bg-slate-50 dark:bg-slate-950 px-3 py-1 text-slate-700 dark:text-slate-300">
               {tabCountLabel}
             </Badge>
           </div>
         </div>
 
-        <div className="mt-5 space-y-4 rounded-2xl border border-dashed border-amber-100 bg-amber-50/40 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+        <div className="mt-5 space-y-4 rounded-2xl border border-dashed border-amber-100 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
             <Filter className="h-4 w-4" />
             <span>{tabMeta[activeTab].description}</span>
           </div>
@@ -690,21 +690,21 @@ export const AdminBillingPage: React.FC = () => {
         </div>
       </Card>
 
-      <Card className="overflow-hidden border-gray-100 p-0 shadow-sm">
-        <div className="border-b border-gray-100 bg-white px-6 py-4">
+      <Card className="overflow-hidden border-gray-100 dark:border-slate-800 p-0 shadow-sm">
+        <div className="border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{tabMeta[activeTab].label}</h2>
-              <p className="text-sm text-gray-500">{loading ? 'Đang tải...' : `${activeTotals} kết quả toàn hệ thống`}</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{tabMeta[activeTab].label}</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{loading ? 'Đang tải...' : `${activeTotals} kết quả toàn hệ thống`}</p>
             </div>
-            <Badge variant="outline" className="w-fit rounded-full border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
+            <Badge variant="outline" className="w-fit rounded-full border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 px-3 py-1 text-amber-700 dark:text-amber-400">
               {visibleCountLabel} trên trang
             </Badge>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center p-16 text-sm text-gray-500">
+          <div className="flex items-center justify-center p-16 text-sm text-gray-500 dark:text-slate-400">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Đang tải dữ liệu...
           </div>
@@ -712,14 +712,14 @@ export const AdminBillingPage: React.FC = () => {
           renderTable()
         )}
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-gray-500">
-            Hiển thị <span className="font-medium text-gray-900">{visibleCount}</span> / <span className="font-medium text-gray-900">{activeTotals}</span> kết quả
+        <div className="flex flex-col gap-3 border-t border-gray-100 dark:border-slate-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
+            Hiển thị <span className="font-medium text-gray-900 dark:text-slate-100">{visibleCount}</span> / <span className="font-medium text-gray-900 dark:text-slate-100">{activeTotals}</span> kết quả
           </div>
           <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || loading}>
             Trước
           </Button>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-slate-400">
             {page} / {Math.max(1, Math.ceil(activeTotals / pageSize))}
           </div>
           <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.min(Math.ceil(activeTotals / pageSize), current + 1))} disabled={page >= Math.ceil(activeTotals / pageSize) || loading}>
@@ -729,20 +729,20 @@ export const AdminBillingPage: React.FC = () => {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-gray-100 bg-gradient-to-br from-white to-amber-50/40 p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Payments revenue</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(payments.reduce((sum, item) => sum + item.amount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500">Tổng giá trị giao dịch đã tải về từ endpoint hiện tại.</p>
+        <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-amber-50/40 dark:from-slate-900 dark:to-amber-900/20 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-slate-400">Payments revenue</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(payments.reduce((sum, item) => sum + item.amount, 0))}</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Tổng giá trị giao dịch đã tải về từ endpoint hiện tại.</p>
         </Card>
-        <Card className="border-gray-100 bg-gradient-to-br from-white to-sky-50/40 p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Invoices amount</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(invoices.reduce((sum, item) => sum + item.amount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500">Theo dõi tổng hóa đơn theo phạm vi lọc hiện tại.</p>
+        <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-sky-50/40 dark:from-slate-900 dark:to-sky-900/20 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-slate-400">Invoices amount</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(invoices.reduce((sum, item) => sum + item.amount, 0))}</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Theo dõi tổng hóa đơn theo phạm vi lọc hiện tại.</p>
         </Card>
-        <Card className="border-gray-100 bg-gradient-to-br from-white to-emerald-50/40 p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Mentor booking amount</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(mentorBookings.reduce((sum, item) => sum + item.priceAmount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500">Giúp đối soát doanh thu booking mentor nhanh hơn.</p>
+        <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-emerald-50/40 dark:from-slate-900 dark:to-emerald-900/20 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-slate-400">Mentor booking amount</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(mentorBookings.reduce((sum, item) => sum + item.priceAmount, 0))}</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Giúp đối soát doanh thu booking mentor nhanh hơn.</p>
         </Card>
       </div>
     </div>

@@ -270,6 +270,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Apply theme to DOM
+  useEffect(() => {
+    if (state.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [state.theme]);
+
 
   useEffect(() => {
     if (!state.isAuthenticated || !state.accessToken) {
@@ -394,22 +403,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         user:
           stored.authUser && !prev.user
             ? {
-                id: stored.authUser.userId,
-                email: stored.authUser.email,
-                name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
-                role: stored.authUser.status as UserRole,
-                systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'user'),
-                subscriptionPlan: 'free',
-                cvOptimizations: 0,
-                cvOptimizationsDaily: 0,
-                interviewsUsed: 0,
-                interviewsDaily: 0,
-                mentorSessionsUsed: 0,
-                mentorSessionsMonthly: 0,
-                createdAt: new Date(),
-                verified: stored.authUser.emailVerified,
-                hasUsedTrial: false,
-              }
+              id: stored.authUser.userId,
+              email: stored.authUser.email,
+              name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
+              role: stored.authUser.status as UserRole,
+              systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'user'),
+              subscriptionPlan: 'free',
+              cvOptimizations: 0,
+              cvOptimizationsDaily: 0,
+              interviewsUsed: 0,
+              interviewsDaily: 0,
+              mentorSessionsUsed: 0,
+              mentorSessionsMonthly: 0,
+              createdAt: new Date(),
+              verified: stored.authUser.emailVerified,
+              hasUsedTrial: false,
+            }
             : prev.user,
       }));
     } else {
@@ -437,7 +446,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       const loginPath = '/dang-nhap';
       if (!window.location.pathname.startsWith(loginPath) &&
-          !window.location.pathname.startsWith('/login')) {
+        !window.location.pathname.startsWith('/login')) {
         const returnUrl = encodeURIComponent(
           window.location.pathname + window.location.search
         );
@@ -623,8 +632,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const upgradeToPremium = (plan: SubscriptionPlan, paymentMethod: PaymentMethod) => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'premium',
         subscriptionPlan: plan,
         paymentMethod: paymentMethod,
@@ -663,8 +672,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const cancelSubscription = () => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'cancelled'
       } : null
     }));
@@ -673,8 +682,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const downgradePlan = (newPlan: SubscriptionPlan) => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'free',
         subscriptionPlan: newPlan,
         subscriptionEndsAt: undefined
@@ -719,7 +728,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  
+
 
   const markNotificationRead = (id: string) => {
     setState(prev => {
@@ -768,31 +777,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useCVOptimization = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Unlimited plans
     if (limits.cvOptimizationsDaily === 'unlimited') {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           cvOptimizations: prev.user.cvOptimizations + 1
         } : null
       }));
       eventTracker.track('cv_optimize', { role: state.user.role, plan: state.user.subscriptionPlan });
       return true;
     }
-    
+
     // Check if user has reached daily limit
     if (state.user.cvOptimizationsDaily >= limits.cvOptimizationsDaily) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         cvOptimizations: prev.user.cvOptimizations + 1,
         cvOptimizationsDaily: prev.user.cvOptimizationsDaily + 1
       } : null
@@ -803,31 +812,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useInterview = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Unlimited plans
     if (limits.interviewsDaily === 'unlimited') {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           interviewsUsed: prev.user.interviewsUsed + 1
         } : null
       }));
       eventTracker.track('interview_start', { role: state.user.role, plan: state.user.subscriptionPlan });
       return true;
     }
-    
+
     // Check if user has reached daily limit
     if (state.user.interviewsDaily >= limits.interviewsDaily) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         interviewsUsed: prev.user.interviewsUsed + 1,
         interviewsDaily: prev.user.interviewsDaily + 1
       } : null
@@ -838,18 +847,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useMentorSession = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Check if user has reached monthly limit
     if (state.user.mentorSessionsMonthly >= limits.mentorSessionsMonthly) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         mentorSessionsUsed: prev.user.mentorSessionsUsed + 1,
         mentorSessionsMonthly: prev.user.mentorSessionsMonthly + 1
       } : null
@@ -860,9 +869,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const canUseMentorSession = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     return state.user.mentorSessionsMonthly < limits.mentorSessionsMonthly;
   };
 
@@ -881,8 +890,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isCVResetNeeded || isInterviewResetNeeded || isMentorResetNeeded) {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           cvOptimizationsDaily: isCVResetNeeded ? 0 : prev.user.cvOptimizationsDaily,
           interviewsDaily: isInterviewResetNeeded ? 0 : prev.user.interviewsDaily,
           mentorSessionsMonthly: isMentorResetNeeded ? 0 : prev.user.mentorSessionsMonthly,
@@ -896,30 +905,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const watchAdForCredit = () => {
     if (!state.user) return;
-    
+
     // Only free users can watch ads for credits
     if (state.user.role !== 'free') return;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
     if (limits.cvOptimizationsDaily === 'unlimited') return;
-    
+
     // Add 1 more CV optimization to their quota
     // Note: cvOptimizationsDaily is the count of optimizations used today
     // We decrease the counter by 1 to give them 1 more optimization attempt
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         // Decrease the daily count by 1 to give them 1 more optimization attempt
         cvOptimizationsDaily: Math.max(0, prev.user.cvOptimizationsDaily - 1)
       } : null
     }));
-    
-    eventTracker.track('ad_watched_for_credit', { 
+
+    eventTracker.track('ad_watched_for_credit', {
       plan: state.user.subscriptionPlan,
-      previousCount: state.user.cvOptimizationsDaily 
+      previousCount: state.user.cvOptimizationsDaily
     });
-    
+
     // Add notification
     addNotification({
       title: 'Đã nhận thưởng!',

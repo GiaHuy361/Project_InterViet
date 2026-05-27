@@ -81,6 +81,79 @@ const supportNavItems: NavItem[] = [
   { label: 'Liên hệ khách hàng', icon: Mail, path: '/support/contact-requests' },
 ];
 
+const NavLink: React.FC<{ item: NavItem; isActive: boolean; collapsed: boolean }> = ({ item, isActive, collapsed }) => {
+  const Icon = item.icon;
+  const linkClass = cn(
+    'rounded-2xl text-[15px] transition-colors',
+    collapsed ? 'flex items-center justify-center px-0 py-3.5' : 'flex items-center gap-4 px-5 py-3.5',
+    isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-100 dark:shadow-none' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+  );
+
+  const iconClass = cn(
+    'h-6 w-6',
+    collapsed ? 'mx-auto' : 'flex-shrink-0',
+    isActive && 'text-blue-600'
+  );
+
+  const linkContent = (
+    <Link to={item.path} className={linkClass}>
+      <Icon className={iconClass} />
+      {!collapsed && <span className="font-semibold">{item.label}</span>}
+      {isActive && !collapsed && (
+        <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
+      )}
+      {item.badge && !collapsed && (
+        <div className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+          {item.badge}
+        </div>
+      )}
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {linkContent}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>{item.label}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return linkContent;
+};
+
+const NavSection: React.FC<{
+  label: string;
+  items: NavItem[];
+  icon: React.ComponentType<{ className?: string }>;
+  accentColor: string;
+  isActive: (path: string) => boolean;
+  collapsed: boolean;
+}> = ({ label, items, icon: SectionIcon, accentColor, isActive, collapsed }) => (
+  <div className="mt-2">
+    {!collapsed && (
+      <div className={`mb-1 flex items-center gap-2 px-5 py-2`}>
+        <SectionIcon className={`h-3.5 w-3.5 ${accentColor}`} />
+        <span className={`text-xs font-bold uppercase tracking-wider ${accentColor}`}>
+          {label}
+        </span>
+      </div>
+    )}
+    {collapsed && (
+      <div className="mx-auto my-2 h-px w-8 bg-gray-200 dark:bg-gray-700" />
+    )}
+    {items.map((item) => (
+      <NavLink key={item.path} item={item} isActive={isActive(item.path)} collapsed={collapsed} />
+    ))}
+  </div>
+);
+
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { state } = useApp();
@@ -170,84 +243,11 @@ export const AppSidebar: React.FC = () => {
     return location.pathname === path;
   };
 
-  const NavLink: React.FC<{ item: NavItem }> = ({ item }) => {
-    const Icon = item.icon;
-    const active = isActive(item.path);
-    const linkClass = cn(
-      'rounded-2xl text-[15px] transition-colors',
-      collapsed ? 'flex items-center justify-center px-0 py-3.5' : 'flex items-center gap-4 px-5 py-3.5',
-      active ? 'bg-blue-50 text-blue-600 shadow-sm shadow-blue-100' : 'text-gray-700 hover:bg-gray-100'
-    );
-
-    const iconClass = cn(
-      'h-6 w-6',
-      collapsed ? 'mx-auto' : 'flex-shrink-0',
-      active && 'text-blue-600'
-    );
-
-    const linkContent = (
-      <Link to={item.path} className={linkClass}>
-        <Icon className={iconClass} />
-        {!collapsed && <span className="font-semibold">{item.label}</span>}
-        {active && !collapsed && (
-          <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
-        )}
-        {item.badge && !collapsed && (
-          <div className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
-            {item.badge}
-          </div>
-        )}
-      </Link>
-    );
-
-    if (collapsed) {
-      return (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {linkContent}
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{item.label}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    return linkContent;
-  };
-
-  /** Render a labeled section of nav items */
-  const NavSection: React.FC<{
-    label: string;
-    items: NavItem[];
-    icon: React.ComponentType<{ className?: string }>;
-    accentColor: string;
-  }> = ({ label, items, icon: SectionIcon, accentColor }) => (
-    <div className="mt-2">
-      {!collapsed && (
-        <div className={`mb-1 flex items-center gap-2 px-5 py-2`}>
-          <SectionIcon className={`h-3.5 w-3.5 ${accentColor}`} />
-          <span className={`text-xs font-bold uppercase tracking-wider ${accentColor}`}>
-            {label}
-          </span>
-        </div>
-      )}
-      {collapsed && (
-        <div className="mx-auto my-2 h-px w-8 bg-gray-200" />
-      )}
-      {items.map((item) => (
-        <NavLink key={item.path} item={item} />
-      ))}
-    </div>
-  );
-
   return (
     <aside 
       ref={asideRef}
       className={cn(
-        'app-sidebar left-0 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 overflow-hidden',
+        'app-sidebar left-0 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden',
         collapsed ? 'w-20' : 'w-80'
       )}
     >
@@ -271,6 +271,8 @@ export const AppSidebar: React.FC = () => {
             items={navItems}
             icon={Users}
             accentColor="text-blue-600"
+            isActive={isActive}
+            collapsed={collapsed}
           />
         )}
 
@@ -281,6 +283,8 @@ export const AppSidebar: React.FC = () => {
             items={mentorNavItems}
             icon={Briefcase}
             accentColor="text-orange-600"
+            isActive={isActive}
+            collapsed={collapsed}
           />
         )}
 
@@ -291,6 +295,8 @@ export const AppSidebar: React.FC = () => {
             items={supportNavItems}
             icon={Headphones}
             accentColor="text-teal-600"
+            isActive={isActive}
+            collapsed={collapsed}
           />
         )}
 
@@ -301,6 +307,8 @@ export const AppSidebar: React.FC = () => {
             items={adminNavItems}
             icon={Shield}
             accentColor="text-violet-600"
+            isActive={isActive}
+            collapsed={collapsed}
           />
         )}
 
@@ -318,22 +326,22 @@ export const AppSidebar: React.FC = () => {
       </nav>
 
       {/* Bottom navigation */}
-      <div className={cn('space-y-1 border-t border-gray-200', collapsed ? 'py-2' : 'p-5')}>
+      <div className={cn('space-y-1 border-t border-gray-200 dark:border-gray-800', collapsed ? 'py-2' : 'p-5')}>
         {bottomNavItems.map((item) => (
-          <NavLink key={item.path} item={item} />
+          <NavLink key={item.path} item={item} isActive={isActive(item.path)} collapsed={collapsed} />
         ))}
       </div>
 
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center border-t border-gray-200 p-5 transition-colors hover:bg-gray-50"
+        className="flex items-center justify-center border-t border-gray-200 dark:border-gray-800 p-5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
         aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
       >
         {collapsed ? (
-          <ChevronRight className="w-5 h-5 text-gray-600" />
+          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         ) : (
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
             <ChevronLeft className="w-5 h-5" />
             <span className="text-sm">Thu gọn</span>
           </div>

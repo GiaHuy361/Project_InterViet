@@ -218,7 +218,7 @@ export const InterviewLivePage: React.FC = () => {
       </Card>
 
       {error && (
-        <Card className="border-red-200 bg-red-50 text-red-700 p-4">
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-4">
           {error}
         </Card>
       )}

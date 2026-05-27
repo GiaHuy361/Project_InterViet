@@ -64,8 +64,8 @@ export const ForgotPasswordPage: React.FC = () => {
         subtitle="Chúng tôi đã xử lý yêu cầu của bạn"
       >
         <div className="text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-            <CheckCircle className="h-8 w-8 text-emerald-600" />
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+            <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <AuthAlert message={SUCCESS_MESSAGE} variant="success" />
           <p className="mb-6 text-sm text-slate-600">
@@ -90,7 +90,7 @@ export const ForgotPasswordPage: React.FC = () => {
       subtitle="Nhập email để nhận liên kết đặt lại mật khẩu"
       footer={
         <p className="text-center text-sm text-slate-600">
-          <Link to="/dang-nhap" className="font-semibold text-blue-600 hover:text-blue-700">
+          <Link to="/dang-nhap" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Quay lại đăng nhập
           </Link>
         </p>

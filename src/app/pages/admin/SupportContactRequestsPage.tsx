@@ -22,9 +22,9 @@ import { toast } from 'sonner';
 type ContactRequestStatus = 'pending' | 'processed' | 'ignored';
 
 const statusConfig: Record<ContactRequestStatus, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
-  pending: { label: 'Chờ xử lý', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-200', icon: Clock },
-  processed: { label: 'Đã tiếp nhận', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-200', icon: CheckCircle2 },
-  ignored: { label: 'Bỏ qua', color: 'text-slate-500', bg: 'bg-slate-500/10 border-slate-200', icon: XCircle },
+  pending: { label: 'Chờ xử lý', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800', icon: Clock },
+  processed: { label: 'Đã tiếp nhận', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800', icon: CheckCircle2 },
+  ignored: { label: 'Bỏ qua', color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-9500/10 border-slate-200 dark:border-slate-800', icon: XCircle },
 };
 
 export const SupportContactRequestsPage: React.FC = () => {
@@ -130,10 +130,10 @@ export const SupportContactRequestsPage: React.FC = () => {
             <Mail className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Liên hệ Khách hàng</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Liên hệ Khách hàng</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               Tiếp nhận lời nhắn từ khách vãng lai •{' '}
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
                 Support Workspace
               </span>
             </p>
@@ -142,14 +142,14 @@ export const SupportContactRequestsPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm border border-gray-200 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-xl bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-300 shadow-sm border border-gray-200 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950"
             onClick={() => loadRequests()}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </button>
-          <div className="text-sm text-gray-500">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
+          <div className="text-sm text-gray-500 dark:text-slate-400">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
         </div>
       </div>
 
@@ -163,13 +163,13 @@ export const SupportContactRequestsPage: React.FC = () => {
               key={key}
               onClick={() => setFilterStatus(key === filterStatus ? 'all' : (key as ContactRequestStatus))}
               className={`flex items-center gap-3 rounded-2xl border p-4 transition-all duration-200 hover:shadow-sm ${
-                filterStatus === key ? config.bg : 'border-gray-100 bg-white'
+                filterStatus === key ? config.bg : 'border-gray-100 bg-white dark:bg-slate-900'
               }`}
             >
               <Icon className={`h-5 w-5 ${config.color}`} />
               <div className="text-left">
-                <p className="text-xl font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500">{config.label}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{count}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{config.label}</p>
               </div>
             </button>
           );
@@ -185,21 +185,21 @@ export const SupportContactRequestsPage: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && loadRequests()}
-          className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          className="w-full rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2.5 pl-11 pr-4 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
         />
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-          <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
+        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-slate-400">Đang tải dữ liệu...</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-900/30">
             <Mail className="h-7 w-7 text-indigo-400" />
           </div>
-          <p className="text-lg font-semibold text-gray-700">Chưa có liên hệ nào</p>
+          <p className="text-lg font-semibold text-gray-700 dark:text-slate-300">Chưa có liên hệ nào</p>
           <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto">
             Không tìm thấy kết quả khớp với bộ lọc hiện tại.
           </p>
@@ -214,7 +214,7 @@ export const SupportContactRequestsPage: React.FC = () => {
             return (
               <div
                 key={req.id}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:border-indigo-200 hover:shadow-md cursor-pointer"
+                className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-5 shadow-sm transition-all duration-200 hover:border-indigo-200 dark:border-indigo-800 hover:shadow-md cursor-pointer"
                 onClick={() => openDetailDialog(req.id)}
               >
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${status.bg}`}>
@@ -223,12 +223,12 @@ export const SupportContactRequestsPage: React.FC = () => {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900 truncate">{req.subject}</p>
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{req.subject}</p>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-slate-400">
                       {req.category}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                  <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
                     <span className="flex items-center gap-1">
                       <User className="h-3.5 w-3.5" />
                       {req.fullName} ({req.email})
@@ -251,12 +251,12 @@ export const SupportContactRequestsPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     {reqStatus === 'pending' && (
                       <>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'processed'); }} className="rounded-md bg-emerald-50 px-3 py-1 text-sm text-emerald-700 border hover:bg-emerald-100">Tiếp nhận</button>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'ignored'); }} className="rounded-md bg-slate-50 px-3 py-1 text-sm text-slate-700 border hover:bg-slate-100">Bỏ qua</button>
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'processed'); }} className="rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-400 border hover:bg-emerald-100 dark:bg-emerald-900/40">Tiếp nhận</button>
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'ignored'); }} className="rounded-md bg-slate-50 dark:bg-slate-950 px-3 py-1 text-sm text-slate-700 dark:text-slate-300 border hover:bg-slate-100">Bỏ qua</button>
                       </>
                     )}
                     {(reqStatus === 'processed' || reqStatus === 'ignored') && (
-                      <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'pending'); }} className="rounded-md bg-white px-3 py-1 text-sm border hover:bg-gray-50">
+                      <button onClick={(event) => { event.stopPropagation(); handleSetStatus(req.id, 'pending'); }} className="rounded-md bg-white dark:bg-slate-900 px-3 py-1 text-sm border hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
                         Hoàn tác
                       </button>
                     )}
@@ -272,13 +272,13 @@ export const SupportContactRequestsPage: React.FC = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="rounded px-3 py-1 border bg-white disabled:opacity-50"
+                className="rounded px-3 py-1 border bg-white dark:bg-slate-900 disabled:opacity-50"
               >Trước</button>
-              <div className="text-sm text-gray-600">{page} / {Math.ceil(total / pageSize)}</div>
+              <div className="text-sm text-gray-600 dark:text-slate-400">{page} / {Math.ceil(total / pageSize)}</div>
               <button
                 onClick={() => setPage((p) => Math.min(Math.ceil(total / pageSize), p + 1))}
                 disabled={page >= Math.ceil(total / pageSize)}
-                className="rounded px-3 py-1 border bg-white disabled:opacity-50"
+                className="rounded px-3 py-1 border bg-white dark:bg-slate-900 disabled:opacity-50"
               >Sau</button>
             </div>
           )}
@@ -296,29 +296,29 @@ export const SupportContactRequestsPage: React.FC = () => {
           </DialogHeader>
 
           {detailLoading ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+            <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center text-sm text-gray-500 dark:text-slate-400 flex flex-col items-center gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
               Đang tải chi tiết...
             </div>
           ) : detailData ? (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Người gửi</p>
-                  <p className="mt-1 font-semibold text-gray-900 flex items-center gap-2"><User className="h-4 w-4" />{detailData.fullName}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Người gửi</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2"><User className="h-4 w-4" />{detailData.fullName}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Email</p>
-                  <p className="mt-1 font-semibold text-gray-900 flex items-center gap-2"><Mail className="h-4 w-4" />{detailData.email}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Email</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2"><Mail className="h-4 w-4" />{detailData.email}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Số điện thoại</p>
-                  <p className="mt-1 font-semibold text-gray-900 flex items-center gap-2"><Phone className="h-4 w-4" />{detailData.phone || 'Không cung cấp'}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Số điện thoại</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2"><Phone className="h-4 w-4" />{detailData.phone || 'Không cung cấp'}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Phân loại / Trạng thái</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Phân loại / Trạng thái</p>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-slate-300">
                       <Tag className="h-3 w-3" /> {detailData.category}
                     </span>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[detailData.status as ContactRequestStatus]?.bg} ${statusConfig[detailData.status as ContactRequestStatus]?.color}`}>
@@ -328,18 +328,18 @@ export const SupportContactRequestsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Chủ đề</p>
-                <p className="font-semibold text-gray-900 text-lg mb-4">{detailData.subject}</p>
+              <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">Chủ đề</p>
+                <p className="font-semibold text-gray-900 dark:text-slate-100 text-lg mb-4">{detailData.subject}</p>
                 
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Nội dung tin nhắn</p>
-                <div className="rounded-xl bg-gray-50 p-4 text-sm leading-relaxed text-gray-700 border border-gray-100 whitespace-pre-wrap">
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">Nội dung tin nhắn</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-slate-950 p-4 text-sm leading-relaxed text-gray-700 dark:text-slate-300 border border-gray-100 whitespace-pre-wrap">
                   {detailData.message || 'Không có nội dung.'}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
+            <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center text-sm text-gray-500 dark:text-slate-400">
               Không có dữ liệu chi tiết.
             </div>
           )}

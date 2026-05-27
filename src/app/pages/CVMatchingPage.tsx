@@ -524,7 +524,7 @@ export const CVMatchingPage: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <Label>Chọn CV</Label>
             {selectedResume && (
-              <Badge className="bg-green-100 text-green-800">
+              <Badge className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
                 <CheckCircle2 className="mr-1" size={14} />
                 Đã upload
               </Badge>
@@ -571,7 +571,7 @@ export const CVMatchingPage: React.FC = () => {
           <p className="text-xs text-gray-500">Hỗ trợ: .pdf, .docx, .jpg, .jpeg, .png | Tối đa 10MB</p>
 
           {selectedResume && (
-            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
               {selectedResume.title} ({selectedResume.originalFileName})
             </div>
           )}
@@ -586,7 +586,7 @@ export const CVMatchingPage: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <Label>Job Description</Label>
             {jobDescription && (
-              <Badge className="bg-green-100 text-green-800">
+              <Badge className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
                 <CheckCircle2 className="mr-1" size={14} />
                 Đã tạo JD
               </Badge>
@@ -633,7 +633,7 @@ export const CVMatchingPage: React.FC = () => {
           />
 
           {jobDescription && (
-            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
               {jobDescription.title} - {jobDescription.companyName}
             </div>
           )}
@@ -658,7 +658,7 @@ export const CVMatchingPage: React.FC = () => {
 
       {(isPolling || (sessionDetail && !isFinalMatchStatus(sessionDetail.status))) && (
         <Card className="p-4 flex items-center gap-2">
-          <Sparkles size={16} className="text-blue-600" />
+          <Sparkles size={16} className="text-blue-600 dark:text-blue-400" />
           <span className="text-sm">Đang phân tích mức độ phù hợp...</span>
           <Badge variant="outline">{sessionDetail?.status ?? 'Processing'}</Badge>
         </Card>
@@ -668,8 +668,8 @@ export const CVMatchingPage: React.FC = () => {
         <Card className="p-4 flex items-start gap-2 border-red-300">
           <AlertCircle size={16} className="text-red-500 mt-0.5" />
           <div>
-            <p className="font-medium text-red-700">Phiên so khớp thất bại</p>
-            <p className="text-sm text-red-600">{sessionDetail.errorMessage ?? 'Vui lòng thử lại.'}</p>
+            <p className="font-medium text-red-700 dark:text-red-400">Phiên so khớp thất bại</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{sessionDetail.errorMessage ?? 'Vui lòng thử lại.'}</p>
           </div>
         </Card>
       )}
@@ -678,7 +678,7 @@ export const CVMatchingPage: React.FC = () => {
         <div className="space-y-4">
           <Card className="p-6">
             <p className="text-sm text-gray-500">Điểm tổng</p>
-            <p className="text-4xl font-bold text-blue-600">{totalScore.toFixed(2)}%</p>
+            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">{totalScore.toFixed(2)}%</p>
             <p className="mt-2 text-sm text-gray-700">{primaryMatch.summaryText || 'Không có tóm tắt.'}</p>
             {selectedResume && (
               <p className="mt-3 text-xs text-gray-500">
@@ -709,19 +709,19 @@ export const CVMatchingPage: React.FC = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Card className="p-4">
               <p className="text-xs text-gray-500">Hoàn thành</p>
-              <p className="text-2xl font-semibold text-emerald-600">{sessionDetail?.completedCount ?? 0}</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{sessionDetail?.completedCount ?? 0}</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs text-gray-500">Thất bại</p>
-              <p className="text-2xl font-semibold text-red-600">{sessionDetail?.failedCount ?? 0}</p>
+              <p className="text-2xl font-semibold text-red-600 dark:text-red-400">{sessionDetail?.failedCount ?? 0}</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs text-gray-500">Điểm cao nhất</p>
-              <p className="text-2xl font-semibold text-emerald-600">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs text-gray-500">Điểm trung bình</p>
-              <p className="text-2xl font-semibold text-blue-600">{(sessionDetail?.averageScore ?? 0).toFixed(2)}%</p>
+              <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{(sessionDetail?.averageScore ?? 0).toFixed(2)}%</p>
             </Card>
           </div>
 
@@ -759,7 +759,7 @@ export const CVMatchingPage: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {matchedSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
               {matchedSkills.map((skill) => (
-                <Badge key={skill} className="bg-green-100 text-green-800">
+                <Badge key={skill} className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
                   {skill}
                 </Badge>
               ))}
@@ -769,7 +769,7 @@ export const CVMatchingPage: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {missingSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
               {missingSkills.map((skill) => (
-                <Badge key={skill} className="bg-orange-100 text-orange-800">
+                <Badge key={skill} className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300">
                   {skill}
                 </Badge>
               ))}

@@ -180,7 +180,7 @@ export const VerifyEmailPage: React.FC = () => {
         className="mb-6 flex justify-center"
       >
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-violet-100">
-          <Mail className="h-8 w-8 text-blue-600" />
+          <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
         </div>
       </motion.div>
 

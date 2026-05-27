@@ -94,7 +94,7 @@ export const InterviewPreCallPage: React.FC = () => {
       {/* System Check */}
       <Card className="p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <AlertCircle size={20} className="text-blue-600" />
+          <AlertCircle size={20} className="text-blue-600 dark:text-blue-400" />
           Kiểm tra hệ thống
         </h3>
         
@@ -102,19 +102,19 @@ export const InterviewPreCallPage: React.FC = () => {
           {/* Internet Connection */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
-              <Wifi className="text-green-600" size={24} />
+              <Wifi className="text-green-600 dark:text-green-400" size={24} />
               <div>
                 <div className="font-medium">Kết nối Internet</div>
                 <div className="text-sm text-gray-600">Tốt</div>
               </div>
             </div>
-            <Check className="text-green-600" size={24} />
+            <Check className="text-green-600 dark:text-green-400" size={24} />
           </div>
 
           {/* Microphone */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
-              <Mic className={micPermission === 'granted' ? 'text-green-600' : 'text-gray-400'} size={24} />
+              <Mic className={micPermission === 'granted' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'} size={24} />
               <div>
                 <div className="font-medium">Microphone</div>
                 <div className="text-sm text-gray-600">
@@ -144,27 +144,27 @@ export const InterviewPreCallPage: React.FC = () => {
                   ))}
                 </div>
               )}
-              {micPermission === 'granted' && <Check className="text-green-600" size={24} />}
-              {micPermission === 'denied' && <X className="text-red-600" size={24} />}
+              {micPermission === 'granted' && <Check className="text-green-600 dark:text-green-400" size={24} />}
+              {micPermission === 'denied' && <X className="text-red-600 dark:text-red-400" size={24} />}
             </div>
           </div>
 
           {/* Audio Output */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
-              <Headphones className="text-green-600" size={24} />
+              <Headphones className="text-green-600 dark:text-green-400" size={24} />
               <div>
                 <div className="font-medium">Loa / Tai nghe</div>
                 <div className="text-sm text-gray-600">Sẵn sàng</div>
               </div>
             </div>
-            <Check className="text-green-600" size={24} />
+            <Check className="text-green-600 dark:text-green-400" size={24} />
           </div>
         </div>
       </Card>
 
       {/* Tips */}
-      <Card className="p-6 bg-yellow-50 border-yellow-200">
+      <Card className="p-6 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800">
         <h3 className="font-semibold mb-3 flex items-center gap-2">
           💡 Gợi ý cho buổi phỏng vấn tốt nhất
         </h3>
@@ -181,7 +181,7 @@ export const InterviewPreCallPage: React.FC = () => {
             <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-1.5"></div>
             <span>Nói rõ ràng và tự nhiên như đang trò chuyện thật</span>
           </li>
-          <li className="flex items-start gap-2 text-amber-700 font-medium">
+          <li className="flex items-start gap-2 text-amber-700 dark:text-amber-400 font-medium">
             <div className="w-1.5 h-1.5 bg-amber-700 rounded-full mt-1.5"></div>
             <span>⚠️ Không tải lại trang (F5) trong khi phỏng vấn voice để tránh mất kết nối.</span>
           </li>

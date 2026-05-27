@@ -192,7 +192,7 @@ export const MentorBookingsPage: React.FC = () => {
       {loading ? (
         <Card className="p-10 text-center text-sm text-gray-500">Đang tải danh sách booking...</Card>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50 p-6 text-red-700">{error}</Card>
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-6 text-red-700 dark:text-red-400">{error}</Card>
       ) : bookings.length === 0 ? (
         <Card className="p-10 text-center">
           <CalendarDays className="mx-auto mb-3 h-14 w-14 text-gray-400" />
@@ -207,7 +207,7 @@ export const MentorBookingsPage: React.FC = () => {
                 key={booking.id}
                 type="button"
                 onClick={() => handleOpenBooking(booking)}
-                className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedBookingId === booking.id ? 'border-cyan-300 bg-cyan-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedBookingId === booking.id ? 'border-cyan-300 bg-cyan-50 dark:bg-cyan-900/30 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

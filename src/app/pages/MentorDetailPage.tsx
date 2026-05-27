@@ -119,7 +119,7 @@ export const MentorDetailPage: React.FC = () => {
       {loading ? (
         <Card className="p-8 text-center text-sm text-gray-500">Đang tải thông tin mentor...</Card>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50 p-6 text-red-700">{error}</Card>
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-6 text-red-700 dark:text-red-400">{error}</Card>
       ) : mentor ? (
         <>
           <AppPageHeader
@@ -166,7 +166,7 @@ export const MentorDetailPage: React.FC = () => {
                   <div className="mt-4">
                     <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Chuyên môn (Expertise)</p>
                     <div className="flex flex-wrap gap-2">
-                      {mentor.expertise!.map(e => <Badge key={e} variant="outline" className="text-cyan-700 bg-cyan-50 border-cyan-200">{e}</Badge>)}
+                      {mentor.expertise!.map(e => <Badge key={e} variant="outline" className="text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30 border-cyan-200 dark:border-cyan-800">{e}</Badge>)}
                     </div>
                   </div>
                 )}
@@ -174,7 +174,7 @@ export const MentorDetailPage: React.FC = () => {
                   <div className="mt-4">
                     <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Ngành nghề (Industries)</p>
                     <div className="flex flex-wrap gap-2">
-                      {mentor.industries!.map(i => <Badge key={i} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200">{i}</Badge>)}
+                      {mentor.industries!.map(i => <Badge key={i} variant="outline" className="text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800">{i}</Badge>)}
                     </div>
                   </div>
                 )}
@@ -182,7 +182,7 @@ export const MentorDetailPage: React.FC = () => {
                   <div className="mt-4">
                     <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Ngôn ngữ (Languages)</p>
                     <div className="flex flex-wrap gap-2">
-                      {mentor.languages!.map(l => <Badge key={l} variant="outline" className="text-blue-700 bg-blue-50 border-blue-200">{l}</Badge>)}
+                      {mentor.languages!.map(l => <Badge key={l} variant="outline" className="text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">{l}</Badge>)}
                     </div>
                   </div>
                 )}
@@ -191,7 +191,7 @@ export const MentorDetailPage: React.FC = () => {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Thông tin</p>
                 <div className="mt-3 space-y-2 text-sm text-gray-700">
                   <p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> {mentor.fullName}</p>
-                  <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {availableSlots.length} slot trống</p>
+                  <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> {availableSlots.length} slot trống</p>
                   <p className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> {mentor.ratingCount} đánh giá</p>
                 </div>
               </div>
@@ -216,7 +216,7 @@ export const MentorDetailPage: React.FC = () => {
                       key={slot.id}
                       type="button"
                       onClick={() => setSelectedSlotId(slot.id)}
-                      className={`w-full rounded-2xl border p-4 text-left transition-all ${active ? 'border-blue-300 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                      className={`w-full rounded-2xl border p-4 text-left transition-all ${active ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/30 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
@@ -267,7 +267,7 @@ export const MentorDetailPage: React.FC = () => {
                 <Textarea rows={5} value={candidateNotes} onChange={(event) => setCandidateNotes(event.target.value)} />
               </div>
 
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 p-4 text-sm text-amber-900">
                 <p className="font-semibold">Quy trình</p>
                 <p className="mt-1">Backend sẽ giữ slot, tạo booking pending_payment, rồi mở checkout mock dùng chung cho thanh toán.</p>
               </div>

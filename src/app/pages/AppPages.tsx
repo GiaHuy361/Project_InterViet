@@ -182,7 +182,7 @@ export const InterviewReportPage: React.FC = () => {
               Quay lại danh sách báo cáo
             </Button>
             {id && (
-              <Button variant="outline" className="hover-lift text-red-600 hover:text-red-700" onClick={() => setShowDeleteConfirm(true)}>
+              <Button variant="outline" className="hover-lift text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-400" onClick={() => setShowDeleteConfirm(true)}>
                 <Trash2 className="mr-2" size={16} />
                 Xóa
               </Button>
@@ -200,7 +200,7 @@ export const InterviewReportPage: React.FC = () => {
       {loading && <Card className="glass-card p-6">Đang tải báo cáo...</Card>}
 
       {error && (
-        <Card className="border-red-200 bg-red-50 text-red-700 p-4">
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-4">
           <div className="flex items-center justify-between gap-4">
             <span>{error}</span>
             <Button variant="outline" onClick={() => id && navigate(0)}>
@@ -229,7 +229,7 @@ export const InterviewReportPage: React.FC = () => {
               <Sparkles className="text-yellow-500" size={20} />
               Điểm tổng thể từ AI
             </h3>
-            <div className="text-7xl font-extrabold text-blue-600 mb-4 animate-bounce">
+            <div className="text-7xl font-extrabold text-blue-600 dark:text-blue-400 mb-4 animate-bounce">
               {overallScore ?? '—'}
             </div>
             <Badge className="text-lg px-6 py-1.5 bg-blue-600">
@@ -262,15 +262,15 @@ export const InterviewReportPage: React.FC = () => {
           </Card>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 border-green-100 bg-green-50/20">
-              <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+            <Card className="p-6 border-green-100 dark:border-green-800/50 bg-green-50 dark:bg-green-900/30">
+              <h3 className="font-bold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
                 👍 Ưu điểm (Strengths)
               </h3>
               {report.strengths && report.strengths.length > 0 ? (
                 <ul className="space-y-2 text-sm text-gray-700">
                   {report.strengths.map((item, index) => (
                     <li key={`strength-${index}`} className="flex items-start gap-1">
-                      <span className="text-green-600">•</span>
+                      <span className="text-green-600 dark:text-green-400">•</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -280,8 +280,8 @@ export const InterviewReportPage: React.FC = () => {
               )}
             </Card>
 
-            <Card className="p-6 border-red-100 bg-red-50/20">
-              <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+            <Card className="p-6 border-red-100 dark:border-red-800/50 bg-red-50 dark:bg-red-900/30">
+              <h3 className="font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
                 👎 Điểm yếu (Weaknesses)
               </h3>
               {report.weaknesses && report.weaknesses.length > 0 ? (
@@ -298,15 +298,15 @@ export const InterviewReportPage: React.FC = () => {
               )}
             </Card>
 
-            <Card className="p-6 border-amber-100 bg-amber-50/20">
-              <h3 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
+            <Card className="p-6 border-amber-100 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/30">
+              <h3 className="font-bold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
                 💡 Lời khuyên (Recommendations)
               </h3>
               {report.recommendations && report.recommendations.length > 0 ? (
                 <ul className="space-y-2 text-sm text-gray-700">
                   {report.recommendations.map((item, index) => (
                     <li key={`recommend-${index}`} className="flex items-start gap-1">
-                      <span className="text-amber-600">•</span>
+                      <span className="text-amber-600 dark:text-amber-400">•</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -689,7 +689,7 @@ export const NotificationsPage: React.FC = () => {
           {pagedNotifications.map(notification => (
             <Card 
               key={notification.id} 
-              className={`p-6 cursor-pointer ${!notification.isRead ? 'bg-blue-50 border-blue-200' : ''}`}
+              className={`p-6 cursor-pointer ${!notification.isRead ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : ''}`}
               onClick={() => void handleMarkRead(notification.id)}
             >
               <div className="flex items-start gap-3">
@@ -746,7 +746,7 @@ export const NotificationsPage: React.FC = () => {
       </Card>
 
       {error && (
-        <Card className="border-amber-200 bg-amber-50 p-4 text-amber-800">
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 p-4 text-amber-800 dark:text-amber-300">
           {error}
         </Card>
       )}
@@ -879,7 +879,7 @@ export const SubscriptionPage: React.FC = () => {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-600 mb-2">Gói hiện tại</h3>
-            <h2 className="text-3xl font-bold text-blue-600 mb-2">{currentPlanInfo.name}</h2>
+            <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">{currentPlanInfo.name}</h2>
             <p className="text-sm text-gray-600">{currentPlanInfo.description}</p>
           </div>
           <Badge className={`${isPaidPlan ? 'bg-blue-600' : 'bg-gray-400'} text-white px-4 py-2 text-sm`}>
@@ -889,7 +889,7 @@ export const SubscriptionPage: React.FC = () => {
 
         {/* Subscription Info */}
         {isPaidPlan && state.user?.subscriptionEndsAt && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-900">
               <strong>Gia hạn tự động:</strong> {state.user.subscriptionEndsAt.toLocaleDateString('vi-VN')}
             </p>
@@ -902,7 +902,7 @@ export const SubscriptionPage: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-2">
             {currentPlanInfo.features.map((feature, index) => (
               <div key={index} className="flex items-start gap-2">
-                <CheckCircle size={16} className="text-green-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle size={16} className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                 <span className="text-sm">{feature}</span>
               </div>
             ))}
@@ -1050,7 +1050,7 @@ export const SubscriptionPage: React.FC = () => {
             <div className="space-y-2 flex-1 text-sm">
               {CANDIDATE_PLANS['monthly'].features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Check className="text-green-600 flex-shrink-0 mt-0.5" size={14} />
+                  <Check className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" size={14} />
                   <span className="text-xs">{feature}</span>
                 </div>
               ))}
@@ -1068,7 +1068,7 @@ export const SubscriptionPage: React.FC = () => {
           </Card>
 
           {/* Quarterly Plan */}
-          <Card className={`p-6 flex flex-col relative ${currentPlan === 'quarterly' ? 'border-2 border-purple-600 shadow-lg' : 'border-2 border-purple-200'}`}>
+          <Card className={`p-6 flex flex-col relative ${currentPlan === 'quarterly' ? 'border-2 border-purple-600 shadow-lg' : 'border-2 border-purple-200 dark:border-purple-800'}`}>
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-4 py-1 text-xs font-bold rounded-full whitespace-nowrap">
               {CANDIDATE_PLANS['quarterly'].badge}
             </div>
@@ -1105,7 +1105,7 @@ export const SubscriptionPage: React.FC = () => {
             <div className="space-y-2 flex-1 text-sm">
               {CANDIDATE_PLANS['quarterly'].features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Check className="text-green-600 flex-shrink-0 mt-0.5" size={14} />
+                  <Check className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" size={14} />
                   <span className="text-xs">{feature}</span>
                 </div>
               ))}
@@ -1113,7 +1113,7 @@ export const SubscriptionPage: React.FC = () => {
           </Card>
 
           {/* Yearly Plan */}
-          <Card className={`p-6 flex flex-col relative ${currentPlan === 'yearly' ? 'border-2 border-green-600 shadow-lg' : 'border-2 border-green-200'}`}>
+          <Card className={`p-6 flex flex-col relative ${currentPlan === 'yearly' ? 'border-2 border-green-600 shadow-lg' : 'border-2 border-green-200 dark:border-green-800'}`}>
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-1 text-xs font-bold rounded-full whitespace-nowrap">
               {CANDIDATE_PLANS['yearly'].badge}
             </div>
@@ -1150,7 +1150,7 @@ export const SubscriptionPage: React.FC = () => {
             <div className="space-y-2 flex-1 text-sm">
               {CANDIDATE_PLANS['yearly'].features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Check className="text-green-600 flex-shrink-0 mt-0.5" size={14} />
+                  <Check className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" size={14} />
                   <span className="text-xs">{feature}</span>
                 </div>
               ))}
@@ -1171,8 +1171,8 @@ export const SubscriptionPage: React.FC = () => {
                   <th className="text-left p-4 font-bold">Tính năng</th>
                   <th className="text-center p-4 font-bold">Miễn phí</th>
                   <th className="text-center p-4 font-bold">Tháng</th>
-                  <th className="text-center p-4 font-bold bg-purple-50">Quý</th>
-                  <th className="text-center p-4 font-bold bg-green-50">Năm</th>
+                  <th className="text-center p-4 font-bold bg-purple-50 dark:bg-purple-900/30">Quý</th>
+                  <th className="text-center p-4 font-bold bg-green-50 dark:bg-green-900/30">Năm</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -1180,92 +1180,92 @@ export const SubscriptionPage: React.FC = () => {
                   <td className="p-4 font-medium">Tối ưu CV</td>
                   <td className="text-center p-4">3 lần/tài khoản</td>
                   <td className="text-center p-4">3 lần/ngày</td>
-                  <td className="text-center p-4 bg-purple-50">5 lần/ngày</td>
-                  <td className="text-center p-4 bg-green-50 font-semibold">Không giới hạn</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">5 lần/ngày</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30 font-semibold">Không giới hạn</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Phỏng vấn AI</td>
                   <td className="text-center p-4">1 phiên/tài khoản</td>
                   <td className="text-center p-4">1 lần/ngày</td>
-                  <td className="text-center p-4 bg-purple-50">3 lần/ngày</td>
-                  <td className="text-center p-4 bg-green-50 font-semibold">Không giới hạn</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">3 lần/ngày</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30 font-semibold">Không giới hạn</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Phỏng vấn với Mentor/người thật</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50">3 lần/tháng</td>
-                  <td className="text-center p-4 bg-green-50 font-semibold">1 lần/tuần</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">3 lần/tháng</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30 font-semibold">1 lần/tuần</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Model AI</td>
                   <td className="text-center p-4">Basic</td>
                   <td className="text-center p-4">Ổn định</td>
-                  <td className="text-center p-4 bg-purple-50">Cao cấp</td>
-                  <td className="text-center p-4 bg-green-50">Cao cấp</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">Cao cấp</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30">Cao cấp</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Phong cách AI interviewer & stress-test</td>
                   <td className="text-center p-4">Cơ bản</td>
                   <td className="text-center p-4">Đầy đủ 6 loại</td>
-                  <td className="text-center p-4 bg-purple-50">Đầy đủ 6 loại</td>
-                  <td className="text-center p-4 bg-green-50">Đầy đủ 6 loại</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">Đầy đủ 6 loại</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30">Đầy đủ 6 loại</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Báo cáo phân tích</td>
                   <td className="text-center p-4">Rút gọn</td>
                   <td className="text-center p-4">Toàn diện</td>
-                  <td className="text-center p-4 bg-purple-50">Toàn diện</td>
-                  <td className="text-center p-4 bg-green-50">Toàn diện</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">Toàn diện</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30">Toàn diện</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Phân tích kỹ năng giao tiếp</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Xuất PDF</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">So sánh tiến bộ</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">So sánh benchmark ngành</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Chọn mentor theo nhóm ngành</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-purple-50"><X className="text-red-500 inline" size={18} /></td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30"><X className="text-red-500 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Lưu lịch sử không giới hạn</td>
                   <td className="text-center p-4"><X className="text-red-500 inline" size={18} /></td>
                   <td className="text-center p-4">30 ngày</td>
-                  <td className="text-center p-4 bg-purple-50">90 ngày</td>
-                  <td className="text-center p-4 bg-green-50"><CheckCircle className="text-green-600 inline" size={18} /></td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">90 ngày</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30"><CheckCircle className="text-green-600 dark:text-green-400 inline" size={18} /></td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Hỗ trợ</td>
                   <td className="text-center p-4">Email</td>
                   <td className="text-center p-4">Email</td>
-                  <td className="text-center p-4 bg-purple-50">Priority</td>
-                  <td className="text-center p-4 bg-green-50">24/7 cao nhất</td>
+                  <td className="text-center p-4 bg-purple-50 dark:bg-purple-900/30">Priority</td>
+                  <td className="text-center p-4 bg-green-50 dark:bg-green-900/30">24/7 cao nhất</td>
                 </tr>
               </tbody>
             </table>
@@ -1378,7 +1378,7 @@ export const ActivityLogPage: React.FC = () => {
             {events.slice(0, 20).map(event => (
               <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <Activity size={16} className="text-blue-600" />
+                  <Activity size={16} className="text-blue-600 dark:text-blue-400" />
                   <div>
                     <p className="font-medium text-sm">
                       {eventTypeLabels[event.type] || event.type}
@@ -1434,7 +1434,7 @@ export const SubscriptionExpiredPage: React.FC = () => {
   const navigate = useNavigate();
   return (
     <Card className="p-12 text-center max-w-md mx-auto">
-      <AlertCircle className="w-16 h-16 text-orange-600 mx-auto mb-4" />
+      <AlertCircle className="w-16 h-16 text-orange-600 dark:text-orange-400 mx-auto mb-4" />
       <h1 className="text-2xl font-bold mb-2">Gói đã hết hạn</h1>
       <p className="text-gray-600 mb-6">Chọn gói phù hợp để tiếp tục sử dụng tính năng nâng cao</p>
       <Button onClick={() => navigate('/goi-dich-vu')}>Nâng cấp ngay</Button>
@@ -1529,9 +1529,9 @@ export const HelpCenterPage: React.FC = () => {
   };
 
   const statusBadgeClass: Record<string, string> = {
-    open: 'bg-blue-100 text-blue-700',
-    in_progress: 'bg-amber-100 text-amber-700',
-    resolved: 'bg-emerald-100 text-emerald-700',
+    open: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
+    in_progress: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+    resolved: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400',
     closed: 'bg-gray-100 text-gray-700',
   };
 
@@ -1707,7 +1707,7 @@ export const HelpCenterPage: React.FC = () => {
           )}
 
           {!isLoadingTickets && listError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400">
               {listError}
             </div>
           )}
@@ -1727,8 +1727,8 @@ export const HelpCenterPage: React.FC = () => {
                   onClick={() => selectTicket(ticket.id)}
                   className={`w-full rounded-xl border p-3 text-left transition-colors ${
                     selectedTicketId === ticket.id
-                      ? 'border-blue-300 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                      ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 hover:border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:bg-blue-900/30'
                   }`}
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
@@ -1783,7 +1783,7 @@ export const HelpCenterPage: React.FC = () => {
           )}
 
           {selectedTicketId && !isLoadingDetail && detailError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400">
               {detailError}
             </div>
           )}
@@ -1827,7 +1827,7 @@ export const HelpCenterPage: React.FC = () => {
                         key={message.id}
                         className={`rounded-lg p-3 ${
                           message.senderType === 'user'
-                            ? 'bg-blue-50'
+                            ? 'bg-blue-50 dark:bg-blue-900/30'
                             : 'bg-gray-50'
                         }`}
                       >

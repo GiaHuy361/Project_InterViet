@@ -14,7 +14,7 @@
  * - 'support' (Support Staff): customer support role
  * - 'admin' (Administrator): full system access
  */
-export type SystemRole = 'user' | 'support' | 'admin';
+export type SystemRole = 'user' | 'support' | 'admin' | 'mentor';
 
 /** Standard JWT payload fields + custom claims */
 export interface JwtPayload {

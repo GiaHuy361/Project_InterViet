@@ -35,7 +35,7 @@ export const AdminDevPromoteModal: React.FC<{ open: boolean; onOpenChange: (v: b
           <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
           <Select value={roleCode} onValueChange={setRoleCode}>
-            <SelectTrigger className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900">
+            <SelectTrigger className="h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -44,7 +44,7 @@ export const AdminDevPromoteModal: React.FC<{ open: boolean; onOpenChange: (v: b
             </SelectContent>
           </Select>
 
-          {result && <div className="text-sm text-gray-700">{result}</div>}
+          {result && <div className="text-sm text-gray-700 dark:text-slate-300">{result}</div>}
         </div>
 
         <DialogFooter>

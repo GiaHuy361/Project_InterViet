@@ -79,27 +79,27 @@ const AdminStatsTab = () => {
     <div className="space-y-6">
       <h2 className="text-xl font-bold">Tổng quan Nội dung</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-blue-50 border-blue-100">
-          <p className="text-sm text-blue-600 font-medium">FAQs (Đã đăng / Tổng)</p>
+        <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800/50">
+          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">FAQs (Đã đăng / Tổng)</p>
           <p className="text-2xl font-bold mt-1">{summary.publishedFaqs} / {summary.totalFaqs}</p>
         </Card>
-        <Card className="p-4 bg-purple-50 border-purple-100">
-          <p className="text-sm text-purple-600 font-medium">Blog (Đã đăng / Tổng)</p>
+        <Card className="p-4 bg-purple-50 dark:bg-purple-900/30 border-purple-100 dark:border-purple-800/50">
+          <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Blog (Đã đăng / Tổng)</p>
           <p className="text-2xl font-bold mt-1">{summary.publishedBlogArticles} / {summary.totalBlogArticles}</p>
         </Card>
-        <Card className="p-4 bg-emerald-50 border-emerald-100">
-          <p className="text-sm text-emerald-600 font-medium">Đánh giá (Active / Tổng)</p>
+        <Card className="p-4 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800/50">
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Đánh giá (Active / Tổng)</p>
           <p className="text-2xl font-bold mt-1">{summary.activeTestimonials} / {summary.totalTestimonials}</p>
         </Card>
-        <Card className="p-4 bg-amber-50 border-amber-100">
-          <p className="text-sm text-amber-600 font-medium">Liên hệ (Chờ / Tổng)</p>
+        <Card className="p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-100 dark:border-amber-800/50">
+          <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">Liên hệ (Chờ / Tổng)</p>
           <p className="text-2xl font-bold mt-1">{summary.pendingContactRequests} / {summary.totalContactRequests}</p>
         </Card>
       </div>
       
       <Card className="p-6">
         <h3 className="font-bold mb-2">Thêm chỉ số động (Dynamic Stats)</h3>
-        <p className="text-sm text-gray-500 mb-4">Các chỉ số này có thể hiển thị trên Landing Page. Hiện tại chưa có giao diện danh sách.</p>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Các chỉ số này có thể hiển thị trên Landing Page. Hiện tại chưa có giao diện danh sách.</p>
         <Button onClick={() => toast.info('Tính năng thêm chỉ số động qua API chưa có UI đầy đủ.')}>Thêm chỉ số</Button>
       </Card>
     </div>
@@ -138,7 +138,7 @@ const AdminTestimonialsTab = () => {
           <div key={item.id} className="p-4 border rounded flex justify-between items-center">
             <div>
               <p className="font-bold">{item.authorName} - {item.authorRole}</p>
-              <p className="text-sm text-gray-600">"{item.content}" - {item.rating} sao</p>
+              <p className="text-sm text-gray-600 dark:text-slate-400">"{item.content}" - {item.rating} sao</p>
             </div>
             <Button variant="destructive" size="sm" onClick={() => handleDelete(item.id)}>Xóa</Button>
           </div>
@@ -181,7 +181,7 @@ const AdminFaqsTab = () => {
           <div key={item.id} className="p-4 border rounded flex justify-between items-start">
             <div>
               <p className="font-bold">{item.question}</p>
-              <p className="text-sm text-gray-600">{item.answer}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-400">{item.answer}</p>
               <span className="text-xs bg-gray-100 px-2 rounded">{item.category}</span>
             </div>
             <Button variant="destructive" size="sm" onClick={() => handleDelete(item.id)}>Xóa</Button>
@@ -225,7 +225,7 @@ const AdminBlogTab = () => {
           <div key={item.id} className="p-4 border rounded flex justify-between items-center">
             <div>
               <p className="font-bold">{item.title}</p>
-              <p className="text-sm text-gray-600">{item.author} - {new Date(item.publishedAt).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-400">{item.author} - {new Date(item.publishedAt).toLocaleDateString()}</p>
             </div>
             <Button variant="destructive" size="sm" onClick={() => handleDelete(item.id)}>Xóa</Button>
           </div>
@@ -266,7 +266,7 @@ const AdminContactRequestsTab = () => {
               <div>
                 <p className="font-bold">{item.fullName} &lt;{item.email}&gt; - {item.phone}</p>
                 <p className="text-sm font-semibold">[{item.category}] {item.subject}</p>
-                <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleString()}</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">{new Date(item.createdAt).toLocaleString()}</p>
               </div>
               <select className="input-premium text-sm p-1" value={item.status} onChange={e => handleUpdateStatus(item.id, e.target.value)}>
                 <option value="pending">Chờ xử lý</option>
@@ -275,7 +275,7 @@ const AdminContactRequestsTab = () => {
                 <option value="ignored">Bỏ qua</option>
               </select>
             </div>
-            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{item.message}</p>
+            <p className="text-sm text-gray-700 dark:text-slate-300 bg-gray-50 dark:bg-slate-950 p-3 rounded">{item.message}</p>
           </div>
         )) : null}
         {items.length === 0 && <p>Chưa có dữ liệu</p>}
@@ -306,17 +306,17 @@ const AdminSharesTab = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="font-bold">{item.title}</p>
-                <p className="text-sm text-gray-600">Chủ sở hữu: {item.ownerFullName} ({item.ownerEmail})</p>
+                <p className="text-sm text-gray-600 dark:text-slate-400">Chủ sở hữu: {item.ownerFullName} ({item.ownerEmail})</p>
                 <p className="text-sm">Loại báo cáo: {item.reportType}</p>
               </div>
               <div className="text-right">
-                <span className={`text-xs px-2 py-1 rounded ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <span className={`text-xs px-2 py-1 rounded ${item.isActive ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}`}>
                   {item.isActive ? 'Đang kích hoạt' : 'Đã vô hiệu hóa'}
                 </span>
-                <p className="text-xs mt-1 font-mono text-gray-500">Token: ***{item.tokenPreview}</p>
+                <p className="text-xs mt-1 font-mono text-gray-500 dark:text-slate-400">Token: ***{item.tokenPreview}</p>
               </div>
             </div>
-            <p className="text-xs text-gray-500">Ngày tạo: {new Date(item.createdAt).toLocaleString()} | Lượt xem: {item.viewCount}</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">Ngày tạo: {new Date(item.createdAt).toLocaleString()} | Lượt xem: {item.viewCount}</p>
           </div>
         )) : null}
         {(!Array.isArray(items) || items.length === 0) && <p>Chưa có dữ liệu</p>}

@@ -107,7 +107,7 @@ export const JDHistoryPage: React.FC = () => {
 
       {error ? (
         <Card className="glass-card p-10 text-center">
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </Card>
       ) : loading ? (
         <Card className="glass-card p-10 text-center">
@@ -128,7 +128,7 @@ export const JDHistoryPage: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <h3 className="truncate font-bold">{item.title}</h3>
-                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                    <span className="rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-400 dark:bg-violet-900/40 dark:text-violet-300">
                       JD
                     </span>
                   </div>
@@ -143,7 +143,7 @@ export const JDHistoryPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-400"
                     onClick={() => promptDelete(item)}
                   >
                     Xóa

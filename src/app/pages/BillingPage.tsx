@@ -29,7 +29,7 @@ export const BillingPage: React.FC = () => {
   const [creatingSession, setCreatingSession] = useState(false);
   const [devLoading, setDevLoading] = useState(false);
 
-  const selectedPlan = locationState?.selectedPlan ?? 'pro_monthly';
+  const selectedPlan = locationState?.selectedPlan ?? 'monthly';
   const contextType = locationState?.contextType ?? 'subscription';
   const enableDevBilling = isDevBillingEnabled;
 
@@ -161,7 +161,7 @@ export const BillingPage: React.FC = () => {
                     type="button"
                     onClick={() => setSelectedProvider(provider.provider)}
                     className={`rounded-2xl border p-4 text-left transition-all ${
-                      active ? 'border-sky-300 bg-sky-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+                      active ? 'border-sky-300 bg-sky-50 dark:bg-sky-900/30 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -188,7 +188,7 @@ export const BillingPage: React.FC = () => {
       </Card>
 
       {enableDevBilling && (
-        <Card className="space-y-4 border-dashed border-amber-300 bg-amber-50/40 p-6">
+        <Card className="space-y-4 border-dashed border-amber-300 bg-amber-50 dark:bg-amber-900/30 p-6">
           <div>
             <h3 className="font-semibold text-amber-900 dark:text-amber-200">Dev: kích hoạt gói test</h3>
             <p className="text-sm text-amber-800 dark:text-amber-300/90">Chỉ hiển thị ở local/development.</p>
@@ -203,7 +203,7 @@ export const BillingPage: React.FC = () => {
 
       <Card className="p-6">
         <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600" />
+          <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="font-semibold text-slate-900">Flow chính thức</p>
             <p className="text-sm text-slate-500">

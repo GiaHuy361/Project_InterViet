@@ -3,10 +3,3 @@
 @import './theme.css';
 @import './animations.css';
 
-/* Sidebar sticky below header: uses --iv-header-height set by JS */
-.app-sidebar {
-	position: sticky;
-	left: 0;
-	top: var(--iv-header-height, 5rem);
-	height: calc(100vh - var(--iv-header-height, 5rem));
-}

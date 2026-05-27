@@ -106,7 +106,7 @@ function PrettyJson({ data }: { data: object }) {
   };
   return (
     <div className="relative">
-      <pre className="max-h-[40vh] overflow-auto rounded-md bg-slate-50 p-4 text-sm">{text}</pre>
+      <pre className="max-h-[40vh] overflow-auto rounded-md bg-slate-50 dark:bg-slate-950 p-4 text-sm">{text}</pre>
       <div className="absolute top-2 right-2">
         <Button variant="ghost" size="sm" onClick={copy}>
           <Copy className="mr-2 h-4 w-4" />Copy
@@ -122,7 +122,7 @@ export const AdminJsonSamplesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">System JSON Samples</h1>
-          <p className="text-sm text-gray-500">Standard response samples and error shapes used by backend (RFC7807, API envelope)</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Standard response samples and error shapes used by backend (RFC7807, API envelope)</p>
         </div>
       </div>
 
@@ -132,7 +132,7 @@ export const AdminJsonSamplesPage: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold">{s.title}</h3>
-                <p className="text-sm text-gray-500">JSON shape</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">JSON shape</p>
               </div>
             </div>
             <div className="mt-3">

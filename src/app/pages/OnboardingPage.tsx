@@ -86,13 +86,13 @@ export const OnboardingPage: React.FC = () => {
                   onClick={() => setRole(r)}
                   className={`p-4 border-2 rounded-lg text-left transition-all ${
                     role === r 
-                      ? 'border-blue-600 bg-blue-50' 
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{r}</span>
-                    {role === r && <CheckCircle className="text-blue-600" size={20} />}
+                    {role === r && <CheckCircle className="text-blue-600 dark:text-blue-400" size={20} />}
                   </div>
                 </button>
               ))}
@@ -116,13 +116,13 @@ export const OnboardingPage: React.FC = () => {
                   onClick={() => setExperience(exp)}
                   className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
                     experience === exp 
-                      ? 'border-blue-600 bg-blue-50' 
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{exp}</span>
-                    {experience === exp && <CheckCircle className="text-blue-600" size={20} />}
+                    {experience === exp && <CheckCircle className="text-blue-600 dark:text-blue-400" size={20} />}
                   </div>
                 </button>
               ))}
@@ -146,13 +146,13 @@ export const OnboardingPage: React.FC = () => {
                   onClick={() => toggleGoal(goal)}
                   className={`p-4 border-2 rounded-lg text-left transition-all ${
                     goals.includes(goal)
-                      ? 'border-blue-600 bg-blue-50' 
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{goal}</span>
-                    {goals.includes(goal) && <CheckCircle className="text-blue-600" size={20} />}
+                    {goals.includes(goal) && <CheckCircle className="text-blue-600 dark:text-blue-400" size={20} />}
                   </div>
                 </button>
               ))}

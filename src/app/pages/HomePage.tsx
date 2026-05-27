@@ -35,6 +35,8 @@ export const HomePage: React.FC = () => {
     totalInterviewsConducted: 0,
     averageRating: 0
   });
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingTestimonials, setLoadingTestimonials] = useState(true);
   const [loadingBlogs, setLoadingBlogs] = useState(true);
@@ -86,7 +88,7 @@ export const HomePage: React.FC = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/dang-ky')}
-                className="group btn-glow h-12 rounded-xl bg-white px-8 font-semibold text-blue-700 shadow-2xl hover:bg-blue-50"
+                className="group btn-glow h-12 rounded-xl bg-white px-8 font-semibold text-blue-700 dark:text-blue-400 shadow-2xl hover:bg-blue-50 dark:bg-blue-900/30"
               >
                 Dùng thử miễn phí <ArrowRight className="ml-2 size-[18px] transition-transform group-hover:translate-x-0.5" />
               </Button>
@@ -169,7 +171,7 @@ export const HomePage: React.FC = () => {
       <section id="ung-vien" className="py-16 bg-white scroll-mt-16">
         <div className="max-w-[1440px] mx-auto px-8">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-3">
+            <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-full mb-3">
               <GraduationCap size={18} />
               <span className="text-sm font-semibold">Dành cho ứng viên</span>
             </div>
@@ -183,14 +185,14 @@ export const HomePage: React.FC = () => {
 
           <div className="grid lg:grid-cols-3 gap-6 max-w-5xl mx-auto mb-8">
             <ScaleOnHover>
-            <Card className="rounded-2xl border-2 border-slate-100 p-6 transition-shadow hover:border-blue-200 hover:shadow-xl">
+            <Card className="rounded-2xl border-2 border-slate-100 p-6 transition-shadow hover:border-blue-200 dark:border-blue-800 hover:shadow-xl">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <FileText className="text-blue-600" size={24} />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText className="text-blue-600 dark:text-blue-400" size={24} />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold mb-1">Tối ưu CV & So khớp JD</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-medium">
                     <CheckCircle size={14} />
                     <span>Miễn phí 3 lần</span>
                   </div>
@@ -203,17 +205,17 @@ export const HomePage: React.FC = () => {
             </ScaleOnHover>
 
             <ScaleOnHover>
-            <Card className="relative rounded-2xl border-2 border-purple-200 p-6 transition-shadow hover:shadow-xl">
+            <Card className="relative rounded-2xl border-2 border-purple-200 dark:border-purple-800 p-6 transition-shadow hover:shadow-xl">
               <div className="absolute -top-2 -right-2 bg-gradient-to-br from-purple-600 to-blue-600 text-white px-3 py-1 text-xs font-bold rounded-full">
                 PHỔ BIẾN
               </div>
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Mic className="text-purple-600" size={24} />
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Mic className="text-purple-600 dark:text-purple-400" size={24} />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold mb-1">Phỏng vấn AI Real-time</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-purple-600 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 font-medium">
                     <Zap size={14} />
                     <span>Phản hồi tức thì</span>
                   </div>
@@ -226,14 +228,14 @@ export const HomePage: React.FC = () => {
             </ScaleOnHover>
 
             <ScaleOnHover>
-            <Card className="rounded-2xl border-2 border-slate-100 p-6 transition-shadow hover:border-green-200 hover:shadow-xl">
+            <Card className="rounded-2xl border-2 border-slate-100 p-6 transition-shadow hover:border-green-200 dark:border-green-800 hover:shadow-xl">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="text-green-600" size={24} />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <BarChart3 className="text-green-600 dark:text-green-400" size={24} />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold mb-1">Báo cáo Chi tiết</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
                     <TrendingUp size={14} />
                     <span>Theo dõi tiến độ</span>
                   </div>
@@ -274,7 +276,7 @@ export const HomePage: React.FC = () => {
                 <div className="col-span-2 text-center text-gray-500 py-10">Đang tải đánh giá...</div>
               ) : (
                 testimonials.map((testimonial, idx) => (
-                  <Card key={testimonial.id} className={`p-8 hover:shadow-xl transition-shadow ${idx % 2 === 1 ? 'border-2 border-purple-200' : ''}`}>
+                  <Card key={testimonial.id} className={`p-8 hover:shadow-xl transition-shadow ${idx % 2 === 1 ? 'border-2 border-purple-200 dark:border-purple-800' : ''}`}>
                     <div className="flex items-center gap-4 mb-4">
                       {testimonial.avatarUrl ? (
                         <img src={testimonial.avatarUrl} alt={testimonial.authorName} className="w-12 h-12 rounded-full object-cover" />
@@ -336,12 +338,12 @@ export const HomePage: React.FC = () => {
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex flex-wrap gap-2 mb-3">
                       {blog.category && (
-                        <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
                           {blog.category}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold mb-2 line-clamp-2 hover:text-blue-600 transition-colors">{blog.title}</h3>
+                    <h3 className="text-xl font-bold mb-2 line-clamp-2 hover:text-blue-600 dark:text-blue-400 transition-colors">{blog.title}</h3>
                     <div className="text-gray-600 text-sm mb-4 line-clamp-3 flex-1" dangerouslySetInnerHTML={{ __html: blog.content }}></div>
                     <div className="flex items-center justify-between text-xs text-gray-500 mt-auto">
                       <span>{blog.author}</span>
@@ -375,7 +377,7 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
             <Button 
               size="lg"
-              className="text-lg px-10 h-14 bg-white text-blue-600 hover:bg-blue-50"
+              className="text-lg px-10 h-14 bg-white text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:bg-blue-900/30"
               onClick={() => navigate('/dang-ky')}
             >
               Dùng thử miễn phí <ArrowRight className="ml-2" size={20} />

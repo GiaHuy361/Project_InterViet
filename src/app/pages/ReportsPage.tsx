@@ -148,7 +148,7 @@ export const ReportsPage: React.FC = () => {
       {loading && <Card className="glass-card p-6">Đang tải báo cáo...</Card>}
 
       {error && (
-        <Card className="border-red-200 bg-red-50 text-red-700 p-4">
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-4">
           <div className="flex items-center justify-between gap-4">
             <span>{error}</span>
             <Button variant="outline" onClick={() => navigate(0)}>
@@ -224,7 +224,7 @@ export const ReportsPage: React.FC = () => {
                     </div>
                     <div className="rounded-xl bg-slate-50 p-3">
                       <p className="text-xs text-gray-500">Điểm tổng</p>
-                      <p className="font-semibold text-blue-600">{interview.overallScore ?? '—'}</p>
+                      <p className="font-semibold text-blue-600 dark:text-blue-400">{interview.overallScore ?? '—'}</p>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-3">
                       <p className="text-xs text-gray-500">Tỷ lệ hoàn thành</p>
@@ -258,7 +258,7 @@ export const ReportsPage: React.FC = () => {
 
                 <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 lg:gap-4 shrink-0">
                   <div className="text-right">
-                    <div className="text-3xl font-extrabold text-blue-600">{interview.overallScore ?? '—'}</div>
+                    <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400">{interview.overallScore ?? '—'}</div>
                     <div className="text-xs text-gray-600">điểm</div>
                   </div>
                   <div className="flex gap-2">
@@ -305,7 +305,7 @@ export const ReportsPage: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            {shareError ? <p className="text-sm text-red-600">{shareError}</p> : null}
+            {shareError ? <p className="text-sm text-red-600 dark:text-red-400">{shareError}</p> : null}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">

@@ -301,7 +301,7 @@ export const ContactPage: React.FC = () => {
                 { icon: MapPin, title: 'Địa chỉ', value: '123 Nguyễn Huệ, Q.1, TP.HCM' },
               ].map((c) => (
                 <Card key={c.title} className="glass-card hover-lift rounded-2xl p-6">
-                  <c.icon className="mb-3 h-8 w-8 text-violet-600" />
+                  <c.icon className="mb-3 h-8 w-8 text-violet-600 dark:text-violet-400" />
                   <h3 className="mb-2 font-bold">{c.title}</h3>
                   <p className="text-slate-600">{c.value}</p>
                 </Card>
@@ -327,7 +327,7 @@ export const SupportPage: React.FC = () => (
           ].map((item) => (
             <StaggerItem key={item.title}>
               <GlassFeatureCard>
-                <item.icon className="mb-4 h-12 w-12 text-violet-600" />
+                <item.icon className="mb-4 h-12 w-12 text-violet-600 dark:text-violet-400" />
                 <h3 className="mb-3 text-xl font-bold">{item.title}</h3>
                 <p className="mb-4 text-slate-600">{item.desc}</p>
                 <Button variant="outline" className="rounded-xl">{item.btn}</Button>
@@ -421,11 +421,11 @@ export const StatusPage: React.FC = () => {
               <Card className="glass-card rounded-2xl p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-50 dark:bg-emerald-900/300 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                     <h3 className="font-bold">{service.name}</h3>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-emerald-500/10 text-emerald-700">Hoạt động</Badge>
+                    <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">Hoạt động</Badge>
                     <p className="mt-1 text-sm text-slate-500">{service.uptime}% uptime</p>
                   </div>
                 </div>
@@ -483,8 +483,8 @@ export const MaintenancePage: React.FC = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-6">
         <Card className="glass-card max-w-lg rounded-2xl p-12 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-100">
-            <FeatureIcon className="h-10 w-10 text-amber-600" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/40">
+            <FeatureIcon className="h-10 w-10 text-amber-600 dark:text-amber-400" />
           </div>
           <h1 className="mb-4 text-3xl font-bold text-gray-900">{featureInfo.title}</h1>
           <p className="mb-3 text-slate-600">{featureInfo.description}</p>
@@ -508,7 +508,7 @@ export const MaintenancePage: React.FC = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
       <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
-        <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600" style={{ animationDuration: '3s' }} />
+        <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600 dark:text-violet-400" style={{ animationDuration: '3s' }} />
         <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
         <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
         <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>

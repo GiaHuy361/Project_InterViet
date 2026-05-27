@@ -207,7 +207,7 @@ export const CVHistoryPage: React.FC = () => {
 
       {error ? (
         <Card className="glass-card p-10 text-center">
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </Card>
       ) : loading ? (
         <Card className="glass-card p-10 text-center">
@@ -228,10 +228,10 @@ export const CVHistoryPage: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <h3 className="truncate font-bold">{resume.title}</h3>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${resume.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${resume.isActive ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
                       {getActiveLabel(resume.isActive)}
                     </span>
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                    <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 dark:bg-blue-900/40 dark:text-blue-300">
                       {formatStatusLabel(resume.parseStatus)}
                     </span>
                   </div>
@@ -295,7 +295,7 @@ export const CVHistoryPage: React.FC = () => {
             {detailLoading ? (
               <p className="text-sm text-slate-500">Đang tải chi tiết CV...</p>
             ) : detailError ? (
-              <p className="text-sm text-red-600">{detailError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{detailError}</p>
             ) : resumeDetail ? (
               <>
                 <div className="grid gap-3 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700">

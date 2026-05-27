@@ -589,7 +589,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-6 pb-12">
         <AppPageHeader title="Phỏng vấn Voice Realtime" subtitle="Đang khởi tạo phiên..." />
         <Card className="glass-card p-12 text-center flex flex-col items-center justify-center space-y-4">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin" />
+          <RefreshCw className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-spin" />
           <h3 className="text-xl font-bold">Vui lòng chờ</h3>
           <p className="text-gray-500">Đang chuẩn bị phiên làm việc và cấu hình microphone...</p>
         </Card>
@@ -602,10 +602,10 @@ export const InterviewVoiceLivePage: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-6 pb-12">
         <AppPageHeader title="Phỏng vấn Voice Realtime" subtitle="Đang thiết lập cuộc gọi..." />
         <Card className="glass-card p-12 text-center flex flex-col items-center justify-center space-y-4">
-          <Volume2 className="w-12 h-12 text-blue-600 animate-pulse" />
+          <Volume2 className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-pulse" />
           <h3 className="text-xl font-bold">Đang kết nối tới AI Interviewer...</h3>
           <p className="text-gray-500">Đang tạo đường truyền âm thanh WebRTC bảo mật.</p>
-          <div className="text-xs text-amber-600 font-semibold max-w-sm mt-4">
+          <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold max-w-sm mt-4">
             ⚠️ Lưu ý không F5 hoặc làm mới trình duyệt lúc này để tránh gián đoạn.
           </div>
         </Card>
@@ -618,12 +618,12 @@ export const InterviewVoiceLivePage: React.FC = () => {
     return (
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
         <AppPageHeader title="Lỗi Kết Nối" subtitle="Đã xảy ra sự cố trong quá trình phỏng vấn voice" />
-        <Card className="border-red-200 bg-red-50 text-red-700 p-6 space-y-4">
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-6 space-y-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5 text-red-600" />
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
             <div>
               <h3 className="font-bold text-lg">Không thể bắt đầu phỏng vấn voice</h3>
-              <p className="mt-1 text-sm text-red-600">{errorMessage}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -661,7 +661,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
           {/* Header */}
           <div className="w-full flex items-center justify-between z-10">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+              <span className="w-3 h-3 bg-red-50 dark:bg-red-900/300 rounded-full animate-ping"></span>
               <span className="text-sm font-semibold tracking-wide text-red-400">REC</span>
             </div>
             
@@ -694,7 +694,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 e.stopPropagation();
                 void handleResumeAudio();
               }}
-              className="z-20 w-full max-w-md bg-amber-500 hover:bg-amber-600 text-slate-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer shadow-lg animate-bounce transition-all my-2"
+              className="z-20 w-full max-w-md bg-amber-50 dark:bg-amber-900/300 hover:bg-amber-600 text-slate-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer shadow-lg animate-bounce transition-all my-2"
             >
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Volume2 className="w-5 h-5 flex-shrink-0 animate-pulse" />
@@ -709,7 +709,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
             {!isPushToTalkMode ? (
               <>
                 <div
-                  className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl transition-all duration-75"
+                  className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 rounded-full blur-xl transition-all duration-75"
                   style={{ transform: `scale(${1 + volumeLevel / 150})` }}
                 ></div>
                 <div
@@ -732,8 +732,8 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 onTouchEnd={handlePttUp}
                 className={`absolute w-36 h-36 rounded-full shadow-xl flex flex-col items-center justify-center transition-all duration-150 select-none ${
                   isPushToTalkActive
-                    ? 'bg-red-500 scale-95 shadow-red-500/50'
-                    : 'bg-blue-600 hover:bg-blue-500 scale-100 shadow-blue-500/40'
+                    ? 'bg-red-50 dark:bg-red-900/300 scale-95 shadow-red-500/50'
+                    : 'bg-blue-600 hover:bg-blue-50 dark:bg-blue-900/300 scale-100 shadow-blue-500/40'
                 }`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -791,8 +791,8 @@ export const InterviewVoiceLivePage: React.FC = () => {
         </Card>
 
         {/* Browser warn */}
-        <div className="p-4 rounded-xl border border-amber-200/80 bg-amber-50 text-amber-900 text-sm flex gap-3 items-start">
-          <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+        <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-900/30 text-amber-900 text-sm flex gap-3 items-start">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
           <div>
             <strong>Lưu ý quan trọng:</strong> Vui lòng không đóng tab hoặc tải lại trang (F5). Bản quyền cuộc gọi được xác thực bằng token ngắn hạn chạy hoàn toàn trên RAM; nếu tải lại, bạn sẽ bị mất liên kết và không thể tiếp tục phiên này.
           </div>
@@ -813,15 +813,15 @@ export const InterviewVoiceLivePage: React.FC = () => {
         />
 
         {errorMessage && (
-          <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-xl text-sm flex gap-2 items-start">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="p-4 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-xl text-sm flex gap-2 items-start">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div>{errorMessage}</div>
           </div>
         )}
 
         {finalizeMessage && (
-          <div className="p-4 border border-green-200 bg-green-50 text-green-800 rounded-xl text-sm flex gap-2 items-center">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <div className="p-4 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-xl text-sm flex gap-2 items-center">
+            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
             <div>{finalizeMessage}</div>
           </div>
         )}
@@ -832,7 +832,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
           <div className="md:col-span-1 space-y-4">
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                <FileText size={18} className="text-blue-600" />
+                <FileText size={18} className="text-blue-600 dark:text-blue-400" />
                 Raw Transcript (Văn bản thô)
               </h3>
               <p className="text-xs text-gray-500">
@@ -854,7 +854,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
             <Card className="p-6 space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
-                  <User size={20} className="text-blue-600" />
+                  <User size={20} className="text-blue-600 dark:text-blue-400" />
                   Danh sách câu hỏi & trả lời ({manualQaPairs.length})
                 </h3>
                 {isEditingMode && (
@@ -1003,7 +1003,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
             <Sparkles className="text-yellow-500" size={20} />
             Điểm tổng thể từ AI
           </h3>
-          <div className="text-7xl font-extrabold text-blue-600 mb-4 animate-bounce">
+          <div className="text-7xl font-extrabold text-blue-600 dark:text-blue-400 mb-4 animate-bounce">
             {overallScore ?? '—'}
           </div>
           <Badge className="text-lg px-6 py-1.5 bg-blue-600">
@@ -1038,15 +1038,15 @@ export const InterviewVoiceLivePage: React.FC = () => {
 
         {/* Strengths & Weaknesses & Recommendations */}
         <div className="grid md:grid-cols-3 gap-6">
-          <Card className="p-6 border-green-100 bg-green-50/20">
-            <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+          <Card className="p-6 border-green-100 dark:border-green-800/50 bg-green-50 dark:bg-green-900/30">
+            <h3 className="font-bold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
               👍 Ưu điểm (Strengths)
             </h3>
             {completedReport.strengths && completedReport.strengths.length > 0 ? (
               <ul className="space-y-2 text-sm text-gray-700">
                 {completedReport.strengths.map((item, index) => (
                   <li key={`strength-${index}`} className="flex items-start gap-1">
-                    <span className="text-green-600">•</span>
+                    <span className="text-green-600 dark:text-green-400">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -1056,8 +1056,8 @@ export const InterviewVoiceLivePage: React.FC = () => {
             )}
           </Card>
 
-          <Card className="p-6 border-red-100 bg-red-50/20">
-            <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+          <Card className="p-6 border-red-100 dark:border-red-800/50 bg-red-50 dark:bg-red-900/30">
+            <h3 className="font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
               👎 Điểm yếu (Weaknesses)
             </h3>
             {completedReport.weaknesses && completedReport.weaknesses.length > 0 ? (
@@ -1074,15 +1074,15 @@ export const InterviewVoiceLivePage: React.FC = () => {
             )}
           </Card>
 
-          <Card className="p-6 border-amber-100 bg-amber-50/20">
-            <h3 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
+          <Card className="p-6 border-amber-100 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/30">
+            <h3 className="font-bold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
               💡 Khuyên dùng (Recommendations)
             </h3>
             {completedReport.recommendations && completedReport.recommendations.length > 0 ? (
               <ul className="space-y-2 text-sm text-gray-700">
                 {completedReport.recommendations.map((item, index) => (
                   <li key={`recommend-${index}`} className="flex items-start gap-1">
-                    <span className="text-amber-600">•</span>
+                    <span className="text-amber-600 dark:text-amber-400">•</span>
                     <span>{item}</span>
                   </li>
                 ))}

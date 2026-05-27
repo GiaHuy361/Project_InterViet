@@ -156,7 +156,7 @@ export const MentorDirectoryPage: React.FC = () => {
       {loading ? (
         <Card className="p-10 text-center text-sm text-gray-500">Đang tải danh bạ mentor...</Card>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50 p-6 text-red-700">{error}</Card>
+        <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-6 text-red-700 dark:text-red-400">{error}</Card>
       ) : mentors.length === 0 ? (
         <Card className="p-10 text-center">
           <Users className="mx-auto mb-3 h-14 w-14 text-gray-400" />

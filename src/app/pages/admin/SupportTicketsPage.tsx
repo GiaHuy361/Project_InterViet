@@ -28,17 +28,17 @@ import { toast } from 'sonner';
 type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
 const statusConfig: Record<TicketStatus, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
-  open: { label: 'Đang mở', color: 'text-red-500', bg: 'bg-red-500/10 border-red-200', icon: AlertCircle },
-  in_progress: { label: 'Đang xử lý', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-200', icon: Loader2 },
-  resolved: { label: 'Đã giải quyết', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-200', icon: CheckCircle2 },
-  closed: { label: 'Đã đóng', color: 'text-slate-500', bg: 'bg-slate-500/10 border-slate-200', icon: XCircle },
+  open: { label: 'Đang mở', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800', icon: AlertCircle },
+  in_progress: { label: 'Đang xử lý', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800', icon: Loader2 },
+  resolved: { label: 'Đã giải quyết', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800', icon: CheckCircle2 },
+  closed: { label: 'Đã đóng', color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-9500/10 border-slate-200 dark:border-slate-800', icon: XCircle },
 };
 
 const priorityConfig = {
-  low: { label: 'Thấp', color: 'text-gray-600 bg-gray-100' },
-  medium: { label: 'Trung bình', color: 'text-blue-600 bg-blue-100' },
-  high: { label: 'Cao', color: 'text-orange-600 bg-orange-100' },
-  urgent: { label: 'Khẩn cấp', color: 'text-red-600 bg-red-100' },
+  low: { label: 'Thấp', color: 'text-gray-600 dark:text-slate-400 bg-gray-100' },
+  medium: { label: 'Trung bình', color: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40' },
+  high: { label: 'Cao', color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40' },
+  urgent: { label: 'Khẩn cấp', color: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40' },
 };
 
 export const SupportTicketsPage: React.FC = () => {
@@ -226,10 +226,10 @@ export const SupportTicketsPage: React.FC = () => {
             <Headphones className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quản lý Hỗ trợ</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Quản lý Hỗ trợ</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               Tiếp nhận và xử lý yêu cầu hỗ trợ •{' '}
-              <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-xs font-semibold text-teal-700 dark:text-teal-400">
                 Support Workspace
               </span>
             </p>
@@ -238,14 +238,14 @@ export const SupportTicketsPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm border border-gray-200 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-xl bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-300 shadow-sm border border-gray-200 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950"
             onClick={() => loadTickets()}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </button>
-          <div className="text-sm text-gray-500">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
+          <div className="text-sm text-gray-500 dark:text-slate-400">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
         </div>
       </div>
 
@@ -259,13 +259,13 @@ export const SupportTicketsPage: React.FC = () => {
               key={key}
               onClick={() => setFilterStatus(key === filterStatus ? 'all' : (key as TicketStatus))}
               className={`flex items-center gap-3 rounded-2xl border p-4 transition-all duration-200 hover:shadow-sm ${
-                filterStatus === key ? config.bg : 'border-gray-100 bg-white'
+                filterStatus === key ? config.bg : 'border-gray-100 bg-white dark:bg-slate-900'
               }`}
             >
               <Icon className={`h-5 w-5 ${config.color}`} />
               <div className="text-left">
-                <p className="text-xl font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500">{config.label}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{count}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{config.label}</p>
               </div>
             </button>
           );
@@ -282,15 +282,15 @@ export const SupportTicketsPage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && loadTickets()}
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
+            className="w-full rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-2.5 pl-11 pr-4 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 transition-colors focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
           />
         </div>
-        <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 cursor-pointer transition-colors hover:bg-gray-50">
+        <label className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-300 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
           <input 
             type="checkbox" 
             checked={assignedToMe} 
             onChange={(e) => setAssignedToMe(e.target.checked)}
-            className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+            className="rounded border-gray-300 text-teal-600 dark:text-teal-400 focus:ring-teal-500 h-4 w-4"
           />
           Chỉ xem Ticket của tôi
         </label>
@@ -298,15 +298,15 @@ export const SupportTicketsPage: React.FC = () => {
 
       {/* Tickets List */}
       {loading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-          <p className="text-sm text-gray-500">Đang tải danh sách ticket...</p>
+        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-slate-400">Đang tải danh sách ticket...</p>
         </div>
       ) : filteredTickets.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50">
+        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50 dark:bg-teal-900/30">
             <MessageSquare className="h-7 w-7 text-teal-400" />
           </div>
-          <p className="text-lg font-semibold text-gray-700">Chưa có ticket nào</p>
+          <p className="text-lg font-semibold text-gray-700 dark:text-slate-300">Chưa có ticket nào</p>
           <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto">
             Không tìm thấy ticket nào khớp với bộ lọc hiện tại.
           </p>
@@ -325,7 +325,7 @@ export const SupportTicketsPage: React.FC = () => {
             return (
               <div
                 key={ticket.id}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:border-teal-200 hover:shadow-md cursor-pointer"
+                className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-5 shadow-sm transition-all duration-200 hover:border-teal-200 dark:border-teal-800 hover:shadow-md cursor-pointer"
                 onClick={() => openDetailDialog(ticket.id)}
               >
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${status.bg}`}>
@@ -334,12 +334,12 @@ export const SupportTicketsPage: React.FC = () => {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900 truncate">{ticket.subject}</p>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{ticket.subject}</p>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priority.color}`}>
                       {priority.label}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                  <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
                     <span className="flex items-center gap-1 font-mono text-xs text-gray-400">
                       {ticket.ticketNumber}
                     </span>
@@ -371,7 +371,7 @@ export const SupportTicketsPage: React.FC = () => {
                           handleAssignSelf(ticket.id);
                         }}
                         disabled={assignLoading === ticket.id}
-                        className="rounded-md bg-teal-50 px-3 py-1 text-sm font-medium text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors disabled:opacity-50"
+                        className="rounded-md bg-teal-50 dark:bg-teal-900/30 px-3 py-1 text-sm font-medium text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:bg-teal-900/40 transition-colors disabled:opacity-50"
                       >
                         {assignLoading === ticket.id ? 'Đang nhận...' : 'Tự nhận xử lý'}
                       </button>
@@ -383,33 +383,33 @@ export const SupportTicketsPage: React.FC = () => {
                         event.stopPropagation();
                         openReplyDialog(ticket.id);
                       }}
-                      className="rounded-md bg-white px-3 py-1 text-sm border hover:bg-gray-50 transition-colors"
+                      className="rounded-md bg-white dark:bg-slate-900 px-3 py-1 text-sm border hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors"
                     >Trả lời</button>
 
                     {/* Status actions */}
                     {allowStatusChange && ticketStatus === 'open' && (
                       <>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'in_progress'); }} className="rounded-md bg-amber-50 px-3 py-1 text-sm text-amber-700 border hover:bg-amber-100">Bắt đầu</button>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'resolved'); }} className="rounded-md bg-emerald-50 px-3 py-1 text-sm text-emerald-700 border hover:bg-emerald-100">Đã giải quyết</button>
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'in_progress'); }} className="rounded-md bg-amber-50 dark:bg-amber-900/30 px-3 py-1 text-sm text-amber-700 dark:text-amber-400 border hover:bg-amber-100 dark:bg-amber-900/40">Bắt đầu</button>
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'resolved'); }} className="rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-400 border hover:bg-emerald-100 dark:bg-emerald-900/40">Đã giải quyết</button>
                       </>
                     )}
 
                     {allowStatusChange && ticketStatus === 'in_progress' && (
                       <>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'resolved'); }} className="rounded-md bg-emerald-50 px-3 py-1 text-sm text-emerald-700 border hover:bg-emerald-100">Đã giải quyết</button>
-                        {allowClose && <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'closed'); }} className="rounded-md bg-slate-50 px-3 py-1 text-sm text-slate-700 border hover:bg-slate-100">Đóng</button>}
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'resolved'); }} className="rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-400 border hover:bg-emerald-100 dark:bg-emerald-900/40">Đã giải quyết</button>
+                        {allowClose && <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'closed'); }} className="rounded-md bg-slate-50 dark:bg-slate-950 px-3 py-1 text-sm text-slate-700 dark:text-slate-300 border hover:bg-slate-100">Đóng</button>}
                       </>
                     )}
 
                     {allowStatusChange && ticketStatus === 'resolved' && (
                       <>
-                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'open'); }} className="rounded-md bg-red-50 px-3 py-1 text-sm text-red-700 border hover:bg-red-100">Mở lại</button>
-                        {allowClose && <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'closed'); }} className="rounded-md bg-slate-50 px-3 py-1 text-sm text-slate-700 border hover:bg-slate-100">Đóng</button>}
+                        <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'open'); }} className="rounded-md bg-red-50 dark:bg-red-900/30 px-3 py-1 text-sm text-red-700 dark:text-red-400 border hover:bg-red-100 dark:bg-red-900/40">Mở lại</button>
+                        {allowClose && <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'closed'); }} className="rounded-md bg-slate-50 dark:bg-slate-950 px-3 py-1 text-sm text-slate-700 dark:text-slate-300 border hover:bg-slate-100">Đóng</button>}
                       </>
                     )}
 
                     {ticketStatus === 'closed' && (
-                      <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'open'); }} className="rounded-md bg-white px-3 py-1 text-sm border hover:bg-gray-50">
+                      <button onClick={(event) => { event.stopPropagation(); handleSetStatus(ticket.id, 'open'); }} className="rounded-md bg-white dark:bg-slate-900 px-3 py-1 text-sm border hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
                         Mở lại
                       </button>
                     )}
@@ -426,13 +426,13 @@ export const SupportTicketsPage: React.FC = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="rounded px-3 py-1 border bg-white disabled:opacity-50"
+                className="rounded px-3 py-1 border bg-white dark:bg-slate-900 disabled:opacity-50"
               >Trước</button>
-              <div className="text-sm text-gray-600">{page} / {Math.ceil(total / pageSize)}</div>
+              <div className="text-sm text-gray-600 dark:text-slate-400">{page} / {Math.ceil(total / pageSize)}</div>
               <button
                 onClick={() => setPage((p) => Math.min(Math.ceil(total / pageSize), p + 1))}
                 disabled={page >= Math.ceil(total / pageSize)}
-                className="rounded px-3 py-1 border bg-white disabled:opacity-50"
+                className="rounded px-3 py-1 border bg-white dark:bg-slate-900 disabled:opacity-50"
               >Sau</button>
             </div>
           )}
@@ -458,10 +458,10 @@ export const SupportTicketsPage: React.FC = () => {
                 onChange={(e) => setReplyMessage(e.target.value)}
                 placeholder="Nhập nội dung..."
                 rows={5}
-                className={replyIsInternal ? 'bg-amber-50/50 border-amber-200' : ''}
+                className={replyIsInternal ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' : ''}
               />
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 dark:bg-slate-950 p-3">
               <input
                 type="checkbox"
                 id="internal-note"
@@ -469,7 +469,7 @@ export const SupportTicketsPage: React.FC = () => {
                 onChange={(e) => setReplyIsInternal(e.target.checked)}
                 className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 h-4 w-4"
               />
-              <Label htmlFor="internal-note" className="text-sm cursor-pointer text-gray-700">
+              <Label htmlFor="internal-note" className="text-sm cursor-pointer text-gray-700 dark:text-slate-300">
                 Lưu làm ghi chú nội bộ (Ẩn với ứng viên)
               </Label>
             </div>
@@ -478,7 +478,7 @@ export const SupportTicketsPage: React.FC = () => {
               <Button type="button" variant="outline" onClick={closeReplyDialog} disabled={replyLoading}>
                 Hủy
               </Button>
-              <Button type="submit" disabled={replyLoading || !replyMessage.trim()} variant={replyIsInternal ? 'secondary' : 'default'} className={replyIsInternal ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}>
+              <Button type="submit" disabled={replyLoading || !replyMessage.trim()} variant={replyIsInternal ? 'secondary' : 'default'} className={replyIsInternal ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-900 hover:bg-amber-200' : ''}>
                 {replyLoading ? 'Đang gửi...' : (replyIsInternal ? 'Lưu ghi chú' : 'Gửi phản hồi')}
               </Button>
             </DialogFooter>
@@ -497,36 +497,36 @@ export const SupportTicketsPage: React.FC = () => {
           </DialogHeader>
 
           {detailLoading ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+            <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center text-sm text-gray-500 dark:text-slate-400 flex flex-col items-center gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
               Đang tải chi tiết ticket...
             </div>
           ) : detailTicket ? (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Ticket number</p>
-                  <p className="mt-1 font-mono font-semibold text-gray-900">{detailTicket.ticketNumber}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Ticket number</p>
+                  <p className="mt-1 font-mono font-semibold text-gray-900 dark:text-slate-100">{detailTicket.ticketNumber}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Trạng thái</p>
-                  <p className="mt-1 font-semibold text-gray-900">{statusConfig[detailTicket.status as TicketStatus]?.label || detailTicket.status}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Trạng thái</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100">{statusConfig[detailTicket.status as TicketStatus]?.label || detailTicket.status}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Danh mục</p>
-                  <p className="mt-1 font-semibold text-gray-900">{detailTicket.category || '—'}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Danh mục</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100">{detailTicket.category || '—'}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Ưu tiên</p>
-                  <p className="mt-1 font-semibold text-gray-900">{priorityConfig[detailTicket.priority as keyof typeof priorityConfig]?.label || detailTicket.priority}</p>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 dark:bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Ưu tiên</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-slate-100">{priorityConfig[detailTicket.priority as keyof typeof priorityConfig]?.label || detailTicket.priority}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-gray-100 bg-white p-4 flex flex-col justify-center">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Người được gán</p>
+                <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-4 flex flex-col justify-center">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Người được gán</p>
                   <div className="mt-2 flex items-center justify-between">
-                    <p className="font-semibold text-gray-900 flex items-center gap-2">
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
                       {detailTicket.assignedTo || 'Chưa gán cho ai'}
                     </p>
@@ -542,26 +542,26 @@ export const SupportTicketsPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-white p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Thời gian</p>
-                  <div className="mt-2 space-y-1 text-sm text-gray-700">
+                <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Thời gian</p>
+                  <div className="mt-2 space-y-1 text-sm text-gray-700 dark:text-slate-300">
                     <p>Tạo: <span className="font-medium">{formatDateTime(detailTicket.createdAt)}</span></p>
                     <p>Hoạt động: <span className="font-medium">{formatDateTime(detailTicket.lastMessageAt || detailTicket.createdAt)}</span></p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Mô tả ban đầu</p>
-                <div className="rounded-xl bg-gray-50 p-4 text-sm leading-relaxed text-gray-700 border border-gray-100">
+              <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">Mô tả ban đầu</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-slate-950 p-4 text-sm leading-relaxed text-gray-700 dark:text-slate-300 border border-gray-100">
                   {detailTicket.description || 'Không có mô tả.'}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Lịch sử trao đổi</p>
-                  <span className="inline-flex items-center justify-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Lịch sử trao đổi</p>
+                  <span className="inline-flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/30 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-400">
                     {detailTicket.messages?.length || 0} tin nhắn
                   </span>
                 </div>
@@ -575,39 +575,39 @@ export const SupportTicketsPage: React.FC = () => {
                           key={message.id} 
                           className={`rounded-xl border p-4 transition-colors ${
                             isInternal 
-                              ? 'bg-amber-50/50 border-amber-200 shadow-sm shadow-amber-100/50' 
+                              ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 shadow-sm shadow-amber-100/50' 
                               : isStaff 
-                                ? 'bg-teal-50/30 border-teal-100' 
-                                : 'bg-gray-50 border-gray-100'
+                                ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-100 dark:border-teal-800/50' 
+                                : 'bg-gray-50 dark:bg-slate-950 border-gray-100'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               {isStaff ? (
-                                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${isInternal ? 'bg-amber-100' : 'bg-teal-100'}`}>
-                                  <Headphones className={`h-3 w-3 ${isInternal ? 'text-amber-600' : 'text-teal-600'}`} />
+                                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${isInternal ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-teal-100 dark:bg-teal-900/40'}`}>
+                                  <Headphones className={`h-3 w-3 ${isInternal ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`} />
                                 </div>
                               ) : (
                                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">
-                                  <User className="h-3 w-3 text-gray-500" />
+                                  <User className="h-3 w-3 text-gray-500 dark:text-slate-400" />
                                 </div>
                               )}
-                              <span className={`text-xs font-semibold ${isInternal ? 'text-amber-700' : 'text-gray-700'}`}>
+                              <span className={`text-xs font-semibold ${isInternal ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-slate-300'}`}>
                                 {isInternal ? 'GHI CHÚ NỘI BỘ' : (isStaff ? 'Đội ngũ Hỗ trợ' : 'Khách hàng / Ứng viên')}
                               </span>
                               {isInternal && <Lock className="h-3 w-3 text-amber-500" />}
                               {!isInternal && <Globe2 className="h-3 w-3 text-teal-400" />}
                             </div>
-                            <span className="text-xs text-gray-500">{formatDateTime(message.createdAt)}</span>
+                            <span className="text-xs text-gray-500 dark:text-slate-400">{formatDateTime(message.createdAt)}</span>
                           </div>
-                          <p className={`whitespace-pre-wrap text-sm leading-relaxed ${isInternal ? 'text-amber-900' : 'text-gray-800'}`}>
+                          <p className={`whitespace-pre-wrap text-sm leading-relaxed ${isInternal ? 'text-amber-900' : 'text-gray-800 dark:text-slate-200'}`}>
                             {message.messageBody}
                           </p>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500">
+                    <div className="rounded-xl border border-dashed border-gray-200 dark:border-slate-800 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
                       Chưa có trao đổi nào.
                     </div>
                   )}
@@ -615,7 +615,7 @@ export const SupportTicketsPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
+            <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center text-sm text-gray-500 dark:text-slate-400">
               Không có dữ liệu chi tiết cho ticket này.
             </div>
           )}

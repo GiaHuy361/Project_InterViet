@@ -261,7 +261,7 @@ export const CandidateSubscriptionPage: React.FC = () => {
         {isDevBillingEnabled && (
           <Card
             id="dev-billing-block"
-            className="p-6 border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/20"
+            className="p-6 border-dashed border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:bg-amber-950/20"
           >
             <h3 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
               Dev: Kích hoạt gói test

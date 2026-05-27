@@ -60,7 +60,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
           </Button>
 
           {/* Only show Feedback to user or admin */}
-          {(state.user?.role === 'user' || state.user?.role === 'admin' || !state.user?.role) && (
+          {(state.user?.systemRole === 'user' || state.user?.systemRole === 'admin') && (
             <Button
               variant="ghost"
               size="sm"
@@ -72,7 +72,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
           )}
 
           {/* Only show Candidate's Bookings button to candidate (user) */}
-          {(state.user?.role === 'user' || state.user?.role === 'trial') && (
+          {(state.user?.systemRole === 'user') && (
             <Button
               variant="outline"
               size="sm"
@@ -101,7 +101,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
               <strong>
                 {Math.ceil(
                   (state.user.trialEndsAt.getTime() - Date.now()) /
-                    (1000 * 60 * 60 * 24),
+                  (1000 * 60 * 60 * 24),
                 )}{" "}
                 ngày
               </strong>
@@ -109,7 +109,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => navigate("/thanh-toan")}
+              onClick={() => navigate("/goi-dich-vu")}
             >
               Nâng cấp ngay
             </Button>
@@ -147,7 +147,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => navigate("/thanh-toan")}
+              onClick={() => navigate("/goi-dich-vu")}
             >
               Nâng cấp
             </Button>

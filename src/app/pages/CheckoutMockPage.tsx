@@ -314,7 +314,7 @@ export const CheckoutMockPage: React.FC = () => {
             <InfoTile label="Số tiền" value={session ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: session.currencyCode || 'VND', maximumFractionDigits: 0 }).format(session.amount || 0) : '—'} />
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 p-4 text-sm text-amber-900">
             <div className="flex gap-3">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" />
               <div>
@@ -389,7 +389,7 @@ export const CheckoutMockPage: React.FC = () => {
         <div className="space-y-6">
           <Card className="space-y-4 p-6">
             <div className="flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-sky-600" />
+              <QrCode className="h-5 w-5 text-sky-600 dark:text-sky-400" />
               <h3 className="text-lg font-semibold text-gray-900">Chuyển khoản & QR</h3>
             </div>
 
@@ -486,10 +486,10 @@ export const CheckoutMockPage: React.FC = () => {
           </Card>
 
           {isDevBillingEnabled && (
-            <Card className="space-y-3 border-dashed border-amber-300 bg-amber-50/40 p-6">
+            <Card className="space-y-3 border-dashed border-amber-300 bg-amber-50 dark:bg-amber-900/30 p-6">
               <div>
                 <h3 className="text-lg font-semibold text-amber-900">DEV Simulate</h3>
-                <p className="text-sm text-amber-800">Chỉ dùng trong local/development.</p>
+                <p className="text-sm text-amber-800 dark:text-amber-300">Chỉ dùng trong local/development.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => void handleSimulate('success')} disabled={loading}>
@@ -509,7 +509,7 @@ export const CheckoutMockPage: React.FC = () => {
 
       <Card className="p-6">
         <div className="flex items-start gap-3">
-          <Shield className="mt-0.5 h-5 w-5 text-indigo-600" />
+          <Shield className="mt-0.5 h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           <div>
             <p className="font-semibold text-gray-900">Provider khả dụng</p>
             <p className="text-sm text-gray-500">Các cổng mô phỏng theo endpoint chính thức.</p>

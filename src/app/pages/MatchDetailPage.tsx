@@ -36,7 +36,7 @@ const renderTarget = (target: MatchTarget) => {
           <p className="text-sm text-gray-500">{(target as any).companyName || 'Không rõ công ty'}</p>
         </div>
         <div className="flex-shrink-0">
-          <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">{((target.totalScore ?? 0)).toFixed(2)}%</div>
+          <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">{((target.totalScore ?? 0)).toFixed(2)}%</div>
         </div>
       </div>
 
@@ -47,7 +47,7 @@ const renderTarget = (target: MatchTarget) => {
         <div className="flex flex-wrap gap-2">
           {matched.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
           {matched.map((s) => (
-            <Badge key={s} className="bg-green-100 text-green-800">{s}</Badge>
+            <Badge key={s} className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">{s}</Badge>
           ))}
         </div>
 
@@ -55,7 +55,7 @@ const renderTarget = (target: MatchTarget) => {
         <div className="flex flex-wrap gap-2">
           {missing.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
           {missing.map((s) => (
-            <Badge key={s} className="bg-orange-100 text-orange-800">{s}</Badge>
+            <Badge key={s} className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300">{s}</Badge>
           ))}
         </div>
 

@@ -39,29 +39,29 @@ const summaryCards = [
     key: 'totalUsers',
     label: 'Tổng người dùng',
     icon: Users,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/30',
   },
   {
     key: 'totalSubscriptionRevenue',
     label: 'Doanh thu Subscription',
     icon: CreditCard,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/30',
   },
   {
     key: 'totalBookingRevenue',
     label: 'Doanh thu Mentor Booking',
     icon: FileText,
-    color: 'text-violet-600',
-    bgColor: 'bg-violet-50',
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-50 dark:bg-violet-900/30',
   },
   {
     key: 'aiSessions',
     label: 'Tổng số phiên AI',
     icon: BarChart3,
-    color: 'text-amber-600',
-    bgColor: 'bg-amber-50',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/30',
   },
 ];
 
@@ -124,10 +124,10 @@ export const AdminDashboardPage: React.FC = () => {
           <Shield className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500">
-            Xin chào, <span className="font-medium text-gray-700">{state.user?.name}</span> •{' '}
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Admin Dashboard</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            Xin chào, <span className="font-medium text-gray-700 dark:text-slate-300">{state.user?.name}</span> •{' '}
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:text-violet-400">
               <Shield className="h-3 w-3" />
               {state.user?.systemRole?.toUpperCase()}
             </span>
@@ -164,19 +164,19 @@ export const AdminDashboardPage: React.FC = () => {
           return (
             <div
               key={stat.label}
-              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900">{loading ? 'Đang tải...' : value}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-slate-400">{stat.label}</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-slate-100">{loading ? 'Đang tải...' : value}</p>
                 </div>
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.bgColor}`}>
                   <Icon className={`h-5 w-5 ${stat.color}`} />
                 </div>
               </div>
               {trend && !loading && (
-                <div className="mt-3 flex items-center gap-1 text-sm text-emerald-600">
+                <div className="mt-3 flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
                   <TrendingUp className="h-4 w-4" />
                   <span>{trend}</span>
                 </div>
@@ -192,10 +192,10 @@ export const AdminDashboardPage: React.FC = () => {
         <Card className="p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Trạng thái hỗ trợ</h2>
-              <p className="text-sm text-gray-500">Phân bổ ticket theo trạng thái nghiệp vụ</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Trạng thái hỗ trợ</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Phân bổ ticket theo trạng thái nghiệp vụ</p>
             </div>
-            <Badge variant="outline" className="rounded-full bg-slate-50 px-3 py-1 text-slate-700">
+            <Badge variant="outline" className="rounded-full bg-slate-50 dark:bg-slate-950 px-3 py-1 text-slate-700 dark:text-slate-300">
               {formatNumber(supportTotal)} tickets
             </Badge>
           </div>
@@ -218,10 +218,10 @@ export const AdminDashboardPage: React.FC = () => {
                   : 'conic-gradient(#e5e7eb 0% 100%)',
               }}
             >
-              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white shadow-inner">
+              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white dark:bg-slate-900 shadow-inner">
                 <div className="text-center">
                   <p className="text-xs uppercase tracking-wide text-gray-400">Support</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatNumber(supportTotal)}</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-slate-100">{formatNumber(supportTotal)}</p>
                 </div>
               </div>
             </div>
@@ -229,7 +229,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="flex-1 space-y-3">
               {summary?.supportTicketsByStatus ? (
                 Object.entries(summary.supportTicketsByStatus).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div key={key} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 dark:bg-slate-950 px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span
                         className="h-3 w-3 rounded-full"
@@ -238,13 +238,13 @@ export const AdminDashboardPage: React.FC = () => {
                             key === 'open' ? '#ef4444' : key === 'in_progress' ? '#f59e0b' : key === 'resolved' ? '#10b981' : '#64748b',
                         }}
                       />
-                      <span className="text-sm font-medium text-gray-700 capitalize">{key.replace('_', ' ')}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-slate-300 capitalize">{key.replace('_', ' ')}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{formatNumber(value)}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">{formatNumber(value)}</span>
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+                <div className="rounded-xl border border-dashed border-gray-200 dark:border-slate-800 p-6 text-center text-sm text-gray-500 dark:text-slate-400">
                   {loading ? 'Đang tải dữ liệu...' : 'Chưa có dữ liệu hỗ trợ'}
                 </div>
               )}
@@ -254,21 +254,21 @@ export const AdminDashboardPage: React.FC = () => {
 
         <Card className="p-6">
           <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Hoạt động hệ thống</h2>
-            <p className="text-sm text-gray-500">Resume optimized và report sharing</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Hoạt động hệ thống</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Resume optimized và report sharing</p>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl bg-blue-50 p-4">
-              <p className="text-sm text-blue-700">Resume optimized</p>
+            <div className="rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-4">
+              <p className="text-sm text-blue-700 dark:text-blue-400">Resume optimized</p>
               <p className="mt-1 text-3xl font-bold text-blue-900">{loading ? '...' : formatNumber(summary?.totalResumesOptimized)}</p>
             </div>
-            <div className="rounded-2xl bg-violet-50 p-4">
-              <p className="text-sm text-violet-700">Report shares</p>
+            <div className="rounded-2xl bg-violet-50 dark:bg-violet-900/30 p-4">
+              <p className="text-sm text-violet-700 dark:text-violet-400">Report shares</p>
               <p className="mt-1 text-3xl font-bold text-violet-900">{loading ? '...' : formatNumber(summary?.totalReportShares)}</p>
             </div>
-            <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-sm text-emerald-700">Active subscriptions</p>
+            <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 p-4">
+              <p className="text-sm text-emerald-700 dark:text-emerald-400">Active subscriptions</p>
               <p className="mt-1 text-3xl font-bold text-emerald-900">{loading ? '...' : formatNumber(summary?.activeSubscriptions)}</p>
             </div>
           </div>
@@ -276,17 +276,17 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* System Status Banner */}
-      <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 p-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+      <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-teal-50 p-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold text-emerald-800">Hệ thống hoạt động bình thường</p>
-          <p className="text-sm text-emerald-600">Tất cả dịch vụ đang online. Cập nhật lần cuối: vừa xong</p>
+          <p className="font-semibold text-emerald-800 dark:text-emerald-300">Hệ thống hoạt động bình thường</p>
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">Tất cả dịch vụ đang online. Cập nhật lần cuối: vừa xong</p>
         </div>
         <Link
           to="/admin/health"
-          className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50"
+          className="rounded-xl bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 shadow-sm transition-colors hover:bg-emerald-50 dark:bg-emerald-900/30"
         >
           Chi tiết
         </Link>
@@ -294,7 +294,7 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Truy cập nhanh</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">Truy cập nhanh</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickLinks
             .filter((link) => {
@@ -308,14 +308,14 @@ export const AdminDashboardPage: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className="group flex items-start gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:border-violet-200 hover:shadow-md hover:-translate-y-0.5"
+                className="group flex items-start gap-4 rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-5 shadow-sm transition-all duration-300 hover:border-violet-200 dark:border-violet-800 hover:shadow-md hover:-translate-y-0.5"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 transition-colors group-hover:bg-violet-100">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 transition-colors group-hover:bg-violet-100 dark:bg-violet-900/40">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 group-hover:text-violet-700">{link.label}</p>
-                  <p className="mt-0.5 text-sm text-gray-500">{link.description}</p>
+                  <p className="font-semibold text-gray-900 dark:text-slate-100 group-hover:text-violet-700 dark:text-violet-400">{link.label}</p>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-slate-400">{link.description}</p>
                 </div>
               </Link>
             );
@@ -325,12 +325,12 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Placeholder: Recent Activity */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Hoạt động gần đây</h2>
-        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">Hoạt động gần đây</h2>
+        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 dark:bg-slate-950">
             <Clock className="h-6 w-6 text-gray-400" />
           </div>
-          <p className="font-medium text-gray-600">Chưa có widget audit logs</p>
+          <p className="font-medium text-gray-600 dark:text-slate-400">Chưa có widget audit logs</p>
           <p className="mt-1 text-sm text-gray-400">
               Sẽ hiển thị các hoạt động hệ thống quan trọng như đăng nhập, thay đổi cấu hình, v.v.  Đang trong quá trình phát triển.
           </p>

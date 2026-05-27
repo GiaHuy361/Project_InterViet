@@ -123,8 +123,8 @@ export const NetworkPage: React.FC = () => {
   };
 
   const roleColors: Record<string, string> = {
-    mentor: 'bg-purple-100 text-purple-700',
-    mock_interviewer: 'bg-green-100 text-green-700'
+    mentor: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
+    mock_interviewer: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
   };
 
   const availabilityLabels: Record<string, string> = {
@@ -134,8 +134,8 @@ export const NetworkPage: React.FC = () => {
   };
 
   const availabilityColors: Record<string, string> = {
-    available: 'bg-green-500',
-    busy: 'bg-yellow-500',
+    available: 'bg-green-50 dark:bg-green-900/300',
+    busy: 'bg-yellow-50 dark:bg-yellow-900/300',
     offline: 'bg-gray-400'
   };
 
@@ -187,7 +187,7 @@ export const NetworkPage: React.FC = () => {
       />
 
       {!isPremium && (
-        <Card className="glass-card hover-lift p-6 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-violet-50/60 dark:from-blue-950/30 dark:to-violet-950/20">
+        <Card className="glass-card hover-lift p-6 border-blue-200 dark:border-blue-800/80 bg-gradient-to-r from-blue-50/90 to-violet-50/60 dark:from-blue-950/30 dark:to-violet-950/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -237,8 +237,8 @@ export const NetworkPage: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
+              <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <div className="text-2xl font-bold">
@@ -250,8 +250,8 @@ export const NetworkPage: React.FC = () => {
         </Card>
         <Card className="p-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Video className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
+              <Video className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <div className="text-2xl font-bold">
@@ -337,7 +337,7 @@ export const NetworkPage: React.FC = () => {
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div className="text-sm">
                     {profile.hourlyRate && (
-                      <div className="font-semibold text-blue-600">
+                      <div className="font-semibold text-blue-600 dark:text-blue-400">
                         {profile.hourlyRate.toLocaleString('vi-VN')}₫/giờ
                       </div>
                     )}
@@ -376,7 +376,7 @@ export const NetworkPage: React.FC = () => {
             <DialogDescription>
               {selectedProfile?.role === 'mentor' ? 'Mentoring Session' : 'Mock Interview Session'}
               {selectedProfile?.hourlyRate && (
-                <span className="ml-2 font-semibold text-blue-600">
+                <span className="ml-2 font-semibold text-blue-600 dark:text-blue-400">
                   - {selectedProfile.hourlyRate.toLocaleString('vi-VN')}₫/giờ
                 </span>
               )}
@@ -429,7 +429,7 @@ export const NetworkPage: React.FC = () => {
               />
             </div>
 
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-900">
                 <strong>Lưu ý:</strong> {selectedProfile?.name} sẽ nhận được yêu cầu của bạn và xác nhận lịch qua email.
                 Thanh toán sẽ được thực hiện sau khi session kết thúc.

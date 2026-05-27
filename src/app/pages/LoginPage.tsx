@@ -113,7 +113,7 @@ export const LoginPage: React.FC = () => {
       footer={
         <p className="text-center text-sm text-slate-600">
           Chưa có tài khoản?{' '}
-          <Link to="/dang-ky" className="font-semibold text-blue-600 hover:text-blue-700">
+          <Link to="/dang-ky" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Đăng ký miễn phí
           </Link>
         </p>
@@ -153,7 +153,7 @@ export const LoginPage: React.FC = () => {
             <input type="checkbox" className="rounded border-slate-300" />
             Ghi nhớ đăng nhập
           </label>
-          <Link to="/quen-mat-khau" className="font-medium text-blue-600 hover:text-blue-700">
+          <Link to="/quen-mat-khau" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Quên mật khẩu?
           </Link>
         </FormField>
@@ -181,7 +181,7 @@ export const LoginPage: React.FC = () => {
         {GOOGLE_CLIENT_ID ? (
           <section className="flex flex-col items-center gap-3">
             {googleLoading && (
-              <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50/80 py-3 text-sm text-blue-800">
+              <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/30 py-3 text-sm text-blue-800 dark:text-blue-300">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Đang đăng nhập với Google...
               </span>

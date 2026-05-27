@@ -108,7 +108,7 @@ export const SharedReportPage: React.FC = () => {
                 </Button>
               )}
             </div>
-            {pdfError && <p className="text-sm text-red-600">{pdfError}</p>}
+            {pdfError && <p className="text-sm text-red-600 dark:text-red-400">{pdfError}</p>}
           </Card>
 
           <Card className="glass-card p-6">

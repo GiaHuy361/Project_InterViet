@@ -81,8 +81,8 @@ export const AdminAuditLogsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-sm text-gray-500">Lịch sử hành động hệ thống quan trọng</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Lịch sử hành động hệ thống quan trọng</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => void load()}>Làm mới</Button>
@@ -99,7 +99,7 @@ export const AdminAuditLogsPage: React.FC = () => {
         <div className="grid gap-3 lg:grid-cols-5">
           <Input placeholder="Tên / Mô tả" value={search} onChange={(e) => setSearch(e.target.value)} />
           <Select value={actorRole} onValueChange={setActorRole}>
-              <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
+              <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
                 <SelectValue>{actorRole && actorRole !== '__all__' ? actorRole : 'Tất cả vai trò'}</SelectValue>
               </SelectTrigger>
             <SelectContent>
@@ -113,7 +113,7 @@ export const AdminAuditLogsPage: React.FC = () => {
           </Select>
 
           <Select value={action} onValueChange={setAction}>
-            <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
+            <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
               <SelectValue>{action && action !== '__all__' ? actionLabel(action) : 'Tất cả hành động'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -137,13 +137,13 @@ export const AdminAuditLogsPage: React.FC = () => {
       <Card className="p-0">
         <div className="border-b border-gray-100 px-6 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Nhật ký</h2>
-            <div className="text-sm text-gray-500">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Nhật ký</h2>
+            <div className="text-sm text-gray-500 dark:text-slate-400">{loading ? 'Đang tải...' : `${total} kết quả`}</div>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center p-12 text-sm text-gray-500">
+          <div className="flex items-center justify-center p-12 text-sm text-gray-500 dark:text-slate-400">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Đang tải dữ liệu...
           </div>
@@ -173,7 +173,7 @@ export const AdminAuditLogsPage: React.FC = () => {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="p-6 text-center text-gray-500">Không có bản ghi.</TableCell>
+                  <TableCell colSpan={5} className="p-6 text-center text-gray-500 dark:text-slate-400">Không có bản ghi.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -181,10 +181,10 @@ export const AdminAuditLogsPage: React.FC = () => {
         )}
 
         <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-6 py-4">
-          <div className="text-sm text-gray-500">Hiển thị {logs.length} / {total}</div>
+          <div className="text-sm text-gray-500 dark:text-slate-400">Hiển thị {logs.length} / {total}</div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Trước</Button>
-            <div className="text-sm text-gray-600">{page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
+            <div className="text-sm text-gray-600 dark:text-slate-400">{page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
             <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= Math.ceil(total / pageSize)}>Sau</Button>
           </div>
         </div>

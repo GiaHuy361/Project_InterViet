@@ -68,7 +68,7 @@ export const SignupPage: React.FC = () => {
       footer={
         <p className="text-center text-sm text-slate-600">
           Đã có tài khoản?{' '}
-          <Link to="/dang-nhap" className="font-semibold text-blue-600 hover:text-blue-700">
+          <Link to="/dang-nhap" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Đăng nhập
           </Link>
         </p>

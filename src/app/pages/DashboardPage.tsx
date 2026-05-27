@@ -433,7 +433,7 @@ export const DashboardPage: React.FC = () => {
                 </FadeInImmediate>
 
                 <FadeInImmediate delay={0.12}>
-                  <div className="surface-card border-blue-100/80 bg-gradient-to-r from-blue-50/90 via-white to-violet-50/80 p-4 dark:border-blue-900/40 dark:from-blue-950/30 dark:via-slate-900 dark:to-violet-950/30">
+                  <div className="surface-card border-blue-100 dark:border-blue-800/50/80 bg-gradient-to-r from-blue-50/90 via-white to-violet-50/80 p-4 dark:border-blue-900/40 dark:from-blue-950/30 dark:via-slate-900 dark:to-violet-950/30">
                     <div className="flex gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/25">
                         <Lightbulb className="h-5 w-5" />
@@ -546,7 +546,7 @@ export const DashboardPage: React.FC = () => {
                             <span className="truncate font-medium text-slate-900 dark:text-slate-100">
                               {item.title}
                             </span>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.isActive ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
                               {item.isActive ? 'Active' : 'Inactive'}
                             </span>
                           </div>
@@ -583,7 +583,7 @@ export const DashboardPage: React.FC = () => {
                             <span className="truncate font-medium text-slate-900 dark:text-slate-100">
                               {item.title}
                             </span>
-                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                            <span className="rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-400 dark:bg-violet-900/40 dark:text-violet-300">
                               JD
                             </span>
                           </div>
