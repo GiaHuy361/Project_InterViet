@@ -2,6 +2,42 @@ import { apiClient } from '../lib/api/apiClient';
 
 export type AdminTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed' | string;
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  status: string;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt?: string | null;
+}
+
+export interface AdminUserListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: AdminUser[];
+}
+
+export interface AdminUserDetailResponse {
+  userSummary: AdminUser;
+  profileSummary?: {
+    skills?: string[];
+  } | null;
+  quotaSummary?: {
+    dailyMatchUsed: number;
+    dailyMatchLimit: number;
+    dailyInterviewUsed: number;
+    dailyInterviewLimit: number;
+    dailyOptimizeUsed: number;
+    dailyOptimizeLimit: number;
+  } | null;
+  recentPayments?: unknown[] | null;
+  recentBookings?: unknown[] | null;
+  supportTicketCount?: number;
+}
+
 export interface AdminSupportMessage {
   id: string;
   senderType: string;
@@ -31,6 +67,22 @@ export interface AdminSupportTicketListResponse {
   page: number;
   pageSize: number;
   items: AdminSupportTicket[];
+}
+
+export function listAdminUsers(params?: {
+  page?: number;
+  pageSize?: number;
+}): Promise<AdminUserListResponse> {
+  const search = new URLSearchParams();
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.pageSize != null) search.set('pageSize', String(params.pageSize));
+
+  const q = search.toString();
+  return apiClient.get<AdminUserListResponse>(`/admin/users${q ? `?${q}` : ''}`);
+}
+
+export function getAdminUserDetail(userId: string): Promise<AdminUserDetailResponse> {
+  return apiClient.get<AdminUserDetailResponse>(`/admin/users/${encodeURIComponent(userId)}`);
 }
 
 export function listAdminSupportTickets(params?: {
@@ -70,6 +122,8 @@ export function overrideAdminSupportTicketStatus(ticketId: string, status: strin
 }
 
 export default {
+  listAdminUsers,
+  getAdminUserDetail,
   listAdminSupportTickets,
   getAdminSupportTicketDetail,
   assignAdminSupportTicket,

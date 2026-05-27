@@ -22,6 +22,9 @@ import {
   LayoutDashboard,
   ChevronDown,
   ChevronUp,
+  UserCircle,
+  Mail,
+  CalendarDays
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from './ui/utils';
@@ -56,15 +59,26 @@ const bottomNavItems: NavItem[] = [
 // Admin-only navigation items (role: admin)
 const adminNavItems: NavItem[] = [
   { label: 'Admin Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
+  { label: 'Quản lý nội dung (CMS)', icon: FileText, path: '/admin/cms' },
+  { label: 'Lịch Mentor', icon: Briefcase, path: '/admin/mentor-bookings' },
   { label: 'Quản lý người dùng', icon: Users, path: '/admin/users' },
   { label: 'Billing & Hóa đơn', icon: CreditCard, path: '/admin/billing' },
   { label: 'Audit Logs', icon: Activity, path: '/admin/audit-logs' },
   { label: 'Health Check', icon: Server, path: '/admin/health' },
 ];
 
-// Support navigation items (role: admin + support)
+// Mentor navigation items (role: mentor)
+const mentorNavItems: NavItem[] = [
+  { label: 'Mentor Dashboard', icon: LayoutDashboard, path: '/mentor/dashboard' },
+  { label: 'Lịch hẹn của tôi', icon: Briefcase, path: '/mentor/bookings' },
+  { label: 'Khung giờ rảnh', icon: CalendarDays, path: '/mentor/availability' },
+  { label: 'Hồ sơ chuyên gia', icon: UserCircle, path: '/mentor/profile' },
+];
+
 const supportNavItems: NavItem[] = [
+  { label: 'Support Dashboard', icon: LayoutDashboard, path: '/support/dashboard' },
   { label: 'Support Tickets', icon: Headphones, path: '/support/tickets' },
+  { label: 'Liên hệ khách hàng', icon: Mail, path: '/support/contact-requests' },
 ];
 
 export const AppSidebar: React.FC = () => {
@@ -77,7 +91,9 @@ export const AppSidebar: React.FC = () => {
 
   const systemRole: SystemRole = state.user?.systemRole || 'user';
   const isAdmin = systemRole === 'admin';
-  const isAdminOrSupport = systemRole === 'admin' || systemRole === 'support';
+  const isSupport = systemRole === 'support';
+  const isMentor = systemRole === 'mentor';
+  const isUser = systemRole === 'user';
 
   // Feature gate state — hide menu sections when features are disabled by backend
   const [adminDisabled, setAdminDisabled] = useState(() => isFeatureDisabled('admin'));
@@ -248,12 +264,28 @@ export const AppSidebar: React.FC = () => {
           </div>
         </div>
 
-        {navItems.map((item) => (
-          <NavLink key={item.path} item={item} />
-        ))}
+        {/* Candidate / User Section */}
+        {(isUser || isAdmin) && (
+          <NavSection
+            label="Ứng viên"
+            items={navItems}
+            icon={Users}
+            accentColor="text-blue-600"
+          />
+        )}
+
+        {/* Mentor section — visible to admin + mentor */}
+        {(isMentor || isAdmin) && (
+          <NavSection
+            label="Chuyên gia"
+            items={mentorNavItems}
+            icon={Briefcase}
+            accentColor="text-orange-600"
+          />
+        )}
 
         {/* Support section — visible to admin + support unless feature gate is disabled */}
-        {isAdminOrSupport && !supportDisabled && (
+        {(isSupport || isAdmin) && !supportDisabled && (
           <NavSection
             label="Hỗ trợ"
             items={supportNavItems}

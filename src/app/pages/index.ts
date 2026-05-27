@@ -17,7 +17,13 @@ export * from './InterviewDetailPage';
 export * from './InterviewStatsPage';
 export * from './PricingPage';
 export * from './OnboardingPage';
-export * from './BillingPage';
+export { BillingPage } from './BillingPage';
+export { CheckoutMockPage } from './CheckoutMockPage';
+export { PaymentSuccessPage } from './PaymentSuccessPage';
+export { PaymentCancelPage } from './PaymentCancelPage';
+export { MentorDirectoryPage } from './MentorDirectoryPage';
+export { MentorDetailPage } from './MentorDetailPage';
+export { MentorBookingsPage } from './MentorBookingsPage';
 export * from './NetworkPage';
 export * from './NetworkProfilePage';
 export * from './MultiJDMatchingPage';
@@ -32,6 +38,12 @@ export * from './system';
 
 // Export admin pages
 export * from './admin';
+
+// Export support pages
+export * from './support';
+
+// Export mentor pages
+export * from './mentor';
 
 // Export from batch files
 export * from './AllRemainingPages';

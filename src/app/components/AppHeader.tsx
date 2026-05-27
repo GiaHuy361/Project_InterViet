@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { AccountDropdown } from "./AccountDropdown";
-import { Sun, Moon, Search, MessageSquare } from "lucide-react";
+import { Sun, Moon, Search, MessageSquare, CalendarClock } from "lucide-react";
 import { BrandLogo } from "./brand/BrandLogo";
 
 interface AppHeaderProps {
@@ -59,14 +59,30 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
             {state.theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onOpenFeedback}
-            className="hidden md:flex"
-          >
-            <MessageSquare size={18} />
-          </Button>
+          {/* Only show Feedback to user or admin */}
+          {(state.user?.role === 'user' || state.user?.role === 'admin' || !state.user?.role) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenFeedback}
+              className="hidden md:flex"
+            >
+              <MessageSquare size={18} />
+            </Button>
+          )}
+
+          {/* Only show Candidate's Bookings button to candidate (user) */}
+          {(state.user?.role === 'user' || state.user?.role === 'trial') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/mentor-bookings")}
+              className="hidden md:inline-flex gap-2 rounded-full border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <CalendarClock size={18} />
+              Lịch hẹn của tôi
+            </Button>
+          )}
 
           {/* Notifications Dropdown - Portal based */}
           <NotificationDropdown />

@@ -23,6 +23,8 @@ import {
   AlertCircle,
   Settings,
 } from 'lucide-react';
+import { getPublicFaqs, getPublicBlogs, submitContactRequest } from '../../services/publicContentService';
+import type { FaqItem, BlogPost } from '../../lib/api/publicTypes';
 
 function GlassFeatureCard({
   children,
@@ -105,29 +107,39 @@ export const SolutionsPage: React.FC = () => {
 
 export const BlogPage: React.FC = () => {
   const navigate = useNavigate();
-  const posts = [
-    { id: 1, title: '10 mẹo viết CV thu hút nhà tuyển dụng', date: '2026-02-20', category: 'CV Tips' },
-    { id: 2, title: 'Cách trả lời câu hỏi "Tại sao bạn muốn làm việc ở đây?"', date: '2026-02-18', category: 'Phỏng vấn' },
-    { id: 3, title: 'Xu hướng tuyển dụng IT 2026', date: '2026-02-15', category: 'Thị trường' },
-  ];
+  const [posts, setPosts] = React.useState<BlogPost[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    getPublicBlogs().then(setPosts).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div>
       <PublicPageHero title="Blog" subtitle="Kiến thức và xu hướng nghề nghiệp" />
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-6">
-          <Stagger className="grid gap-8 md:grid-cols-3">
-            {posts.map((post) => (
-              <StaggerItem key={post.id}>
-                <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400 }}>
-                  <Card className="glass-card hover-lift cursor-pointer rounded-2xl p-6" onClick={() => navigate(`/blog/${post.id}`)}>
-                    <Badge className="mb-4">{post.category}</Badge>
-                    <h3 className="mb-2 text-xl font-bold">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground">{new Date(post.date).toLocaleDateString('vi-VN')}</p>
-                  </Card>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          {loading ? (
+            <div className="text-center py-10">Đang tải bài viết...</div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+              <p className="text-gray-500 text-lg">Không tìm thấy bài viết nào trong danh mục này.</p>
+            </div>
+          ) : (
+            <Stagger className="grid gap-8 md:grid-cols-3">
+              {posts.map((post) => (
+                <StaggerItem key={post.id}>
+                  <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400 }}>
+                    <Card className="glass-card hover-lift cursor-pointer rounded-2xl p-6" onClick={() => navigate(`/blog/${post.slug}`)}>
+                      {post.category && <Badge className="mb-4">{post.category}</Badge>}
+                      <h3 className="mb-2 text-xl font-bold">{post.title}</h3>
+                      <p className="text-sm text-muted-foreground">{new Date(post.publishedAt).toLocaleDateString('vi-VN')}</p>
+                    </Card>
+                  </motion.div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          )}
         </div>
       </section>
     </div>
@@ -153,24 +165,35 @@ export const BlogPostPage: React.FC = () => {
 };
 
 export const FAQPage: React.FC = () => {
-  const faqs = [
-    { q: 'INTER-VIET là gì?', a: 'INTER-VIET là nền tảng AI giúp bạn tối ưu CV và luyện phỏng vấn.' },
-    { q: 'Gói miễn phí có những gì?', a: 'Gói miễn phí bao gồm 3 lần/tài khoản tối ưu CV và 1 phiên/tài khoản phỏng vấn AI.' },
-    { q: 'Làm sao để nâng cấp gói?', a: 'Bạn có thể nâng cấp bất cứ lúc nào từ trang Gói dịch vụ.' },
-  ];
+  const [faqs, setFaqs] = React.useState<FaqItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    getPublicFaqs().then(setFaqs).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div>
       <PublicPageHero title="Câu hỏi thường gặp" subtitle="Tìm câu trả lời cho các thắc mắc của bạn" />
       <section className="py-20">
         <div className="mx-auto max-w-4xl space-y-4 px-6">
-          {faqs.map((faq, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-              <Card className="glass-card rounded-2xl p-6">
-                <h3 className="mb-2 font-bold">{faq.q}</h3>
-                <p className="text-slate-600 dark:text-slate-400">{faq.a}</p>
-              </Card>
-            </motion.div>
-          ))}
+          {loading ? (
+            <div className="text-center py-10 text-slate-500">Đang tải câu hỏi...</div>
+          ) : faqs.length > 0 ? (
+            faqs.map((faq, i) => (
+              <motion.div key={faq.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+                <Card className="glass-card rounded-2xl p-6">
+                  <h3 className="mb-2 font-bold">{faq.question}</h3>
+                  <p className="text-slate-600 dark:text-slate-400">{faq.answer}</p>
+                </Card>
+              </motion.div>
+            ))
+          ) : (
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+              <p className="text-gray-500 mb-4">Trung tâm trợ giúp đang cập nhật câu hỏi, vui lòng liên hệ trực tiếp với chúng tôi qua nút hỗ trợ dưới đây.</p>
+              <Button onClick={() => window.location.href = '/lien-he'}>Liên hệ Hỗ trợ</Button>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -199,10 +222,34 @@ export const AboutPage: React.FC = () => (
 export const ContactPage: React.FC = () => {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [category, setCategory] = React.useState('Chung');
   const [message, setMessage] = React.useState('');
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [validationErrors, setValidationErrors] = React.useState<Record<string, string[]>>({});
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.');
+    setIsSubmitting(true);
+    setValidationErrors({});
+    try {
+      await submitContactRequest({ name, email, phone, category, subject: 'Liên hệ từ website', message });
+      alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.');
+      setName('');
+      setEmail('');
+      setPhone('');
+      setCategory('Chung');
+      setMessage('');
+    } catch (err: any) {
+      if (err.code === 'Validation.Failed' && err.details) {
+        // Validation Error từ backend 400 Bad Request
+        setValidationErrors(err.details);
+      } else {
+        alert(err.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return (
     <div>
@@ -215,17 +262,36 @@ export const ContactPage: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="name">Họ tên</Label>
-                  <Input id="name" className="input-premium mt-1" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input id="name" className={`input-premium mt-1 ${validationErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={name} onChange={(e) => setName(e.target.value)} required />
+                  {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name.join(', ')}</p>}
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" className="input-premium mt-1" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input id="email" type="email" className={`input-premium mt-1 ${validationErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email.join(', ')}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="phone">Số điện thoại</Label>
+                  <Input id="phone" type="tel" className={`input-premium mt-1 ${validationErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  {validationErrors.phone && <p className="text-red-500 text-xs mt-1">{validationErrors.phone.join(', ')}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="category">Chủ đề cần tư vấn</Label>
+                  <select id="category" className={`input-premium mt-1 w-full ${validationErrors.category ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={category} onChange={(e) => setCategory(e.target.value)} required>
+                    <option value="Chung">Tư vấn chung</option>
+                    <option value="Billing">Thanh toán & Gói cước</option>
+                    <option value="Technical">Hỗ trợ kỹ thuật</option>
+                  </select>
+                  {validationErrors.category && <p className="text-red-500 text-xs mt-1">{validationErrors.category.join(', ')}</p>}
                 </div>
                 <div>
                   <Label htmlFor="message">Tin nhắn</Label>
-                  <Textarea id="message" className="input-premium mt-1" value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
+                  <Textarea id="message" className={`input-premium mt-1 ${validationErrors.message ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
+                  {validationErrors.message && <p className="text-red-500 text-xs mt-1">{validationErrors.message.join(', ')}</p>}
                 </div>
-                <Button type="submit" className="btn-glow h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600">Gửi tin nhắn</Button>
+                <Button type="submit" disabled={isSubmitting} className="btn-glow h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600">
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi tin nhắn'}
+                </Button>
               </form>
             </Card>
             <div className="space-y-6">

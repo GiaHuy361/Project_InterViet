@@ -4,6 +4,7 @@ import { Download, Share2, ShieldAlert } from 'lucide-react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { ApiError } from '../../lib/api/apiError';
 import { reportShareService, type SharedReportResponse } from '../../services/reportShareService';
 import { notifyError } from '../utils/notify';
 
@@ -13,6 +14,7 @@ export const SharedReportPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<SharedReportResponse | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -40,8 +42,13 @@ export const SharedReportPage: React.FC = () => {
 
   const handleDownloadPdf = async () => {
     if (!token) return;
+    if (!report?.allowPdfDownload) {
+      setPdfError('Liên kết này không cho phép tải PDF.');
+      return;
+    }
 
     setPdfLoading(true);
+    setPdfError(null);
     try {
       const response = await reportShareService.exportSharedReportPdf(token);
       if (!response.ok) {
@@ -54,7 +61,11 @@ export const SharedReportPage: React.FC = () => {
       anchor.download = `${report?.title || 'shared-report'}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        setPdfError('Liên kết này không cho phép tải PDF.');
+        return;
+      }
       notifyError('Không thể tải file PDF.');
     } finally {
       setPdfLoading(false);
@@ -97,6 +108,7 @@ export const SharedReportPage: React.FC = () => {
                 </Button>
               )}
             </div>
+            {pdfError && <p className="text-sm text-red-600">{pdfError}</p>}
           </Card>
 
           <Card className="glass-card p-6">

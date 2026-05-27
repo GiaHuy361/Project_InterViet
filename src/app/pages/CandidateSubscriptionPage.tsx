@@ -149,7 +149,7 @@ export const CandidateSubscriptionPage: React.FC = () => {
       return;
     }
 
-    navigate('/thanh-toan', { state: { selectedPlan: targetKey } });
+    navigate('/thanh-toan', { state: { selectedPlan: targetKey, contextType: 'subscription' } });
   };
 
   const cvUsed = user?.cvOptimizationsDaily ?? 0;

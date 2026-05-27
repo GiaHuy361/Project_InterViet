@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
 import { eventTracker } from '../utils/eventTracker';
@@ -477,7 +478,7 @@ export const InterviewReportPage: React.FC = () => {
 
 // Notifications Page
 export const NotificationsPage: React.FC = () => {
-  const { state, markNotificationRead } = useApp();
+  const { state, markNotificationRead, syncNotifications } = useApp();
   const [remoteNotifications, setRemoteNotifications] = useState<NotificationItem[]>([]);
   const [hasRemoteData, setHasRemoteData] = useState(false);
   const [remoteTotalPages, setRemoteTotalPages] = useState(1);
@@ -487,6 +488,8 @@ export const NotificationsPage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
@@ -497,7 +500,13 @@ export const NotificationsPage: React.FC = () => {
       if (showSpinner) setLoading(true);
       else setSyncing(true);
       const [listResponse, prefsResponse, unreadResponse] = await Promise.all([
-        notificationService.listNotifications({ page, pageSize, unreadOnly }),
+        notificationService.listNotifications({
+          page,
+          pageSize,
+          isRead: unreadOnly ? false : undefined,
+          type: typeFilter === 'all' ? undefined : typeFilter,
+          priority: priorityFilter === 'all' ? undefined : priorityFilter,
+        }),
         notificationService.getPreferences().catch(() => null),
         notificationService.getUnreadCount().catch(() => null),
       ]);
@@ -524,7 +533,7 @@ export const NotificationsPage: React.FC = () => {
     }, 45000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, unreadOnly]);
+  }, [page, pageSize, unreadOnly, typeFilter, priorityFilter]);
 
   const notifications = hasRemoteData
     ? remoteNotifications
@@ -546,7 +555,7 @@ export const NotificationsPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [unreadOnly, pageSize]);
+  }, [unreadOnly, typeFilter, priorityFilter, pageSize]);
 
   const handleMarkRead = async (notificationId: string) => {
     if (!hasRemoteData) {
@@ -557,6 +566,7 @@ export const NotificationsPage: React.FC = () => {
     try {
       await notificationService.markRead(notificationId);
       setRemoteNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, isRead: true } : item)));
+      void syncNotifications().catch(() => undefined);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể cập nhật thông báo.');
     }
@@ -570,8 +580,9 @@ export const NotificationsPage: React.FC = () => {
     }
 
     try {
-      await notificationService.markAllRead();
+      await notificationService.markAllRead(typeFilter === 'all' ? undefined : { type: typeFilter });
       setRemoteNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      void syncNotifications().catch(() => undefined);
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể đánh dấu đã đọc.');
@@ -585,6 +596,7 @@ export const NotificationsPage: React.FC = () => {
     try {
       const updated = await notificationService.updatePreferences(preferences);
       setPreferences(updated);
+      void syncNotifications().catch(() => undefined);
       toast.success('Đã lưu tùy chọn thông báo');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể lưu tùy chọn thông báo.');
@@ -620,6 +632,36 @@ export const NotificationsPage: React.FC = () => {
               <Switch checked={unreadOnly} onCheckedChange={setUnreadOnly} />
               <span>Chỉ hiện chưa đọc</span>
             </div>
+          </div>
+          <div className="space-y-1 min-w-40">
+            <p className="text-sm font-medium">Loại</p>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="billing.payment_succeeded">billing.payment_succeeded</SelectItem>
+                <SelectItem value="system.announcement">system.announcement</SelectItem>
+                <SelectItem value="interview.result">interview.result</SelectItem>
+                <SelectItem value="matching.result">matching.result</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 min-w-40">
+            <p className="text-sm font-medium">Ưu tiên</p>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="low">low</SelectItem>
+                <SelectItem value="normal">normal</SelectItem>
+                <SelectItem value="high">high</SelectItem>
+                <SelectItem value="urgent">urgent</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <p className="text-sm font-medium">Số mục/trang</p>
@@ -684,11 +726,14 @@ export const NotificationsPage: React.FC = () => {
         <h3 className="font-bold">Tùy chọn thông báo</h3>
         {preferences ? (
           <div className="grid gap-4 md:grid-cols-2">
-            <ToggleRow label="Thông báo trong app" checked={preferences.inAppEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, inAppEnabled: checked })} />
-            <ToggleRow label="Email thông báo" checked={preferences.emailEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, emailEnabled: checked })} />
-            <ToggleRow label="Nhắc mention" checked={preferences.mentionEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, mentionEnabled: checked })} />
-            <ToggleRow label="Báo cáo" checked={preferences.reportEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, reportEnabled: checked })} />
-            <ToggleRow label="Thanh toán" checked={preferences.billingEnabled} onCheckedChange={(checked) => setPreferences({ ...preferences, billingEnabled: checked })} />
+            <ToggleRow label="Thông báo trong app" checked={preferences.inAppNotificationsEnabled ?? preferences.inAppEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, inAppNotificationsEnabled: checked, inAppEnabled: checked })} />
+            <ToggleRow label="Email thông báo" checked={preferences.emailNotificationsEnabled ?? preferences.emailEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, emailNotificationsEnabled: checked, emailEnabled: checked })} />
+            <ToggleRow label="Thanh toán" checked={preferences.billingNotificationsEnabled ?? preferences.billingEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, billingNotificationsEnabled: checked, billingEnabled: checked })} />
+            <ToggleRow label="CV / Resume" checked={preferences.resumeNotificationsEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, resumeNotificationsEnabled: checked })} />
+            <ToggleRow label="Đối sánh CV-JD" checked={preferences.matchingNotificationsEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, matchingNotificationsEnabled: checked })} />
+            <ToggleRow label="Phỏng vấn AI" checked={preferences.interviewNotificationsEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, interviewNotificationsEnabled: checked })} />
+            <ToggleRow label="Cố vấn / mentor" checked={preferences.mentorNotificationsEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, mentorNotificationsEnabled: checked })} />
+            <ToggleRow label="Thông báo hệ thống" checked={preferences.systemNotificationsEnabled ?? false} onCheckedChange={(checked) => setPreferences({ ...preferences, systemNotificationsEnabled: checked })} />
             <div className="md:col-span-2 flex justify-end">
               <Button onClick={() => void handleSavePreferences()} disabled={savingPreferences}>
                 {savingPreferences ? 'Đang lưu...' : 'Lưu tùy chọn'}
@@ -804,7 +849,7 @@ export const SubscriptionPage: React.FC = () => {
       setShowDowngradeModal(true);
     } else {
       // Navigate to billing for upgrade or select
-      navigate('/thanh-toan', { state: { selectedPlan: planId } });
+      navigate('/thanh-toan', { state: { selectedPlan: planId, contextType: 'subscription' } });
     }
   };
 

@@ -35,6 +35,7 @@ import {
   Activity,
   User,
   TrendingUp,
+  CalendarClock,
 } from 'lucide-react';
 
 const QUICK_STEPS = [
@@ -94,6 +95,13 @@ const CONTINUE_ITEMS = [
     path: '/phong-van-setup',
     gradient: 'from-violet-500 to-purple-600',
     icon: Mic,
+  },
+  {
+    title: 'Quản lý lịch hẹn Mentor',
+    desc: 'Xem và quản lý các lịch hẹn kết nối của bạn',
+    path: '/mentor-bookings',
+    gradient: 'from-amber-500 to-orange-600',
+    icon: CalendarClock,
   },
   {
     title: 'Hoàn thiện hồ sơ ứng viên',

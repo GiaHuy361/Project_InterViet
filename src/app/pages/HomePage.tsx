@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from '../components/ui/button';
@@ -23,9 +23,27 @@ import {
   Play,
   TrendingUp
 } from 'lucide-react';
+import { getPublicStats, getPublicTestimonials, getPublicBlogs } from '../../services/publicContentService';
+import type { PublicStatsResponse, Testimonial, BlogPost } from '../../lib/api/publicTypes';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+
+  const [stats, setStats] = useState<PublicStatsResponse>({
+    totalCandidates: 0,
+    totalCVsProcessed: 0,
+    totalInterviewsConducted: 0,
+    averageRating: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(true);
+  const [loadingBlogs, setLoadingBlogs] = useState(true);
+
+  useEffect(() => {
+    getPublicStats().then(setStats).catch(console.error).finally(() => setLoadingStats(false));
+    getPublicTestimonials().then(setTestimonials).catch(console.error).finally(() => setLoadingTestimonials(false));
+    getPublicBlogs({ page: 1, pageSize: 3 }).then(setBlogs).catch(console.error).finally(() => setLoadingBlogs(false));
+  }, []);
 
   const scrollToPricing = () => {
     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
@@ -85,25 +103,30 @@ export const HomePage: React.FC = () => {
               </Button>
             </div>
 
-            {/* Inline Stats - Compact */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
               <div className="text-center">
-                <div className="text-2xl font-bold mb-1">10,000+</div>
+                <div className="text-2xl font-bold mb-1">{stats.totalCandidates === 0 ? '0' : `${stats.totalCandidates.toLocaleString()}+`}</div>
                 <div className="text-xs text-blue-100">Người dùng</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold mb-1">50,000+</div>
+                <div className="text-2xl font-bold mb-1">{stats.totalCVsProcessed === 0 ? '0' : `${stats.totalCVsProcessed.toLocaleString()}+`}</div>
                 <div className="text-xs text-blue-100">CV tối ưu</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold mb-1">30,000+</div>
+                <div className="text-2xl font-bold mb-1">{stats.totalInterviewsConducted === 0 ? '0' : `${stats.totalInterviewsConducted.toLocaleString()}+`}</div>
                 <div className="text-xs text-blue-100">Phỏng vấn</div>
               </div>
               <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Star size={18} fill="currentColor" className="text-yellow-300" />
-                  <span className="text-2xl font-bold">4.9</span>
-                </div>
+                {stats.averageRating === 0 ? (
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="text-sm font-semibold italic text-blue-200">Chưa có đánh giá</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Star size={18} fill="currentColor" className="text-yellow-300" />
+                    <span className="text-2xl font-bold">{stats.averageRating.toFixed(1)}</span>
+                  </div>
+                )}
                 <div className="text-xs text-blue-100">Đánh giá</div>
               </div>
             </div>
@@ -236,56 +259,99 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Social Proof: Testimonials (2 only) */}
-      <section className="py-16 bg-white">
+      {(loadingTestimonials || testimonials.length > 0) && (
+        <section className="py-16 bg-white">
+          <div className="max-w-[1440px] mx-auto px-8">
+            <div className="text-center mb-10">
+              <h2 className="text-4xl lg:text-5xl font-bold mb-3">Người dùng nói gì về chúng tôi</h2>
+              <p className="text-lg text-gray-600">
+                Hơn 10,000 chuyên gia đã cải thiện sự nghiệp với INTER-VIET
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {loadingTestimonials ? (
+                <div className="col-span-2 text-center text-gray-500 py-10">Đang tải đánh giá...</div>
+              ) : (
+                testimonials.map((testimonial, idx) => (
+                  <Card key={testimonial.id} className={`p-8 hover:shadow-xl transition-shadow ${idx % 2 === 1 ? 'border-2 border-purple-200' : ''}`}>
+                    <div className="flex items-center gap-4 mb-4">
+                      {testimonial.avatarUrl ? (
+                        <img src={testimonial.avatarUrl} alt={testimonial.authorName} className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <AvatarInitials name={testimonial.authorName} />
+                      )}
+                      <div>
+                        <h4 className="font-bold">{testimonial.authorName}</h4>
+                        <p className="text-sm text-gray-600">{testimonial.authorRole}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={14} fill={i < testimonial.rating ? "currentColor" : "none"} className={i < testimonial.rating ? "text-yellow-400" : "text-gray-300"} />
+                      ))}
+                    </div>
+                    <Quote className="text-gray-300 mb-2" size={28} />
+                    <p className="text-gray-700 leading-relaxed">
+                      "{testimonial.content}"
+                    </p>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Blog Preview Section */}
+      <section className="py-16 bg-gray-50 border-t border-gray-200">
         <div className="max-w-[1440px] mx-auto px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-4xl lg:text-5xl font-bold mb-3">Người dùng nói gì về chúng tôi</h2>
-            <p className="text-lg text-gray-600">
-              Hơn 10,000 chuyên gia đã cải thiện sự nghiệp với INTER-VIET
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-bold mb-2">Cẩm nang nghề nghiệp</h2>
+              <p className="text-gray-600">Những bài viết mới nhất giúp bạn phát triển kỹ năng</p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/blog')}>
+              Xem tất cả <ArrowRight className="ml-2" size={16} />
+            </Button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="p-8 hover:shadow-xl transition-shadow">
-              <div className="flex items-center gap-4 mb-4">
-                <AvatarInitials name="Nguyễn Thu Hà" />
-                <div>
-                  <h4 className="font-bold">Nguyễn Thu Hà</h4>
-                  <p className="text-sm text-gray-600">Senior Developer • FPT Software</p>
-                </div>
-              </div>
-              <div className="flex gap-1 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} fill="currentColor" className="text-yellow-400" />
-                ))}
-              </div>
-              <Quote className="text-gray-300 mb-2" size={28} />
-              <p className="text-gray-700 leading-relaxed">
-                "Tính năng phỏng vấn AI thật sự tuyệt vời! Tôi đã luyện tập 5 lần trước buổi phỏng vấn thật
-                và cảm thấy tự tin hơn rất nhiều. Kết quả là đã nhận được offer từ công ty mơ ước."
-              </p>
-            </Card>
-
-            <Card className="p-8 hover:shadow-xl transition-shadow border-2 border-purple-200">
-              <div className="flex items-center gap-4 mb-4">
-                <AvatarInitials name="Trần Minh Quân" />
-                <div>
-                  <h4 className="font-bold">Trần Minh Quân</h4>
-                  <p className="text-sm text-gray-600">Product Manager • VinGroup</p>
-                </div>
-              </div>
-              <div className="flex gap-1 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} fill="currentColor" className="text-yellow-400" />
-                ))}
-              </div>
-              <Quote className="text-gray-300 mb-2" size={28} />
-              <p className="text-gray-700 leading-relaxed">
-                "CV matching score giúp tôi hiểu rõ điểm yếu của CV so với JD. Sau khi tối ưu theo gợi ý,
-                tỷ lệ phản hồi từ nhà tuyển dụng tăng từ 10% lên 60%. Đáng đồng tiền bát gạo!"
-              </p>
-            </Card>
-          </div>
+          {loadingBlogs ? (
+            <div className="text-center text-gray-500 py-10">Đang tải bài viết...</div>
+          ) : blogs.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+              <p className="text-gray-500 mb-4">Không tìm thấy bài viết nào trong danh mục này.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {blogs.map(blog => (
+                <Card key={blog.id} className="overflow-hidden hover:shadow-xl transition-shadow flex flex-col cursor-pointer" onClick={() => navigate(`/blog/${blog.slug}`)}>
+                  <div className="h-48 bg-gray-200 relative">
+                    {blog.coverImageUrl ? (
+                      <img src={blog.coverImageUrl} alt={blog.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                    )}
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {blog.category && (
+                        <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          {blog.category}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 line-clamp-2 hover:text-blue-600 transition-colors">{blog.title}</h3>
+                    <div className="text-gray-600 text-sm mb-4 line-clamp-3 flex-1" dangerouslySetInnerHTML={{ __html: blog.content }}></div>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mt-auto">
+                      <span>{blog.author}</span>
+                      <span>{new Date(blog.publishedAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

@@ -13,6 +13,8 @@ import { AuthFormCard } from '../components/design-system/AuthFormCard';
 import { FormField } from '../components/design-system/FormField';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { AUTH_PLACEHOLDERS } from '../constants/authPlaceholders';
+import { apiClient } from '../../lib/api/apiClient';
+import { getRoleFromToken } from '../../lib/auth/jwtDecode';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -57,7 +59,15 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password, getDeviceName());
       notifySuccess('Đăng nhập thành công!');
-      navigate(searchParams.get('returnUrl') || '/dashboard');
+      
+      const token = apiClient.getAccessToken();
+      const role = token ? getRoleFromToken(token) : 'user';
+      let defaultPath = '/dashboard';
+      if (role === 'admin') defaultPath = '/admin/dashboard';
+      else if (role === 'support') defaultPath = '/support/dashboard';
+      else if (role === 'mentor') defaultPath = '/mentor/dashboard';
+
+      navigate(searchParams.get('returnUrl') || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);
@@ -77,7 +87,15 @@ export const LoginPage: React.FC = () => {
     try {
       await googleLogin(credentialResponse.credential, getDeviceName());
       notifySuccess('Đăng nhập Google thành công!');
-      navigate(searchParams.get('returnUrl') || '/dashboard');
+      
+      const token = apiClient.getAccessToken();
+      const role = token ? getRoleFromToken(token) : 'user';
+      let defaultPath = '/dashboard';
+      if (role === 'admin') defaultPath = '/admin/dashboard';
+      else if (role === 'support') defaultPath = '/support/dashboard';
+      else if (role === 'mentor') defaultPath = '/mentor/dashboard';
+
+      navigate(searchParams.get('returnUrl') || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);

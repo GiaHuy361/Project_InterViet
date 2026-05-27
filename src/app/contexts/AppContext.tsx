@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { eventTracker } from '../utils/eventTracker';
 import { getSubscriptionLimits } from '../utils/subscriptionLimits';
 import { apiClient } from '../../lib/api/apiClient';
+import { ApiError } from '../../lib/api/apiError';
 import * as authService from '../../services/authService';
 import { notificationService } from '../../services/notificationService';
 import type { AuthResponse } from '../../lib/api/apiTypes';
@@ -252,6 +253,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return defaultState;
   });
+  const notificationPollTimerRef = useRef<number | null>(null);
 
   const setNotificationsInState = (notifications: Notification[]) => {
     setState(prev => ({
@@ -271,39 +273,104 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     if (!state.isAuthenticated || !state.accessToken) {
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+        notificationPollTimerRef.current = null;
+      }
       return;
     }
 
     let cancelled = false;
 
-    const syncNotifications = async () => {
+    const syncNotificationSnapshot = async () => {
       try {
-        const response = await notificationService.listNotifications({ page: 1, pageSize: 20 });
+        const [listResponse, unreadResponse] = await Promise.all([
+          notificationService.listNotifications({ page: 1, pageSize: 50 }),
+          notificationService.getUnreadCount(),
+        ]);
         if (cancelled) return;
 
-        const backendNotifications: Notification[] = (response.items || []).map((item) => ({
+        const backendNotifications: Notification[] = (listResponse.items || []).map((item) => ({
           id: item.id,
           title: item.title,
           message: item.message,
           type: mapBackendNotificationType(item.type || item.priority),
           read: Boolean(item.isRead),
           createdAt: new Date(item.createdAt),
+          actionUrl: item.actionUrl ?? undefined,
+          metadata: item.data ?? undefined,
         }));
 
         setNotificationsInState(mergeNotifications(state.notifications, backendNotifications));
-      } catch {
+        setState((prev) => ({
+          ...prev,
+          unreadCount: unreadResponse.unreadCount ?? backendNotifications.filter((notification) => !notification.read).length,
+        }));
+      } catch (error) {
         if (cancelled) return;
+        if (error instanceof ApiError) return;
       }
     };
 
-    void syncNotifications();
-    const timer = window.setInterval(() => {
-      void syncNotifications();
-    }, 60000);
+    const pollUnreadCount = async () => {
+      try {
+        const unreadResponse = await notificationService.getUnreadCount();
+        if (cancelled) return;
+        setState((prev) => ({ ...prev, unreadCount: unreadResponse.unreadCount ?? 0 }));
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          if (notificationPollTimerRef.current) {
+            window.clearInterval(notificationPollTimerRef.current);
+            notificationPollTimerRef.current = null;
+          }
+          apiClient.clearAuthToken();
+          setState((prev) => ({
+            ...prev,
+            isAuthenticated: false,
+            accessToken: null,
+            refreshToken: null,
+            accessTokenExpiry: null,
+            refreshTokenExpiry: null,
+            user: null,
+            unreadCount: 0,
+            notifications: [],
+          }));
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    const schedulePolling = () => {
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+      }
+      const intervalMs = document.visibilityState === 'hidden' ? 120000 : 45000;
+      notificationPollTimerRef.current = window.setInterval(() => {
+        void pollUnreadCount();
+      }, intervalMs);
+    };
+
+    void syncNotificationSnapshot();
+    void pollUnreadCount();
+    schedulePolling();
+
+    const handleVisibilityChange = () => {
+      schedulePolling();
+      if (document.visibilityState === 'visible') {
+        void pollUnreadCount();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+        notificationPollTimerRef.current = null;
+      }
     };
   }, [state.isAuthenticated, state.accessToken]);
 

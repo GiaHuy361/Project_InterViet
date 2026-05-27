@@ -10,7 +10,7 @@ import { eventTracker } from '../utils/eventTracker';
 import { notificationService, type NotificationItem } from '../../services/notificationService';
 
 export const NotificationDropdown: React.FC = () => {
-  const { state, markNotificationRead, markAllNotificationsRead } = useApp();
+  const { state, markNotificationRead, markAllNotificationsRead, syncNotifications } = useApp();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifTab, setNotifTab] = useState<'all' | 'unread'>('all');
@@ -31,6 +31,7 @@ export const NotificationDropdown: React.FC = () => {
     try {
       const response = await notificationService.listNotifications({ page: 1, pageSize: 10 });
       setRemoteNotifications(response.items || []);
+      void syncNotifications().catch(() => undefined);
     } catch {
       setRemoteNotifications(null);
     } finally {
@@ -83,7 +84,7 @@ export const NotificationDropdown: React.FC = () => {
 
   const handleNotificationClick = (notif: NotificationItem | (typeof state.notifications)[number]) => {
     if (remoteNotifications) {
-      void notificationService.markRead(notif.id).catch(() => undefined);
+      void notificationService.markRead(notif.id).then(() => syncNotifications()).catch(() => undefined);
       setRemoteNotifications((prev) => prev?.map((item) => (item.id === notif.id ? { ...item, isRead: true } : item)) || null);
     } else {
       markNotificationRead(notif.id);
@@ -107,7 +108,7 @@ export const NotificationDropdown: React.FC = () => {
 
   const handleMarkAllRead = () => {
     if (remoteNotifications) {
-      void notificationService.markAllRead().catch(() => undefined);
+      void notificationService.markAllRead().then(() => syncNotifications()).catch(() => undefined);
       setRemoteNotifications((prev) => prev?.map((item) => ({ ...item, isRead: true })) || null);
     } else {
       markAllNotificationsRead();
