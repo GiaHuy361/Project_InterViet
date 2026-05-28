@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { AlertCircle, CheckCircle2, FileText, Link2, Sparkles, Target, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, Link2, Sparkles, Target, Upload, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '../../lib/api/apiError';
 import { useApp } from '../contexts/AppContext';
@@ -87,6 +88,7 @@ function getSessionFromStartResponse(response: StartMatchResponse): MatchSession
 }
 
 export const MultiJDMatchingPage: React.FC = () => {
+  const navigate = useNavigate();
   const hasRestoredPollingRef = useRef(false);
   const { addNotification, syncNotifications } = useApp();
   const [cvTitle, setCvTitle] = useState('');
@@ -579,10 +581,16 @@ export const MultiJDMatchingPage: React.FC = () => {
         subtitle="Upload CV một lần, chọn nhiều JD và chạy matching đồng thời."
         icon={Target}
         iconGradient="from-emerald-500 to-teal-600"
+        actions={
+          <Button variant="outline" onClick={() => navigate('/match-history')}>
+            <History className="w-4 h-4 mr-2" />
+            Xem lịch sử
+          </Button>
+        }
       />
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <Label>Chọn CV</Label>
             {selectedResume && (
@@ -595,18 +603,18 @@ export const MultiJDMatchingPage: React.FC = () => {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">Danh sách CV từ hệ thống</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Danh sách CV từ hệ thống</p>
               <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
                 Tải lại
               </Button>
             </div>
             <div className="max-h-44 overflow-y-auto space-y-2 pr-1">
-              {isLoadingResumes && <p className="text-sm text-gray-500">Đang tải danh sách CV...</p>}
-              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500">Chưa có CV nào.</p>}
+              {isLoadingResumes && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có CV nào.</p>}
               {resumes.map((item) => (
                 <label
                   key={item.resumeId}
-                  className="flex items-start gap-3 rounded-md border p-3 hover:bg-gray-50 cursor-pointer"
+                  className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer"
                 >
                   <input
                     type="radio"
@@ -619,8 +627,8 @@ export const MultiJDMatchingPage: React.FC = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-medium">{item.title || item.originalFileName}</p>
-                    <p className="text-xs text-gray-600">{item.originalFileName}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{item.originalFileName}</p>
                   </div>
                 </label>
               ))}
@@ -644,7 +652,7 @@ export const MultiJDMatchingPage: React.FC = () => {
           </Button>
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
           <div className="flex items-center justify-between">
             <Label>Chọn Job Description</Label>
             <Button variant="outline" size="sm" onClick={loadJobDescriptions} disabled={isLoadingJds || isPolling}>
@@ -658,18 +666,18 @@ export const MultiJDMatchingPage: React.FC = () => {
             placeholder="Tiêu đề phiên matching (tùy chọn)"
           />
 
-          <p className="text-sm text-gray-600">
-            Đã chọn <span className="font-semibold">{selectedJdCount}</span> JD
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Đã chọn <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedJdCount}</span> JD
           </p>
 
           <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
-            {isLoadingJds && <p className="text-sm text-gray-500">Đang tải danh sách JD...</p>}
+            {isLoadingJds && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách JD...</p>}
             {!isLoadingJds && jobDescriptions.length === 0 && (
-              <p className="text-sm text-gray-500">Không có JD nào trong hệ thống.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Không có JD nào trong hệ thống.</p>
             )}
 
             {jobDescriptions.map((jd) => (
-              <label key={jd.id} className="flex items-start gap-3 rounded-md border p-3 hover:bg-gray-50 cursor-pointer">
+              <label key={jd.id} className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedJobDescriptionIds.includes(jd.id)}
@@ -677,8 +685,8 @@ export const MultiJDMatchingPage: React.FC = () => {
                   className="mt-1"
                 />
                 <div>
-                  <p className="text-sm font-medium">{jd.title}</p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{jd.title}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
                     {jd.companyName} • {jd.location}
                   </p>
                 </div>
@@ -688,10 +696,10 @@ export const MultiJDMatchingPage: React.FC = () => {
         </Card>
       </div>
 
-      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between dark:bg-slate-900/50 border dark:border-slate-800">
         <div>
-          <p className="font-semibold">Bắt đầu so khớp đa JD</p>
-          <p className="text-sm text-gray-500">Cần chọn đúng 1 CV và chọn ít nhất 1 JD trước khi gọi API matching.</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">Bắt đầu so khớp đa JD</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Cần chọn đúng 1 CV và chọn ít nhất 1 JD trước khi gọi API matching.</p>
         </div>
         <Button onClick={handleStartMultiMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
           <Link2 className="mr-2" size={16} />

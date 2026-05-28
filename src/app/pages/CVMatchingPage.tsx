@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -6,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import { AlertCircle, BriefcaseBusiness, CheckCircle2, FileText, Link2, Sparkles, Upload } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, CheckCircle2, FileText, Link2, Sparkles, Upload, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '../../lib/api/apiError';
 import { useApp } from '../contexts/AppContext';
@@ -91,6 +92,7 @@ function getSessionFromStartResponse(response: StartSingleMatchResponse): MatchS
 }
 
 export const CVMatchingPage: React.FC = () => {
+  const navigate = useNavigate();
   const { addNotification, syncNotifications } = useApp();
   const [cvTitle, setCvTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -225,6 +227,12 @@ export const CVMatchingPage: React.FC = () => {
         setSelectedResumeId(null);
       }
     } catch (error) {
+      // Bắt riêng lỗi 401 để tránh việc apiClient tự xóa token khi /resumes trả về 401
+      if (error instanceof ApiError && error.status === 401) {
+        console.warn('[CVMatchingPage] /resumes trả về 401 - có thể token chưa được gửi');
+        // Không gọi handleApiError vì sẽ không xóa token mà chỉ hiện thông báo
+        return;
+      }
       handleApiError(error);
     } finally {
       setIsLoadingResumes(false);
@@ -242,6 +250,13 @@ export const CVMatchingPage: React.FC = () => {
   useEffect(() => {
     const restorePollingState = async () => {
       const snapshot = readPollingSessionSnapshot<MatchSessionDetail>(CV_MATCH_POLLING_STORAGE_KEY) as CVMatchPollingSnapshot | null;
+
+      // XÓA LOCAL STORAGE ĐỂ TRÁNH GỌI GET /matches/:id GÂY LỖI 401 VĂNG APP
+      if (snapshot?.activeSessionId) {
+        clearPollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY);
+        setIsRestored(true);
+        return;
+      }
 
       if (!snapshot) {
         setIsRestored(true);
@@ -517,10 +532,16 @@ export const CVMatchingPage: React.FC = () => {
         subtitle="Upload CV, tạo JD và so khớp để nhận điểm phù hợp cùng gợi ý cải thiện."
         icon={FileText}
         iconGradient="from-blue-500 to-cyan-500"
+        actions={
+          <Button variant="outline" onClick={() => navigate('/match-history')}>
+            <History className="w-4 h-4 mr-2" />
+            Xem lịch sử
+          </Button>
+        }
       />
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <Label>Chọn CV</Label>
             {selectedResume && (
@@ -533,19 +554,19 @@ export const CVMatchingPage: React.FC = () => {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">Danh sách CV từ hệ thống</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Danh sách CV từ hệ thống</p>
               <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
                 Tải lại
               </Button>
             </div>
 
             <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-              {isLoadingResumes && <p className="text-sm text-gray-500">Đang tải danh sách CV...</p>}
-              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500">Chưa có CV nào.</p>}
+              {isLoadingResumes && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có CV nào.</p>}
               {resumes.map((item) => (
                 <label
                   key={item.resumeId}
-                  className="flex items-start gap-3 rounded-md border p-3 hover:bg-gray-50 cursor-pointer"
+                  className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer"
                 >
                   <input
                     type="radio"
@@ -558,8 +579,8 @@ export const CVMatchingPage: React.FC = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-medium">{item.title || item.originalFileName}</p>
-                    <p className="text-xs text-gray-600">{item.originalFileName}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{item.originalFileName}</p>
                   </div>
                 </label>
               ))}
@@ -582,7 +603,7 @@ export const CVMatchingPage: React.FC = () => {
           </Button>
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <Label>Job Description</Label>
             {jobDescription && (
@@ -645,10 +666,10 @@ export const CVMatchingPage: React.FC = () => {
         </Card>
       </div>
 
-      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between dark:bg-slate-900/50 border dark:border-slate-800">
         <div>
-          <p className="font-semibold">So khớp CV và JD</p>
-          <p className="text-sm text-gray-500">Chọn một CV và tạo JD để bắt đầu so khớp</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">So khớp CV và JD</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Chọn một CV và tạo JD để bắt đầu so khớp</p>
         </div>
         <Button onClick={handleStartMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
           <Link2 className="mr-2" size={16} />

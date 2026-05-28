@@ -77,7 +77,7 @@ export const MentorDirectoryPage: React.FC = () => {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <AppPageHeader
-        title="Màn hình Danh bạ Mentor"
+        title="Danh bạ Mentor"
         subtitle="Tìm mentor theo chuyên môn, đánh giá và mục tiêu hỗ trợ"
         icon={Users}
         iconGradient="from-blue-500 to-violet-600"
@@ -89,14 +89,20 @@ export const MentorDirectoryPage: React.FC = () => {
         }
       />
 
-      <Card className="p-5">
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
-          <div className="relative lg:col-span-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên, headline, bio" className="pl-10" />
+      <Card className="p-5 dark:bg-slate-900/50 border dark:border-slate-800">
+        <div className="grid items-end gap-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div className="space-y-1 lg:col-span-1">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Search className="h-4 w-4" />
+              Tìm kiếm
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên, headline, bio" className="pl-10" />
+            </div>
           </div>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Filter className="h-4 w-4" />
               Chuyên môn
             </div>
@@ -115,7 +121,7 @@ export const MentorDirectoryPage: React.FC = () => {
             </Select>
           </div>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Filter className="h-4 w-4" />
               Dịch vụ
             </div>
@@ -134,7 +140,7 @@ export const MentorDirectoryPage: React.FC = () => {
             </Select>
           </div>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Star className="h-4 w-4" />
               Đánh giá tối thiểu
             </div>
@@ -160,17 +166,17 @@ export const MentorDirectoryPage: React.FC = () => {
       ) : mentors.length === 0 ? (
         <Card className="p-10 text-center">
           <Users className="mx-auto mb-3 h-14 w-14 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900">Không tìm thấy mentor phù hợp</h3>
-          <p className="mt-1 text-sm text-gray-500">Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Không tìm thấy mentor phù hợp</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {mentors.map((mentor) => (
-            <Card key={mentor.id} className="flex h-full flex-col p-6 shadow-sm transition-shadow hover:shadow-md">
+            <Card key={mentor.id} className="flex h-full flex-col p-6 shadow-sm transition-shadow hover:shadow-md dark:bg-slate-900/50 border dark:border-slate-800">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{mentor.fullName}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{mentor.headline || 'Mentor'}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{mentor.fullName}</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{mentor.headline || 'Mentor'}</p>
                 </div>
                 <Badge variant="outline" className="rounded-full">
                   <Star className="mr-1 h-3 w-3 text-amber-500" />
@@ -178,27 +184,27 @@ export const MentorDirectoryPage: React.FC = () => {
                 </Badge>
               </div>
 
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Briefcase className="h-4 w-4" />
                 <span>{mentor.yearsOfExperience ?? 0} năm kinh nghiệm</span>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+              <div className="mt-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <MapPin className="h-4 w-4" />
                 <span>{mentor.specialties.map((item) => item.name).join(' • ') || 'Chuyên môn đa dạng'}</span>
               </div>
 
-              <p className="mt-4 line-clamp-4 text-sm leading-6 text-gray-600">{mentor.bio || 'Chưa có mô tả.'}</p>
+              <p className="mt-4 line-clamp-4 text-sm leading-6 text-gray-600 dark:text-gray-400">{mentor.bio || 'Chưa có mô tả.'}</p>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {mentor.specialties.slice(0, 4).map((specialtyItem) => (
-                  <Badge key={specialtyItem.code} variant="secondary" className="rounded-full">
+                  <Badge key={specialtyItem.code} variant="secondary" className="rounded-full dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700">
                     {specialtyItem.name}
                   </Badge>
                 ))}
               </div>
 
               <div className="mt-auto flex items-center justify-between pt-5">
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   <p>{mentor.specialties.length} chuyên môn</p>
                   <p>{mentor.ratingCount} đánh giá</p>
                 </div>
@@ -217,7 +223,7 @@ export const MentorDirectoryPage: React.FC = () => {
           <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
             Trang trước
           </Button>
-          <p className="text-sm text-gray-600">Trang {page} / {totalPages}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Trang {page} / {totalPages}</p>
           <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
             Trang sau
           </Button>

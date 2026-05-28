@@ -118,9 +118,17 @@ export function updateAdminUserStatus(
   return apiClient.patch(`/admin/users/${encodeURIComponent(userId)}/status`, { status });
 }
 
+export function updateAdminUserRoles(
+  userId: string,
+  roles: string[]
+): Promise<{ message: string; previousRoles: string[]; currentRoles: string[] }> {
+  return apiClient.patch(`/admin/users/${encodeURIComponent(userId)}/roles`, { roles });
+}
+
 export default {
   getAdminDashboardSummary,
   listAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  updateAdminUserRoles,
 };

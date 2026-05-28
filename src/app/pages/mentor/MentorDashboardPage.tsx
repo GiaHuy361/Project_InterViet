@@ -16,6 +16,19 @@ import {
 import mentorWorkspaceService from '../../../services/mentorWorkspaceService';
 import type { MentorWorkspaceDashboardSummary } from '../../../lib/api/publicTypes';
 import { toast } from 'sonner';
+const statusLabel: Record<string, string> = {
+  pending_payment: 'Chờ thanh toán',
+  confirmed: 'Đã xác nhận',
+  cancelled: 'Đã hủy',
+  completed: 'Hoàn thành',
+};
+
+const statusColor: Record<string, string> = {
+  pending_payment: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 hover:bg-amber-200',
+  confirmed: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 hover:bg-blue-200',
+  cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 hover:bg-red-200',
+  completed: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800 hover:bg-emerald-200',
+};
 
 export const MentorDashboardPage: React.FC = () => {
   const [data, setData] = useState<MentorWorkspaceDashboardSummary | null>(null);
@@ -200,12 +213,8 @@ export const MentorDashboardPage: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium 
-                          ${booking.status === 'pending_payment' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300' : 
-                            booking.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300' : 
-                            booking.status === 'completed' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300' : 
-                            'bg-gray-100 text-gray-800 dark:text-slate-200'}`}>
-                          {booking.status}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border ${statusColor[booking.status] || 'bg-gray-100 text-gray-800 dark:text-slate-200 border-transparent'}`}>
+                          {statusLabel[booking.status] || booking.status}
                         </span>
                       </div>
                     </div>

@@ -125,6 +125,7 @@ class ApiClient {
         !url.includes('/auth/login') &&
         !url.includes('/auth/register')
       ) {
+        const hadToken = !!this.accessToken;
         const newToken = await this.handleTokenRefresh();
         if (newToken) {
           return this.request<T>(method, url, body, {
@@ -134,7 +135,14 @@ class ApiClient {
         }
 
         this.clearAuthToken();
-        this.onAuthFailure?.();
+
+        console.error('[apiClient] 401 sau khi refresh thất bại. URL gây lỗi:', url);
+
+        // Chỉ đẩy user ra login nếu trước đó họ có token (tức là phương đang đăng nhập mà bị mất session)
+        // Không push nếu refresh thất bại do lỗi backend trên một endpoint cụ thể
+        if (hadToken) {
+          this.onAuthFailure?.();
+        }
 
         throw new ApiError({
           status: 401,

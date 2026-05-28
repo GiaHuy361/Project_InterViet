@@ -8,7 +8,6 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import {
   Mic,
-  MicOff,
   PhoneOff,
   Volume2,
   AlertCircle,
@@ -23,8 +22,7 @@ import {
   FileText,
   User,
   Sparkles,
-  RefreshCw,
-  Hand
+  RefreshCw
 } from 'lucide-react';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { ApiError } from '../../lib/api/apiError';
@@ -70,19 +68,17 @@ export const InterviewVoiceLivePage: React.FC = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [isAudioSuspended, setIsAudioSuspended] = useState(false);
-  const [isPushToTalkMode, setIsPushToTalkMode] = useState(false);
-  const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
-  
+
   // Realtime token and endpoints (kept in memory, never persisted)
   const realtimeSessionIdRef = useRef<string | null>(null);
   const clientSecretRef = useRef<string | null>(null);
   const connectUrlRef = useRef<string | null>(null);
-  
+
   // WebRTC / WebSocket Client and Transcript Builder
   const rtcClientRef = useRef<OpenAiWebRtcClient | GeminiLiveClient | null>(null);
   const builderRef = useRef<TranscriptBuilder>(new TranscriptBuilder());
   const [turns, setTurns] = useState<any[]>([]);
-  
+
   // Audio Visualizer refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -140,37 +136,6 @@ export const InterviewVoiceLivePage: React.FC = () => {
     };
   }, [state]);
 
-  // 2c. Push-to-Talk mode effect & handlers
-  useEffect(() => {
-    if (rtcClientRef.current) {
-      const client = rtcClientRef.current as any;
-      if (typeof client.setMuted === 'function') {
-        client.setMuted(isPushToTalkMode);
-      }
-    }
-  }, [isPushToTalkMode]);
-
-  const handlePttDown = () => {
-    if (!isPushToTalkMode || !rtcClientRef.current) return;
-    setIsPushToTalkActive(true);
-    const client = rtcClientRef.current as any;
-    if (typeof client.setMuted === 'function') {
-      client.setMuted(false);
-    }
-  };
-
-  const handlePttUp = () => {
-    if (!isPushToTalkMode || !rtcClientRef.current) return;
-    setIsPushToTalkActive(false);
-    const client = rtcClientRef.current as any;
-    if (typeof client.setMuted === 'function') {
-      client.setMuted(true);
-    }
-    if (typeof client.endTurn === 'function') {
-      client.endTurn();
-    }
-  };
-
   // 3. Initialize & Start Realtime session
   useEffect(() => {
     if (!id) {
@@ -182,7 +147,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
       try {
         setState('Starting');
         setErrorMessage(null);
-        
+
         // Fetch session detail first
         const detail = await getInterview(id);
         setSession(detail);
@@ -202,8 +167,8 @@ export const InterviewVoiceLivePage: React.FC = () => {
         const selectedModel = (detail.aiModelRaw && validModels.includes(detail.aiModelRaw))
           ? detail.aiModelRaw
           : detail.aiModel && validModels.includes(detail.aiModel)
-          ? detail.aiModel
-          : 'gpt-4o-mini';
+            ? detail.aiModel
+            : 'gpt-4o-mini';
 
         const realtimePayload = {
           mode: 'voice' as const,
@@ -250,7 +215,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
 
         // Move to connecting state
         setState('Connecting');
-        
+
         // Initialize appropriate client based on provider
         const callbacks = {
           onConnectionStateChange: (connectionState: any) => {
@@ -334,7 +299,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
       } catch (err: any) {
         setState('Error');
         const apiErr = err instanceof ApiError ? err : null;
-        
+
         if (apiErr?.status === 503) {
           setErrorMessage('Tính năng phỏng vấn realtime hiện chưa khả dụng hoặc đang bận. Vui lòng thử lại sau.');
         } else if (apiErr?.status === 403) {
@@ -374,13 +339,13 @@ export const InterviewVoiceLivePage: React.FC = () => {
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
-      
+
       audioContextRef.current = ctx;
       analyserRef.current = analyser;
-      
+
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-      
+
       const update = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
@@ -415,13 +380,13 @@ export const InterviewVoiceLivePage: React.FC = () => {
   // 5. Handle end call
   const handleCallEnd = async (reason: string = 'user_ended') => {
     if (!id) return;
-    
+
     // Stop local tracks and close WebRTC
     cleanupAudioAnalysis();
     if (rtcClientRef.current) {
       rtcClientRef.current.disconnect();
     }
-    
+
     setState('Ended');
 
     // Call End API to log on C# server
@@ -477,7 +442,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
         console.warn('Retry WebRTC failed, falling back to force end', err);
       }
     }
-    
+
     // Nếu secret bị null (vì idempotent) hoặc reconnect tiếp tục thất bại, gọi handleForceEndSession để reset hoàn toàn
     if (realtimeSessionIdRef.current) {
       await handleForceEndSession();
@@ -565,7 +530,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
       const response = await completeInterview(id);
       setCompletedReport(response.report || null);
       setState('Report');
-      
+
       // Update session detail to completed
       const detail = await getInterview(id);
       setSession(detail);
@@ -654,7 +619,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
         />
 
         {/* Live Call Canvas */}
-        <Card 
+        <Card
           onClick={() => { void handleResumeAudio(); }}
           className="relative overflow-hidden bg-slate-900 border-slate-800 text-white rounded-3xl p-8 min-h-[400px] flex flex-col justify-between items-center shadow-xl cursor-pointer"
         >
@@ -664,23 +629,6 @@ export const InterviewVoiceLivePage: React.FC = () => {
               <span className="w-3 h-3 bg-red-50 dark:bg-red-900/300 rounded-full animate-ping"></span>
               <span className="text-sm font-semibold tracking-wide text-red-400">REC</span>
             </div>
-            
-            {/* Mode Toggle */}
-            <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700" onClick={(e) => e.stopPropagation()}>
-              <button
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${!isPushToTalkMode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                onClick={() => setIsPushToTalkMode(false)}
-              >
-                Rảnh tay
-              </button>
-              <button
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${isPushToTalkMode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                onClick={() => setIsPushToTalkMode(true)}
-              >
-                <Hand size={14} />
-                Nhấn giữ
-              </button>
-            </div>
 
             <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md">
               <Clock className="w-4 h-4 text-sky-400" />
@@ -689,7 +637,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
           </div>
 
           {isAudioSuspended && (
-            <div 
+            <div
               onClick={(e) => {
                 e.stopPropagation();
                 void handleResumeAudio();
@@ -706,47 +654,22 @@ export const InterviewVoiceLivePage: React.FC = () => {
 
           {/* Glowing pulsing visualizer circles */}
           <div className="relative my-8 flex items-center justify-center w-48 h-48">
-            {!isPushToTalkMode ? (
-              <>
-                <div
-                  className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 rounded-full blur-xl transition-all duration-75"
-                  style={{ transform: `scale(${1 + volumeLevel / 150})` }}
-                ></div>
-                <div
-                  className="absolute w-36 h-36 bg-blue-600/35 rounded-full border border-blue-400/40 transition-all duration-75"
-                  style={{ transform: `scale(${1 + volumeLevel / 180})` }}
-                ></div>
-                <div
-                  className="absolute w-28 h-28 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-full shadow-lg flex items-center justify-center transition-all duration-75"
-                  style={{ transform: `scale(${1 + volumeLevel / 220})` }}
-                ></div>
-                
-                <Mic className="relative z-10 w-10 h-10 text-white" />
-              </>
-            ) : (
-              <button
-                onMouseDown={handlePttDown}
-                onMouseUp={handlePttUp}
-                onMouseLeave={handlePttUp}
-                onTouchStart={handlePttDown}
-                onTouchEnd={handlePttUp}
-                className={`absolute w-36 h-36 rounded-full shadow-xl flex flex-col items-center justify-center transition-all duration-150 select-none ${
-                  isPushToTalkActive
-                    ? 'bg-red-50 dark:bg-red-900/300 scale-95 shadow-red-500/50'
-                    : 'bg-blue-600 hover:bg-blue-50 dark:bg-blue-900/300 scale-100 shadow-blue-500/40'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {isPushToTalkActive ? (
-                  <Mic className="w-10 h-10 text-white animate-pulse" />
-                ) : (
-                  <MicOff className="w-10 h-10 text-white mb-1" />
-                )}
-                <span className="text-white text-xs font-bold uppercase tracking-wider mt-1 text-center leading-tight">
-                  {isPushToTalkActive ? 'Đang nói...' : 'Giữ\\nđể nói'}
-                </span>
-              </button>
-            )}
+            <>
+              <div
+                className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 rounded-full blur-xl transition-all duration-75"
+                style={{ transform: `scale(${1 + volumeLevel / 150})` }}
+              ></div>
+              <div
+                className="absolute w-36 h-36 bg-blue-600/35 rounded-full border border-blue-400/40 transition-all duration-75"
+                style={{ transform: `scale(${1 + volumeLevel / 180})` }}
+              ></div>
+              <div
+                className="absolute w-28 h-28 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-full shadow-lg flex items-center justify-center transition-all duration-75"
+                style={{ transform: `scale(${1 + volumeLevel / 220})` }}
+              ></div>
+
+              <Mic className="relative z-10 w-10 h-10 text-white" />
+            </>
           </div>
 
           {/* Live transcript scroll box */}
@@ -760,11 +683,10 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 turns.map((turn, i) => (
                   <div
                     key={turn.id || i}
-                    className={`flex flex-col text-sm max-w-[85%] rounded-2xl p-3 ${
-                      turn.role === 'assistant'
-                        ? 'bg-blue-600/20 border border-blue-500/30 self-start text-sky-100'
-                        : 'bg-white/10 border border-white/5 self-end text-slate-100'
-                    }`}
+                    className={`flex flex-col text-sm max-w-[85%] rounded-2xl p-3 ${turn.role === 'assistant'
+                      ? 'bg-blue-600/20 border border-blue-500/30 self-start text-sky-100'
+                      : 'bg-white/10 border border-white/5 self-end text-slate-100'
+                      }`}
                   >
                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-60 mb-0.5">
                       {turn.role === 'assistant' ? 'AI Interviewer' : 'Bạn'}
@@ -804,7 +726,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
   // Render POST-CALL transcript review & QA manual editor (Ended state)
   if (state === 'Ended' || state === 'Finalizing' || state === 'ReadyToComplete' || state === 'Completing') {
     const isEditingMode = state === 'Ended';
-    
+
     return (
       <div className="max-w-4xl mx-auto space-y-6 pb-12">
         <AppPageHeader
@@ -886,7 +808,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
                           <Trash2 size={16} />
                         </button>
                       )}
-                      
+
                       <div className="flex items-center gap-2">
                         <Badge className="bg-blue-600">Câu hỏi {pair.questionNumber}</Badge>
                       </div>
@@ -1000,7 +922,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
         {/* Overall Score */}
         <Card className="glass-card rounded-2xl p-8 text-center bg-gradient-to-b from-blue-50/50 to-white">
           <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center justify-center gap-2">
-            <Sparkles className="text-yellow-500" size={20} />
+            <Sparkles className="text-yellow-500 dark:text-yellow-500" size={20} />
             Điểm tổng thể từ AI
           </h3>
           <div className="text-7xl font-extrabold text-blue-600 dark:text-blue-400 mb-4 animate-bounce">
@@ -1012,24 +934,24 @@ export const InterviewVoiceLivePage: React.FC = () => {
         </Card>
 
         {/* Core Metrics */}
-        <Card className="p-6">
-          <h3 className="font-bold text-lg mb-4 text-gray-800">Điểm số chi tiết</h3>
+        <Card className="p-6 dark:bg-slate-900/50 border dark:border-slate-800">
+          <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100">Điểm số chi tiết</h3>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-              <span className="text-sm text-gray-500 font-medium">Confidence (Tự tin)</span>
-              <div className="text-2xl font-bold text-slate-800">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1 dark:border dark:border-slate-700">
+              <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Confidence (Tự tin)</span>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                 {completedReport.confidenceScore ?? '—'}
               </div>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-              <span className="text-sm text-gray-500 font-medium">Clarity (Mạch lạc)</span>
-              <div className="text-2xl font-bold text-slate-800">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1 dark:border dark:border-slate-700">
+              <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Clarity (Mạch lạc)</span>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                 {completedReport.clarityScore ?? '—'}
               </div>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-              <span className="text-sm text-gray-500 font-medium">Relevance (Liên quan)</span>
-              <div className="text-2xl font-bold text-slate-800">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1 dark:border dark:border-slate-700">
+              <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Relevance (Liên quan)</span>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                 {completedReport.relevanceScore ?? '—'}
               </div>
             </div>
@@ -1043,7 +965,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
               👍 Ưu điểm (Strengths)
             </h3>
             {completedReport.strengths && completedReport.strengths.length > 0 ? (
-              <ul className="space-y-2 text-sm text-gray-700">
+              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 {completedReport.strengths.map((item, index) => (
                   <li key={`strength-${index}`} className="flex items-start gap-1">
                     <span className="text-green-600 dark:text-green-400">•</span>
@@ -1052,7 +974,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
             )}
           </Card>
 
@@ -1061,7 +983,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
               👎 Điểm yếu (Weaknesses)
             </h3>
             {completedReport.weaknesses && completedReport.weaknesses.length > 0 ? (
-              <ul className="space-y-2 text-sm text-gray-700">
+              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 {completedReport.weaknesses.map((item, index) => (
                   <li key={`weakness-${index}`} className="flex items-start gap-1">
                     <span className="text-red-500">•</span>
@@ -1070,7 +992,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
             )}
           </Card>
 
@@ -1079,7 +1001,7 @@ export const InterviewVoiceLivePage: React.FC = () => {
               💡 Khuyên dùng (Recommendations)
             </h3>
             {completedReport.recommendations && completedReport.recommendations.length > 0 ? (
-              <ul className="space-y-2 text-sm text-gray-700">
+              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 {completedReport.recommendations.map((item, index) => (
                   <li key={`recommend-${index}`} className="flex items-start gap-1">
                     <span className="text-amber-600 dark:text-amber-400">•</span>
@@ -1088,23 +1010,23 @@ export const InterviewVoiceLivePage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
             )}
           </Card>
         </div>
 
         {/* Detailed Breakdowns */}
         {completedReport.scoreBreakdowns && completedReport.scoreBreakdowns.length > 0 && (
-          <Card className="p-6 space-y-4">
-            <h3 className="font-bold text-lg text-gray-800">Chi tiết các tiêu chí</h3>
+          <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Chi tiết các tiêu chí</h3>
             <div className="space-y-4">
               {completedReport.scoreBreakdowns.map((item, index) => (
-                <div key={`breakdown-${index}`} className="border-b pb-3 last:border-0 last:pb-0 space-y-1 text-sm">
-                  <div className="flex justify-between items-center font-semibold text-gray-800">
+                <div key={`breakdown-${index}`} className="border-b dark:border-slate-800 pb-3 last:border-0 last:pb-0 space-y-1 text-sm">
+                  <div className="flex justify-between items-center font-semibold text-gray-800 dark:text-gray-100">
                     <span>{item.dimension}</span>
                     <span>{item.score} / {item.maxScore}</span>
                   </div>
-                  {item.comment && <p className="text-gray-600 text-xs italic">{item.comment}</p>}
+                  {item.comment && <p className="text-gray-600 dark:text-gray-400 text-xs italic">{item.comment}</p>}
                 </div>
               ))}
             </div>
@@ -1113,16 +1035,16 @@ export const InterviewVoiceLivePage: React.FC = () => {
 
         {/* Feedback List */}
         {completedReport.feedbackItems && completedReport.feedbackItems.length > 0 && (
-          <Card className="p-6 space-y-4">
-            <h3 className="font-bold text-lg text-gray-800">Ý kiến phản hồi từ AI</h3>
+          <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Ý kiến phản hồi từ AI</h3>
             <div className="grid gap-3">
               {completedReport.feedbackItems.map((item, index) => (
-                <div key={`feedback-${index}`} className="p-3 border rounded-xl bg-slate-50/50 space-y-1">
+                <div key={`feedback-${index}`} className="p-3 border dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 space-y-1 text-gray-800 dark:text-gray-100">
                   <div className="flex justify-between items-center text-sm font-semibold">
                     <span>{item.title}</span>
-                    <Badge variant="secondary" className="text-[10px]">{item.category}</Badge>
+                    <Badge variant="secondary" className="text-[10px] dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600">{item.category}</Badge>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">{item.detail}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{item.detail}</p>
                 </div>
               ))}
             </div>
@@ -1130,15 +1052,15 @@ export const InterviewVoiceLivePage: React.FC = () => {
         )}
 
         {/* Questions and Answers Review */}
-        <Card className="p-6 space-y-4">
-          <h3 className="font-bold text-lg text-gray-800">Hội thoại chi tiết</h3>
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+          <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Hội thoại chi tiết</h3>
           <div className="space-y-4">
             {session?.questions && session.questions.map((q) => {
               const answer = session.answers?.find((a) => a.questionId === q.questionId);
               return (
-                <div key={q.questionId} className="border rounded-xl p-4 bg-slate-50/40 text-sm space-y-2">
-                  <p className="font-semibold text-slate-800">AI: {q.questionText}</p>
-                  <p className="text-gray-700 bg-white p-3 rounded-lg border border-gray-150">
+                <div key={q.questionId} className="border dark:border-slate-700 rounded-xl p-4 bg-slate-50/40 dark:bg-slate-800/50 text-sm space-y-2">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">AI: {q.questionText}</p>
+                  <p className="text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-950 p-3 rounded-lg border border-gray-150 dark:border-slate-700">
                     Bạn: {answer?.answerText || 'Chưa trả lời'}
                   </p>
                 </div>

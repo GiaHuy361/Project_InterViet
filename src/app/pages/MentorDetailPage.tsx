@@ -107,7 +107,10 @@ export const MentorDetailPage: React.FC = () => {
     }
   };
 
-  const slotSummary = (slot: MentorAvailabilitySlot) => `${new Date(slot.startsAt).toLocaleString('vi-VN')} - ${new Date(slot.endsAt).toLocaleTimeString('vi-VN')}`;
+  const slotSummary = (slot?: MentorAvailabilitySlot) => {
+    if (!slot) return '';
+    return `${new Date(slot.startsAt).toLocaleString('vi-VN')} - ${new Date(slot.endsAt).toLocaleTimeString('vi-VN')}`;
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-12">
@@ -259,7 +262,7 @@ export const MentorDetailPage: React.FC = () => {
 
               <div className="space-y-2">
                 <Label>Slot được chọn</Label>
-                <Input value={selectedSlotId ? slotSummary(availableSlots.find(s => s.id === selectedSlotId)!) : ''} readOnly placeholder="Chọn slot bên trái" />
+                <Input value={selectedSlotId ? slotSummary(availableSlots.find(s => s.id === selectedSlotId)) : ''} readOnly placeholder="Chọn slot bên trái" />
               </div>
 
               <div className="space-y-2">
@@ -289,7 +292,7 @@ export const MentorDetailPage: React.FC = () => {
               <div className="space-y-3 text-sm text-gray-600">
                 <p>Mentor: <span className="font-medium text-gray-900">{mentor.fullName}</span></p>
                 <p>Dịch vụ: <span className="font-medium text-gray-900">{serviceType}</span></p>
-                <p>Slot: <span className="font-medium text-gray-900">{slotSummary(availableSlots.find(s => s.id === selectedSlotId)!) || '—'}</span></p>
+                <p>Slot: <span className="font-medium text-gray-900">{slotSummary(availableSlots.find(s => s.id === selectedSlotId)) || '—'}</span></p>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setBookingOpen(false)}>Hủy</Button>

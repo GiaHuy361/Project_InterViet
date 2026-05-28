@@ -96,10 +96,36 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
         children: [
-          // ─── Candidate routes (user + admin) ────────────────
+          // ─── Shared routes (all authenticated roles) ────────────────
           {
             element: (
-              <RoleGuard allowedRoles={['user', 'admin']}>
+              <RoleGuard allowedRoles={['user', 'admin', 'mentor', 'support']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'thong-bao', Component: Pages.NotificationsPage },
+              { path: 'tro-giup', Component: Pages.HelpCenterPage },
+              { path: 'cai-dat', Component: Pages.SettingsPage },
+              { path: 'ho-so', Component: Pages.ProfilePage },
+              { path: 'goi-dich-vu', Component: Pages.CandidateSubscriptionPage },
+              { path: 'thanh-toan', Component: Pages.BillingPage },
+              { path: 'checkout/mock/:sessionId', Component: Pages.CheckoutMockPage },
+              { path: 'payment/success', Component: Pages.PaymentSuccessPage },
+              { path: 'payment/cancel', Component: Pages.PaymentCancelPage },
+              { path: 'hoa-don', Component: Pages.InvoicesPage },
+              { path: 'email', Component: Pages.EmailCenterPage },
+              { path: 'hoat-dong', Component: Pages.ActivityLogPage },
+              { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
+              { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
+              { path: 'system/data', Component: Pages.DataManagementPage },
+            ]
+          },
+          
+          // ─── Candidate routes (user only) ────────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['user']}>
                 <Outlet />
               </RoleGuard>
             ),
@@ -107,6 +133,7 @@ export const router = createBrowserRouter([
               { path: 'onboarding', Component: Pages.OnboardingPage },
               { path: 'dashboard', Component: Pages.DashboardPage },
               { path: 'cv-matching', Component: Pages.CVMatchingPage },
+              { path: 'match-history', Component: Pages.MatchHistoryPage },
               { path: 'cv-history', Component: Pages.CVHistoryPage },
               { path: 'jd-history', Component: Pages.JDHistoryPage },
               { path: 'multi-jd-matching', Component: Pages.MultiJDMatchingPage },
@@ -124,22 +151,6 @@ export const router = createBrowserRouter([
               { path: 'phong-van-chi-tiet/:id', Component: Pages.InterviewDetailPage },
               { path: 'phong-van-thong-ke', Component: Pages.InterviewStatsPage },
               { path: 'bao-cao', Component: Pages.ReportsPage },
-              { path: 'thong-bao', Component: Pages.NotificationsPage },
-              { path: 'tro-giup', Component: Pages.HelpCenterPage },
-              { path: 'cai-dat', Component: Pages.ProfilePage },
-              { path: 'goi-dich-vu', Component: Pages.CandidateSubscriptionPage },
-              { path: 'thanh-toan', Component: Pages.BillingPage },
-              { path: 'checkout/mock/:sessionId', Component: Pages.CheckoutMockPage },
-              { path: 'payment/success', Component: Pages.PaymentSuccessPage },
-              { path: 'payment/cancel', Component: Pages.PaymentCancelPage },
-              { path: 'hoa-don', Component: Pages.InvoicesPage },
-              { path: 'email', Component: Pages.EmailCenterPage },
-              { path: 'hoat-dong', Component: Pages.ActivityLogPage },
-              { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
-              { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
-              
-              // System management (for Candidate)
-              { path: 'system/data', Component: Pages.DataManagementPage },
             ]
           },
 
@@ -162,10 +173,10 @@ export const router = createBrowserRouter([
             ]
           },
 
-          // ─── Support routes (admin + support) ─────────────
+          // ─── Support routes (support only) ─────────────
           {
             element: (
-              <RoleGuard allowedRoles={['admin', 'support']}>
+              <RoleGuard allowedRoles={['support']}>
                 <Outlet />
               </RoleGuard>
             ),
@@ -176,10 +187,10 @@ export const router = createBrowserRouter([
             ]
           },
 
-          // ─── Mentor routes (admin + mentor) ───────────────
+          // ─── Mentor routes (mentor only) ───────────────
           {
             element: (
-              <RoleGuard allowedRoles={['admin', 'mentor']}>
+              <RoleGuard allowedRoles={['mentor']}>
                 <Outlet />
               </RoleGuard>
             ),

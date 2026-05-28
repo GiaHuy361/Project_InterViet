@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { FileText, Target, AlertCircle } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { FileText, Target, AlertCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { cvMatchService, type MatchSessionDetail, type MatchTarget } from '../../services/cvMatchService';
-import { getTimeAgo } from '../utils/time';
 
 function extractList(value?: string | null): string[] {
   if (!value) return [];
@@ -36,7 +36,11 @@ const renderTarget = (target: MatchTarget) => {
           <p className="text-sm text-gray-500">{(target as any).companyName || 'Không rõ công ty'}</p>
         </div>
         <div className="flex-shrink-0">
-          <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">{((target.totalScore ?? 0)).toFixed(2)}%</div>
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            (target.totalScore ?? 0) < 50
+              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+              : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'
+          }`}>{((target.totalScore ?? 0)).toFixed(2)}%</div>
         </div>
       </div>
 
@@ -81,6 +85,7 @@ const renderTarget = (target: MatchTarget) => {
 
 export const MatchDetailPage: React.FC = () => {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<MatchSessionDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -106,13 +111,23 @@ export const MatchDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8 space-y-6">
-      <AppPageHeader title={`Match ${sessionId ?? ''}`} subtitle="Chi tiết phiên matching" icon={Target} iconGradient="from-emerald-500 to-teal-600" />
+      <AppPageHeader
+        title={`Chi tiết phiên so khớp CV: ${detail?.sessionId.substring(0, 8) ?? ''}`}
+        icon={Target}
+        iconGradient="from-emerald-500 to-teal-600"
+        actions={
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Quay lại
+          </Button>
+        }
+      />
 
       <Card className="p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Session ID</p>
-            <p className="font-mono text-sm break-all">{detail?.sessionId ?? sessionId}</p>
+          <div className='text-left'>
+            <p className="text-sm text-gray-500">ID phiên</p>
+            <p className="font-semibold">{detail?.sessionId.substring(0, 8) ?? 'N/A'} </p>
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500">Trạng thái</p>
@@ -135,7 +150,9 @@ export const MatchDetailPage: React.FC = () => {
           </Card>
           <Card className="p-3">
             <p className="text-xs text-gray-500">Điểm tốt nhất</p>
-            <p className="font-semibold">{detail?.bestScore ?? 0}</p>
+            <p className={`font-semibold ${
+              (detail?.bestScore ?? 0) < 50 ? 'text-red-600 dark:text-red-400' : ''
+            }`}>{detail?.bestScore ?? 0}</p>
           </Card>
         </div>
 

@@ -31,6 +31,7 @@ import adminBillingService, {
   AdminReportShareRecord,
   AdminSubscriptionRecord,
 } from '../../../services/adminBillingService';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../components/ui/tooltip';
 
 type BillingTab = 'payments' | 'invoices' | 'subscriptions' | 'bookings' | 'shares';
 
@@ -56,6 +57,14 @@ const paymentStatusBadge: Record<string, string> = {
   confirmed: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
   pending_payment: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   completed: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+};
+
+const paymentPurposeBadge: Record<string, string> = {
+  subscription: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800',
+  subscription_plan: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800',
+  booking_fee: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  mentor_booking: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  report_share: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
 };
 
 const formatCurrency = (amount?: number, currencyCode = 'VND') =>
@@ -123,23 +132,23 @@ export const AdminBillingPage: React.FC = () => {
   const tabCountLabel = useMemo(() => `${activeTotals} records`, [activeTotals]);
   const hasActiveFilters = Boolean(
     searchQuery ||
-      paymentStatus !== 'all' ||
-      paymentPurpose !== 'all' ||
-      paymentProvider !== 'all' ||
-      paymentUserId ||
-      invoiceStatus !== 'all' ||
-      invoicePurpose !== 'all' ||
-      invoiceUserId ||
-      subscriptionStatus !== 'all' ||
-      subscriptionUserId ||
-      bookingStatus !== 'all' ||
-      bookingMentorId ||
-      bookingUserId ||
-      bookingFrom ||
-      bookingTo ||
-      reportType !== 'all' ||
-      reportUserId ||
-      reportIsActive !== 'all',
+    paymentStatus !== 'all' ||
+    paymentPurpose !== 'all' ||
+    paymentProvider !== 'all' ||
+    paymentUserId ||
+    invoiceStatus !== 'all' ||
+    invoicePurpose !== 'all' ||
+    invoiceUserId ||
+    subscriptionStatus !== 'all' ||
+    subscriptionUserId ||
+    bookingStatus !== 'all' ||
+    bookingMentorId ||
+    bookingUserId ||
+    bookingFrom ||
+    bookingTo ||
+    reportType !== 'all' ||
+    reportUserId ||
+    reportIsActive !== 'all',
   );
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -287,10 +296,39 @@ export const AdminBillingPage: React.FC = () => {
     reportIsActive,
   ]);
 
+  const statusTranslations: Record<string, string> = {
+    succeeded: 'Thành công',
+    paid: 'Đã thanh toán',
+    failed: 'Thất bại',
+    pending: 'Chờ xử lý',
+    open: 'Đang mở',
+    draft: 'Bản nháp',
+    void: 'Đã hủy',
+    active: 'Hoạt động',
+    expired: 'Hết hạn',
+    cancelled: 'Đã hủy',
+    confirmed: 'Đã xác nhận',
+    pending_payment: 'Chờ thanh toán',
+    completed: 'Hoàn thành',
+  };
+
+  const purposeTranslations: Record<string, string> = {
+    subscription: 'Gói đăng ký',
+    subscription_plan: 'Gói đăng ký',
+    booking_fee: 'Phí đặt lịch',
+    mentor_booking: 'Đặt lịch mentor',
+    report_share: 'Chia sẻ báo cáo',
+  };
+
   const renderStatusBadge = (value: string) => {
     const className = paymentStatusBadge[value] || 'bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800';
-    return <Badge variant="outline" className={className}>{value}</Badge>;
+    return <Badge variant="outline" className={className}>{statusTranslations[value] || value}</Badge>;
   };
+
+  const renderPurposeBadge = (value: string) => {
+    const className = paymentPurposeBadge[value] || 'bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800';
+    return <Badge variant="outline" className={className}>{purposeTranslations[value] || value}</Badge>;
+  }
 
   const renderEmptyState = (message: string) => (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
@@ -347,7 +385,20 @@ export const AdminBillingPage: React.FC = () => {
           <TableBody>
             {filteredPayments.length ? filteredPayments.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium text-center">{item.id}</TableCell>
+                <TableCell className="font-medium text-center cursor-pointer">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          {`${item.id.slice(0, 6)}...${item.id.slice(-6)}`}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{item.id}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
                 <TableCell className="text-center">{item.userEmail}</TableCell>
                 <TableCell className="text-center">{formatCurrency(item.amount, item.currencyCode)}</TableCell>
                 <TableCell className="text-center">{formatProvider(item.provider)}</TableCell>
@@ -382,10 +433,23 @@ export const AdminBillingPage: React.FC = () => {
           <TableBody>
             {filteredInvoices.length ? filteredInvoices.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium text-center">{item.id}</TableCell>
+                <TableCell className="font-medium text-center cursor-pointer">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          {`${item.id.slice(0, 6)}...${item.id.slice(-6)}`}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{item.id}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
                 <TableCell className="text-center">{item.userEmail}</TableCell>
                 <TableCell className="text-center">{formatCurrency(item.amount, item.currencyCode)}</TableCell>
-                <TableCell className="text-center">{item.purpose}</TableCell>
+                <TableCell className="text-center">{renderPurposeBadge(item.purpose)}</TableCell>
                 <TableCell className="text-center">{renderStatusBadge(item.status)}</TableCell>
                 <TableCell className="text-center">{formatDateTime(item.createdAt)}</TableCell>
               </TableRow>
@@ -453,7 +517,20 @@ export const AdminBillingPage: React.FC = () => {
           <TableBody>
             {filteredBookings.length ? filteredBookings.map((item) => (
               <TableRow key={item.bookingId}>
-                <TableCell className="font-medium text-center">{item.bookingId}</TableCell>
+                <TableCell className="font-medium text-center cursor-pointer">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          {`${item.bookingId.slice(0, 6)}...${item.bookingId.slice(-6)}`}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{item.bookingId}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
                 <TableCell className="text-center">{item.candidateEmail}</TableCell>
                 <TableCell className="text-center">{item.mentorName}</TableCell>
                 <TableCell className="text-center">{formatCurrency(item.priceAmount, item.currencyCode)}</TableCell>
@@ -490,7 +567,20 @@ export const AdminBillingPage: React.FC = () => {
         <TableBody>
           {filteredReportShares.length ? filteredReportShares.map((item) => (
             <TableRow key={item.shareId}>
-              <TableCell className="font-medium text-center">{item.shareId}</TableCell>
+              <TableCell className="font-medium text-center cursor-pointer">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        {`${item.shareId.slice(0, 6)}...${item.shareId.slice(-6)}`}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{item.shareId}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableCell>
               <TableCell className="text-center">
                 <div>
                   <p className="font-medium text-gray-900 dark:text-slate-100">{item.ownerFullName}</p>
@@ -522,10 +612,10 @@ export const AdminBillingPage: React.FC = () => {
     if (activeTab === 'payments') {
       return (
         <div className="grid gap-3 lg:grid-cols-5">
-          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search is local: user email / id" />
-          <select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)} className={fieldSelectClass}><option value="all">All status</option><option value="succeeded">succeeded</option><option value="failed">failed</option><option value="pending">pending</option></select>
-          <select value={paymentPurpose} onChange={(event) => setPaymentPurpose(event.target.value)} className={fieldSelectClass}><option value="all">All purpose</option><option value="subscription_plan">subscription_plan</option><option value="mentor_booking">mentor_booking</option></select>
-          <select value={paymentProvider} onChange={(event) => setPaymentProvider(event.target.value)} className={fieldSelectClass}><option value="all">All provider</option><option value="vnpay">VNPay</option><option value="momo">MoMo</option><option value="stripe">Stripe</option><option value="payos">PayOS</option></select>
+          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tìm kiếm cục bộ: email / id người dùng" />
+          <select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả trạng thái</option><option value="succeeded">Thành công</option><option value="failed">Thất bại</option><option value="pending">Chờ xử lý</option></select>
+          <select value={paymentPurpose} onChange={(event) => setPaymentPurpose(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả mục đích</option><option value="subscription_plan">Gói đăng ký</option><option value="mentor_booking">Đặt lịch mentor</option></select>
+          <select value={paymentProvider} onChange={(event) => setPaymentProvider(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả nhà cung cấp</option><option value="vnpay">VNPay</option><option value="momo">MoMo</option><option value="stripe">Stripe</option><option value="payos">PayOS</option></select>
           <Input value={paymentUserId} onChange={(event) => setPaymentUserId(event.target.value)} placeholder="User ID" />
         </div>
       );
@@ -534,9 +624,9 @@ export const AdminBillingPage: React.FC = () => {
     if (activeTab === 'invoices') {
       return (
         <div className="grid gap-3 lg:grid-cols-4">
-          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search is local: user email / id" />
-          <select value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value)} className={fieldSelectClass}><option value="all">All status</option><option value="draft">draft</option><option value="open">open</option><option value="paid">paid</option><option value="void">void</option></select>
-          <select value={invoicePurpose} onChange={(event) => setInvoicePurpose(event.target.value)} className={fieldSelectClass}><option value="all">All purpose</option><option value="subscription_plan">subscription_plan</option><option value="mentor_booking">mentor_booking</option></select>
+          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tìm kiếm cục bộ: email / id người dùng" />
+          <select value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả trạng thái</option><option value="draft">Bản nháp</option><option value="open">Đang mở</option><option value="paid">Đã thanh toán</option><option value="void">Đã hủy</option></select>
+          <select value={invoicePurpose} onChange={(event) => setInvoicePurpose(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả mục đích</option><option value="subscription_plan">Gói đăng ký</option><option value="mentor_booking">Đặt lịch mentor</option></select>
           <Input value={invoiceUserId} onChange={(event) => setInvoiceUserId(event.target.value)} placeholder="User ID" />
         </div>
       );
@@ -545,8 +635,8 @@ export const AdminBillingPage: React.FC = () => {
     if (activeTab === 'subscriptions') {
       return (
         <div className="grid gap-3 lg:grid-cols-3">
-          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search is local: user email / id" />
-          <select value={subscriptionStatus} onChange={(event) => setSubscriptionStatus(event.target.value)} className={fieldSelectClass}><option value="all">All status</option><option value="active">active</option><option value="expired">expired</option><option value="cancelled">cancelled</option></select>
+          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tìm kiếm cục bộ: email / id người dùng" />
+          <select value={subscriptionStatus} onChange={(event) => setSubscriptionStatus(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="expired">Hết hạn</option><option value="cancelled">Đã hủy</option></select>
           <Input value={subscriptionUserId} onChange={(event) => setSubscriptionUserId(event.target.value)} placeholder="User ID" />
         </div>
       );
@@ -555,8 +645,8 @@ export const AdminBillingPage: React.FC = () => {
     if (activeTab === 'bookings') {
       return (
         <div className="grid gap-3 lg:grid-cols-6">
-          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search is local: email / mentor" />
-          <select value={bookingStatus} onChange={(event) => setBookingStatus(event.target.value)} className={fieldSelectClass}><option value="all">All status</option><option value="pending_payment">pending_payment</option><option value="confirmed">confirmed</option><option value="cancelled">cancelled</option><option value="completed">completed</option></select>
+          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tìm kiếm cục bộ: email / mentor" />
+          <select value={bookingStatus} onChange={(event) => setBookingStatus(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả trạng thái</option><option value="pending_payment">Chờ thanh toán</option><option value="confirmed">Đã xác nhận</option><option value="cancelled">Đã hủy</option><option value="completed">Hoàn thành</option></select>
           <Input value={bookingMentorId} onChange={(event) => setBookingMentorId(event.target.value)} placeholder="Mentor ID" />
           <Input value={bookingUserId} onChange={(event) => setBookingUserId(event.target.value)} placeholder="User ID" />
           <Input type="datetime-local" value={bookingFrom} onChange={(event) => setBookingFrom(event.target.value)} />
@@ -567,9 +657,9 @@ export const AdminBillingPage: React.FC = () => {
 
     return (
       <div className="grid gap-3 lg:grid-cols-4">
-        <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search is local: owner/title" />
-        <select value={reportType} onChange={(event) => setReportType(event.target.value)} className={fieldSelectClass}><option value="all">All report types</option><option value="interview">interview</option><option value="match">match</option></select>
-        <select value={reportIsActive} onChange={(event) => setReportIsActive(event.target.value as 'all' | 'true' | 'false')} className={fieldSelectClass}><option value="all">All active states</option><option value="true">Active</option><option value="false">Inactive</option></select>
+        <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tìm kiếm cục bộ: owner/title" />
+        <select value={reportType} onChange={(event) => setReportType(event.target.value)} className={fieldSelectClass}><option value="all">Tất cả các báo cáo</option><option value="interview">Phỏng vấn</option><option value="match">So khớp</option></select>
+        <select value={reportIsActive} onChange={(event) => setReportIsActive(event.target.value as 'all' | 'true' | 'false')} className={fieldSelectClass}><option value="all">Tất cả trạng thái</option><option value="true">Hoạt động</option><option value="false">Không hoạt động</option></select>
         <Input value={reportUserId} onChange={(event) => setReportUserId(event.target.value)} placeholder="User ID" />
       </div>
     );
@@ -588,19 +678,16 @@ export const AdminBillingPage: React.FC = () => {
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 shadow-sm">
                 <Sparkles className="h-3.5 w-3.5" />
-                Phase 14 billing reconciliation
+                Đối soát thanh toán Phase 14
               </div>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Admin Billing Records</h1>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Bảng kê thanh toán</h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
-                Đối soát giao dịch thanh toán, hóa đơn, subscription, mentor booking và report share trong một màn hình.
+                Đối soát giao dịch thanh toán, hóa đơn, gói đăng ký, đặt lịch mentor và báo cáo trong một màn hình.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={() => void window.history.back()} className="rounded-xl bg-white dark:bg-slate-900/80">
-              Quay lại
-            </Button>
             <Badge variant="outline" className="rounded-full border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 px-3 py-1 text-amber-700 dark:text-amber-400">
               {tabMeta[activeTab].label}
             </Badge>
@@ -612,9 +699,9 @@ export const AdminBillingPage: React.FC = () => {
             { label: 'Tổng kết quả', value: activeTotals, icon: BarChart3 },
             { label: 'Đang hiển thị', value: visibleCount, icon: TrendingUp },
             { label: 'Trang hiện tại', value: page, icon: Receipt },
-            { label: 'Bộ lọc', value: hasActiveFilters ? 'On' : 'Off', icon: Filter },
+            { label: 'Bộ lọc', value: hasActiveFilters ? 'Đang bật' : 'Tắt', icon: Filter },
             { label: 'Tab', value: tabMeta[activeTab].label, icon: CreditCard },
-            { label: 'Trạng thái tải', value: loading ? 'Loading' : 'Ready', icon: Loader2 },
+            { label: 'Trạng thái tải', value: loading ? 'Đang tải' : 'Sẵn sàng', icon: Loader2 },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -668,7 +755,7 @@ export const AdminBillingPage: React.FC = () => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Bộ lọc</h2>
-            <p className="text-sm text-gray-500 dark:text-slate-400">Tùy theo tab hiện tại, các query params sẽ được gửi đúng endpoint. {visibleCountLabel}</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">{visibleCountLabel}</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => void setPage(1)} disabled={loading}>
@@ -730,19 +817,19 @@ export const AdminBillingPage: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-amber-50/40 dark:from-slate-900 dark:to-amber-900/20 p-5 shadow-sm">
-          <p className="text-sm text-gray-500 dark:text-slate-400">Payments revenue</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Doanh thu</p>
           <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(payments.reduce((sum, item) => sum + item.amount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Tổng giá trị giao dịch đã tải về từ endpoint hiện tại.</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Tổng giá trị giao dịch.</p>
         </Card>
         <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-sky-50/40 dark:from-slate-900 dark:to-sky-900/20 p-5 shadow-sm">
-          <p className="text-sm text-gray-500 dark:text-slate-400">Invoices amount</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Hóa đơn</p>
           <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(invoices.reduce((sum, item) => sum + item.amount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Theo dõi tổng hóa đơn theo phạm vi lọc hiện tại.</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Tổng giá trị hóa đơn.</p>
         </Card>
         <Card className="border-gray-100 dark:border-slate-800 bg-gradient-to-br from-white to-emerald-50/40 dark:from-slate-900 dark:to-emerald-900/20 p-5 shadow-sm">
-          <p className="text-sm text-gray-500 dark:text-slate-400">Mentor booking amount</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Đặt lịch Mentor</p>
           <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(mentorBookings.reduce((sum, item) => sum + item.priceAmount, 0))}</p>
-          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Giúp đối soát doanh thu booking mentor nhanh hơn.</p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Tổng giá trị đặt lịch mentor.</p>
         </Card>
       </div>
     </div>

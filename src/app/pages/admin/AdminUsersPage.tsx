@@ -30,18 +30,19 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import adminService, { AdminUserDetailResponse, AdminUserSummary } from '../../../services/adminManagementService';
+import { toast } from 'sonner';
 
 type UserStatus = 'active' | 'suspended' | 'disabled';
 type EmailVerifiedFilter = 'all' | 'true' | 'false';
 
-const roleOptions = ['admin', 'support', 'mentor', 'candidate'] as const;
+const roleOptions = ['admin', 'support', 'mentor', 'user'] as const;
 const statusOptions: UserStatus[] = ['active', 'suspended', 'disabled'];
 
 const roleBadgeClass: Record<string, string> = {
   admin: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800',
   support: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
   mentor: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  candidate: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  user: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
 };
 
 const statusBadgeClass: Record<UserStatus, string> = {
@@ -87,6 +88,7 @@ export const AdminUsersPage: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailUser, setDetailUser] = useState<AdminUserDetailResponse | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<UserStatus | null>(null);
+  const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -165,9 +167,25 @@ export const AdminUsersPage: React.FC = () => {
       await loadUsers();
     } catch (error) {
       console.error('Failed to update user status', error);
-      alert('Không thể cập nhật trạng thái người dùng');
+      toast.error('Không thể cập nhật trạng thái người dùng');
     } finally {
       setStatusUpdating(null);
+    }
+  };
+
+  const updateRole = async (role: string) => {
+    if (!detailUser?.userSummary.id) return;
+    setRoleUpdating(role);
+    try {
+      await adminService.updateAdminUserRoles(detailUser.userSummary.id, [role]);
+      await refreshCurrentUserDetail();
+      await loadUsers();
+      toast.success(`Đã cập nhật vai trò thành ${role}`);
+    } catch (error) {
+      console.error('Failed to update user role', error);
+      toast.error('Không thể cập nhật vai trò người dùng');
+    } finally {
+      setRoleUpdating(null);
     }
   };
 
@@ -517,6 +535,27 @@ export const AdminUsersPage: React.FC = () => {
                     >
                       {statusUpdating === status ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       {statusLabel[status]}
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-5 mt-4 border-t border-gray-100">
+                <div className="mb-4 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-gray-600 dark:text-slate-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-slate-100">Cập nhật vai trò (Role)</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {roleOptions.map((role) => (
+                    <Button
+                      key={role}
+                      type="button"
+                      variant={detailUser.userSummary.role?.toLowerCase() === role ? 'default' : 'outline'}
+                      onClick={() => void updateRole(role)}
+                      disabled={roleUpdating !== null}
+                    >
+                      {roleUpdating === role ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      <span className="capitalize">{role}</span>
                     </Button>
                   ))}
                 </div>

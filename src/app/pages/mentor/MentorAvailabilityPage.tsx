@@ -19,6 +19,12 @@ export const MentorAvailabilityPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [slots, setSlots] = useState<MentorAvailabilitySlot[]>([]);
 
+  // Helper function to format date as local ISO string without Z (e.g., YYYY-MM-DDTHH:mm:ss)
+  const toLocalISOString = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+  };
+
   // Form State cho Slot Mới
   const [newDate, setNewDate] = useState('');
   const [newStartTime, setNewStartTime] = useState('09:00');
@@ -41,10 +47,13 @@ export const MentorAvailabilityPage: React.FC = () => {
 
   useEffect(() => {
     loadAvailability();
-    // Set default date to tomorrow
+    // Set default date to tomorrow in local time
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    setNewDate(tomorrow.toISOString().split('T')[0]);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    setNewDate(`${yyyy}-${mm}-${dd}`);
   }, []);
 
   const handleAddSlot = () => {
@@ -101,7 +110,7 @@ export const MentorAvailabilityPage: React.FC = () => {
       toast.error('Không thể xóa khung giờ đã có ứng viên đặt.');
       return;
     }
-    setSlots(slots.filter(s => s !== slotToRemove));
+    setSlots(slots.filter(s => s.id !== slotToRemove.id));
   };
 
   const handleSave = async () => {
@@ -109,16 +118,18 @@ export const MentorAvailabilityPage: React.FC = () => {
     try {
       // Chỉ gửi lên Backend những thông tin cần thiết.
       const payload: UpdateMentorAvailabilityRequest = {
-        slots: slots.map(s => ({
-          startsAt: s.startsAt,
-          endsAt: s.endsAt,
-          priceAmount: s.priceAmount,
-          currencyCode: s.currencyCode
-        }))
+        slots: slots
+          .filter(s => s.status === 'available')
+          .map(s => ({
+            startsAt: s.startsAt,
+            endsAt: s.endsAt,
+            priceAmount: s.priceAmount,
+            currencyCode: s.currencyCode
+          }))
       };
 
       const result = await mentorWorkspaceService.updateMentorAvailability(payload);
-      toast.success(`Đã lưu thành công! (Xóa ${result.clearedCount}, Thêm ${result.addedCount} slot)`);
+      toast.success('Đã lưu cấu hình khung giờ thành công!');
       
       // Reload from server to get correct IDs
       await loadAvailability();

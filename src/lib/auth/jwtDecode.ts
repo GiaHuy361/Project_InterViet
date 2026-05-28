@@ -55,7 +55,7 @@ const ROLE_CLAIM_NAMES = [
 /**
  * Valid system roles set for fast lookup
  */
-const VALID_ROLES = new Set<string>(['user', 'support', 'admin']);
+const VALID_ROLES = new Set<string>(['user', 'support', 'admin', 'mentor']);
 
 /**
  * Decode base64url string to UTF-8 string.

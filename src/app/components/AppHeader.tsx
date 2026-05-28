@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useApp } from "../contexts/AppContext";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Badge } from "./ui/badge";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { AccountDropdown } from "./AccountDropdown";
 import { Sun, Moon, Search, MessageSquare, CalendarClock } from "lucide-react";
@@ -24,12 +25,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
     }
   };
 
+  let dashboardPath = "/dashboard";
+  if (state.user?.systemRole === 'admin') dashboardPath = "/admin/dashboard";
+  else if (state.user?.systemRole === 'support') dashboardPath = "/support/dashboard";
+  else if (state.user?.systemRole === 'mentor') dashboardPath = "/mentor/dashboard";
+
   return (
     <header id="app-header" className="sticky top-0 z-50 shrink-0 border-b border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="h-20 flex items-center justify-between gap-6 px-8">
         {/* Logo */}
         <div className="flex h-20 shrink-0 items-center border-b border-gray-200 px-6">
-          <BrandLogo href="/dashboard" size="lg" />
+          <BrandLogo href={dashboardPath} size="lg" />
         </div>
 
         {/* Search */}
@@ -86,6 +92,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
 
           {/* Notifications Dropdown - Portal based */}
           <NotificationDropdown />
+
+          {state.user?.systemRole && (
+            <Badge 
+              variant="outline" 
+              className={`hidden md:inline-flex ${
+                state.user.systemRole === 'admin' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800' :
+                state.user.systemRole === 'support' ? 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800' :
+                state.user.systemRole === 'mentor' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' :
+                state.user.systemRole === 'user' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' :
+                'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              {
+                state.user.systemRole === 'admin' ? 'Quản trị viên' :
+                state.user.systemRole === 'support' ? 'Hỗ trợ' :
+                state.user.systemRole === 'mentor' ? 'Mentor' :
+                state.user.systemRole === 'user' ? 'Thành viên' :
+                state.user.systemRole
+              }
+            </Badge>
+          )}
 
           {/* Account Dropdown - Portal based */}
           <AccountDropdown />

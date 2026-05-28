@@ -16,17 +16,17 @@ import mentorService, { type MentorBookingItem } from '../../services/mentorServ
 import { isDevBillingEnabled } from '../../config/devBilling';
 
 const statusLabel: Record<string, string> = {
-  pending_payment: 'Pending payment',
-  confirmed: 'Confirmed',
-  cancelled: 'Cancelled',
-  completed: 'Completed',
+  pending_payment: 'Chờ thanh toán',
+  confirmed: 'Đã xác nhận',
+  cancelled: 'Đã hủy',
+  completed: 'Hoàn thành',
 };
 
-const statusVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  pending_payment: 'secondary',
-  confirmed: 'default',
-  cancelled: 'destructive',
-  completed: 'outline',
+const statusColor: Record<string, string> = {
+  pending_payment: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 hover:bg-amber-200',
+  confirmed: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 hover:bg-blue-200',
+  cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 hover:bg-red-200',
+  completed: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800 hover:bg-emerald-200',
 };
 
 export const MentorBookingsPage: React.FC = () => {
@@ -207,16 +207,18 @@ export const MentorBookingsPage: React.FC = () => {
                 key={booking.id}
                 type="button"
                 onClick={() => handleOpenBooking(booking)}
-                className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedBookingId === booking.id ? 'border-cyan-300 bg-cyan-50 dark:bg-cyan-900/30 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                className={`w-full rounded-2xl border p-4 text-left transition-all ${selectedBookingId === booking.id ? 'border-cyan-300 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-900/40 shadow-sm' : 'border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900 hover:border-gray-300 dark:hover:border-slate-700'}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-gray-900">{booking.mentorName}</p>
-                    <p className="text-sm text-gray-500">{booking.mentorHeadline || booking.serviceType}</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{booking.mentorName}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{booking.mentorHeadline || booking.serviceType}</p>
                   </div>
-                  <Badge variant={statusVariant[booking.status] || 'outline'}>{statusLabel[booking.status] || booking.status}</Badge>
+                  <Badge variant="outline" className={statusColor[booking.status] || ''}>
+                    {statusLabel[booking.status] || booking.status}
+                  </Badge>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                   <span className="inline-flex items-center gap-1"><DollarSignIcon className="h-4 w-4 text-green-500" /> {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: booking.currencyCode, maximumFractionDigits: 0 }).format(booking.amount)}</span>
                   <span className="inline-flex items-center gap-1"><Clock3 className="h-4 w-4 text-cyan-500" /> {booking.scheduledStartsAt ? new Date(booking.scheduledStartsAt).toLocaleString('vi-VN') : 'Chờ xác nhận'}</span>
                 </div>
@@ -229,13 +231,15 @@ export const MentorBookingsPage: React.FC = () => {
               <>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{selectedBooking.mentorName}</h3>
-                    <p className="text-sm text-gray-500">{selectedBooking.mentorHeadline || selectedBooking.serviceType}</p>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{selectedBooking.mentorName}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedBooking.mentorHeadline || selectedBooking.serviceType}</p>
                   </div>
-                  <Badge variant={statusVariant[selectedBooking.status] || 'outline'}>{statusLabel[selectedBooking.status] || selectedBooking.status}</Badge>
+                  <Badge variant="outline" className={statusColor[selectedBooking.status] || ''}>
+                    {statusLabel[selectedBooking.status] || selectedBooking.status}
+                  </Badge>
                 </div>
 
-                <div className="grid gap-3 text-sm text-gray-700">
+                <div className="grid gap-3 text-sm text-gray-700 dark:text-gray-300">
                   <InfoRow label="Giờ bắt đầu" value={selectedBooking.scheduledStartsAt ? new Date(selectedBooking.scheduledStartsAt).toLocaleString('vi-VN') : 'Chờ xác nhận'} />
                   <InfoRow label="Giờ kết thúc" value={selectedBooking.scheduledEndsAt ? new Date(selectedBooking.scheduledEndsAt).toLocaleString('vi-VN') : 'Chờ xác nhận'} />
                   <InfoRow label="Loại Dịch vụ" value={selectedBooking.serviceType} />
@@ -265,7 +269,7 @@ export const MentorBookingsPage: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+              <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 Chọn một booking để xem chi tiết.
               </div>
             )}
@@ -331,9 +335,9 @@ export const MentorBookingsPage: React.FC = () => {
 };
 
 const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-    <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-    <p className="mt-1 break-words font-medium text-gray-900">{value}</p>
+  <div className="rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 px-4 py-3">
+    <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</p>
+    <p className="mt-1 break-words font-medium text-gray-900 dark:text-gray-100">{value}</p>
   </div>
 );
 

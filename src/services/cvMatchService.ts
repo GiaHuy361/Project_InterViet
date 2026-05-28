@@ -214,5 +214,14 @@ export const cvMatchService = {
 
   getMatchSessionDetail: (sessionId: string) => apiClient.get<MatchSessionDetail>(`/matches/${sessionId}`),
 
+  listMatchSessions: (params?: { page?: number; pageSize?: number; sessionType?: MatchSessionType }) => {
+    const search = new URLSearchParams();
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.pageSize != null) search.set('pageSize', String(params.pageSize));
+    if (params?.sessionType) search.set('sessionType', params.sessionType);
+    const qs = search.toString();
+    return apiClient.get<MatchSessionPage>(`/matches${qs ? `?${qs}` : ''}`);
+  },
+
   downloadResume: (resumeId: string) => apiClient.get<Response>(`/resumes/${resumeId}/download`, { rawResponse: true }),
 };

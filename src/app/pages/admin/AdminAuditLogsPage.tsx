@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import adminSystemService, { AdminAuditLogRecord, AdminPaginatedResponse } from '../../../services/adminSystemService';
 import AdminDevPromoteModal from './AdminDevPromoteModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 
 const actionLabelMap: Record<string, string> = {
   'support.ticket_created': 'Tạo ticket',
@@ -99,9 +100,9 @@ export const AdminAuditLogsPage: React.FC = () => {
         <div className="grid gap-3 lg:grid-cols-5">
           <Input placeholder="Tên / Mô tả" value={search} onChange={(e) => setSearch(e.target.value)} />
           <Select value={actorRole} onValueChange={setActorRole}>
-              <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
-                <SelectValue>{actorRole && actorRole !== '__all__' ? actorRole : 'Tất cả vai trò'}</SelectValue>
-              </SelectTrigger>
+            <SelectTrigger className="file:text-foreground placeholder:text-slate-400 selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100 shadow-sm transition-[color,box-shadow] outline-none md:text-sm">
+              <SelectValue>{actorRole && actorRole !== '__all__' ? actorRole : 'Tất cả vai trò'}</SelectValue>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Tất cả vai trò</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
@@ -164,7 +165,20 @@ export const AdminAuditLogsPage: React.FC = () => {
                   <TableCell className="text-center">{new Date(l.createdAt).toLocaleString('vi-VN')}</TableCell>
                   <TableCell className="text-center">{l.actorEmail} <span className="text-xs text-gray-400">({l.actorRole})</span></TableCell>
                   <TableCell className="text-center">{actionLabel(l.action)}</TableCell>
-                  <TableCell className="text-center">{l.resource} {l.resourceId ? `(${l.resourceId})` : ''}</TableCell>
+                  <TableCell className="text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            {`${l.resource} ${l.resourceId ? `(${l.resourceId.slice(0, 6)}...${l.resourceId.slice(-6)})` : ''}`}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{l.resourceId}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell className="text-center">
                     <Button variant="outline" size="sm" onClick={() => openDetail(l.metadataJson)}>
                       Xem

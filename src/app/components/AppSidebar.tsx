@@ -265,7 +265,7 @@ export const AppSidebar: React.FC = () => {
         </div>
 
         {/* Candidate / User Section */}
-        {(isUser || isAdmin) && (
+        {isUser && (
           <NavSection
             label="Ứng viên"
             items={navItems}
@@ -276,8 +276,8 @@ export const AppSidebar: React.FC = () => {
           />
         )}
 
-        {/* Mentor section — visible to admin + mentor */}
-        {(isMentor || isAdmin) && (
+        {/* Mentor section */}
+        {isMentor && (
           <NavSection
             label="Chuyên gia"
             items={mentorNavItems}
@@ -288,8 +288,8 @@ export const AppSidebar: React.FC = () => {
           />
         )}
 
-        {/* Support section — visible to admin + support unless feature gate is disabled */}
-        {(isSupport || isAdmin) && !supportDisabled && (
+        {/* Support section — visible to support only unless feature gate is disabled */}
+        {isSupport && !supportDisabled && (
           <NavSection
             label="Hỗ trợ"
             items={supportNavItems}
@@ -327,7 +327,9 @@ export const AppSidebar: React.FC = () => {
 
       {/* Bottom navigation */}
       <div className={cn('space-y-1 border-t border-gray-200 dark:border-gray-800', collapsed ? 'py-2' : 'p-5')}>
-        {bottomNavItems.map((item) => (
+        {bottomNavItems
+          .filter(item => !(item.path === '/goi-dich-vu' && (isMentor || isAdmin)))
+          .map((item) => (
           <NavLink key={item.path} item={item} isActive={isActive(item.path)} collapsed={collapsed} />
         ))}
       </div>

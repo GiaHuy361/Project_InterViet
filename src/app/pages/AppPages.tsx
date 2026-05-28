@@ -29,13 +29,13 @@ import {
   FileText, BarChart3, MessageSquare, HelpCircle, Check, X, Sparkles
 } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
-import { 
-  CANDIDATE_PLANS, 
-  getPlanQuota, 
-  getPlanActionType, 
-  getPlanCTAText, 
+import {
+  CANDIDATE_PLANS,
+  getPlanQuota,
+  getPlanActionType,
+  getPlanCTAText,
   getPlanCTAVariant,
-  type PlanActionType 
+  type PlanActionType
 } from '../config/pricing';
 import { toast } from 'sonner';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
@@ -224,8 +224,8 @@ export const InterviewReportPage: React.FC = () => {
 
       {report && (
         <>
-          <Card className="glass-card rounded-2xl p-8 text-center bg-gradient-to-b from-blue-50/50 to-white">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center justify-center gap-2">
+          <Card className="glass-card rounded-2xl p-8 text-center bg-gradient-to-b from-blue-50/50 dark:from-blue-900/20 to-white dark:to-slate-900">
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center justify-center gap-2">
               <Sparkles className="text-yellow-500" size={20} />
               Điểm tổng thể từ AI
             </h3>
@@ -238,23 +238,23 @@ export const InterviewReportPage: React.FC = () => {
           </Card>
 
           <Card className="p-6">
-            <h3 className="font-bold text-lg mb-4 text-gray-800">Điểm số chi tiết</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">Điểm số chi tiết</h3>
             <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-                <span className="text-sm text-gray-500 font-medium">Confidence (Tự tin)</span>
-                <div className="text-2xl font-bold text-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Confidence (Tự tin)</span>
+                <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">
                   {report.confidenceScore ?? '—'}
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-                <span className="text-sm text-gray-500 font-medium">Clarity (Mạch lạc)</span>
-                <div className="text-2xl font-bold text-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Clarity (Mạch lạc)</span>
+                <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">
                   {report.clarityScore ?? '—'}
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl text-center space-y-1">
-                <span className="text-sm text-gray-500 font-medium">Relevance (Liên quan)</span>
-                <div className="text-2xl font-bold text-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center space-y-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Relevance (Liên quan)</span>
+                <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">
                   {report.relevanceScore ?? '—'}
                 </div>
               </div>
@@ -263,11 +263,11 @@ export const InterviewReportPage: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="p-6 border-green-100 dark:border-green-800/50 bg-green-50 dark:bg-green-900/30">
-              <h3 className="font-bold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-green-800 dark:text-green-400 mb-3 flex items-center gap-2">
                 👍 Ưu điểm (Strengths)
               </h3>
               {report.strengths && report.strengths.length > 0 ? (
-                <ul className="space-y-2 text-sm text-gray-700">
+                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                   {report.strengths.map((item, index) => (
                     <li key={`strength-${index}`} className="flex items-start gap-1">
                       <span className="text-green-600 dark:text-green-400">•</span>
@@ -276,34 +276,34 @@ export const InterviewReportPage: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
               )}
             </Card>
 
             <Card className="p-6 border-red-100 dark:border-red-800/50 bg-red-50 dark:bg-red-900/30">
-              <h3 className="font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-red-800 dark:text-red-400 mb-3 flex items-center gap-2">
                 👎 Điểm yếu (Weaknesses)
               </h3>
               {report.weaknesses && report.weaknesses.length > 0 ? (
-                <ul className="space-y-2 text-sm text-gray-700">
+                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                   {report.weaknesses.map((item, index) => (
                     <li key={`weakness-${index}`} className="flex items-start gap-1">
-                      <span className="text-red-500">•</span>
+                      <span className="text-red-500 dark:text-red-400">•</span>
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
               )}
             </Card>
 
             <Card className="p-6 border-amber-100 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/30">
-              <h3 className="font-bold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-3 flex items-center gap-2">
                 💡 Lời khuyên (Recommendations)
               </h3>
               {report.recommendations && report.recommendations.length > 0 ? (
-                <ul className="space-y-2 text-sm text-gray-700">
+                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                   {report.recommendations.map((item, index) => (
                     <li key={`recommend-${index}`} className="flex items-start gap-1">
                       <span className="text-amber-600 dark:text-amber-400">•</span>
@@ -312,18 +312,18 @@ export const InterviewReportPage: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500 italic">Chưa có đánh giá</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
               )}
             </Card>
           </div>
 
           <Card className="p-6 space-y-4">
-            <h3 className="font-bold text-lg text-gray-800">Chi tiết các tiêu chí</h3>
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Chi tiết các tiêu chí</h3>
             {report.scoreBreakdowns && report.scoreBreakdowns.length > 0 ? (
               <div className="space-y-4">
                 {report.scoreBreakdowns.map((item, index) => (
-                  <div key={`breakdown-${index}`} className="border-b pb-3 last:border-0 last:pb-0 space-y-1 text-sm">
-                    <div className="flex justify-between items-center font-semibold text-gray-800">
+                  <div key={`breakdown-${index}`} className="border-b dark:border-slate-800 pb-3 last:border-0 last:pb-0 space-y-1 text-sm">
+                    <div className="flex justify-between items-center font-semibold text-gray-800 dark:text-gray-200">
                       <span>{item.dimension}</span>
                       <span>{item.score ?? '—'} / {item.maxScore ?? '—'}</span>
                     </div>
@@ -332,17 +332,17 @@ export const InterviewReportPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Chưa có đánh giá</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
             )}
           </Card>
 
           <Card className="p-6 space-y-4">
-            <h3 className="font-bold text-lg text-gray-800">Ý kiến phản hồi từ AI</h3>
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Ý kiến phản hồi từ AI</h3>
             {report.feedbackItems && report.feedbackItems.length > 0 ? (
               <div className="grid gap-3">
                 {report.feedbackItems.map((item, index) => (
-                  <div key={`feedback-${index}`} className="p-3 border rounded-xl bg-slate-50/50 space-y-1">
-                    <div className="flex justify-between items-center text-sm font-semibold">
+                  <div key={`feedback-${index}`} className="p-3 border dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 space-y-1">
+                    <div className="flex justify-between items-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                       <span>{item.title}</span>
                       <Badge variant="secondary" className="text-[10px]">{item.category}</Badge>
                     </div>
@@ -351,109 +351,109 @@ export const InterviewReportPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Chưa có đánh giá</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">Chưa có đánh giá</p>
             )}
           </Card>
 
-            <Card className="p-6 space-y-4">
-              <h3 className="font-bold text-lg text-gray-800">Thông tin phiên phỏng vấn</h3>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Trạng thái</span>
-                  <strong>{session?.status ?? 'N/A'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Mode</span>
-                  <strong>{session?.mode || 'N/A'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Interview mode</span>
-                  <strong>{session?.interviewerMode || 'N/A'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">AI model</span>
-                  <strong>{session?.aiModelRaw || session?.aiModel || 'N/A'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Số câu hỏi dự kiến</span>
-                  <strong>{session?.totalExpectedQuestions ?? 0}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Đã trả lời</span>
-                  <strong>{session?.answeredCount ?? 0}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Ngày tạo</span>
-                  <strong>{session?.createdAt ? new Date(session.createdAt).toLocaleString('vi-VN') : 'N/A'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Ngày hoàn tất</span>
-                  <strong>{session?.completedAt ? new Date(session.completedAt).toLocaleString('vi-VN') : 'Chưa hoàn tất'}</strong>
-                </div>
+          <Card className="p-6 space-y-4">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Thông tin phiên phỏng vấn</h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Trạng thái</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.status ?? 'N/A'}</strong>
               </div>
-            </Card>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Mode</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.mode || 'N/A'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Interview mode</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.interviewerMode || 'N/A'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">AI model</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.aiModelRaw || session?.aiModel || 'N/A'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Số câu hỏi dự kiến</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.totalExpectedQuestions ?? 0}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Đã trả lời</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.answeredCount ?? 0}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Ngày tạo</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.createdAt ? new Date(session.createdAt).toLocaleString('vi-VN') : 'N/A'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Ngày hoàn tất</span>
+                <strong className="text-gray-900 dark:text-gray-100">{session?.completedAt ? new Date(session.completedAt).toLocaleString('vi-VN') : 'Chưa hoàn tất'}</strong>
+              </div>
+            </div>
+          </Card>
 
-            <Card className="p-6 space-y-4">
-              <h3 className="font-bold text-lg text-gray-800">Chi tiết kỹ thuật</h3>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                {/* <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Pace score</span>
-                  <strong>{report.paceScore ?? '—'}</strong>
+          <Card className="p-6 space-y-4">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Chi tiết kỹ thuật</h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              {/* <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                  <span className="text-gray-500 dark:text-gray-400">Pace score</span>
+                  <strong className="text-gray-900 dark:text-gray-100">{report.paceScore ?? '—'}</strong>
                 </div> */}
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Model version</span>
-                  <strong>{report.modelVersion ?? 'Chưa có dữ liệu'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Schema version</span>
-                  <strong>{report.schemaVersion ?? 'Chưa có dữ liệu'}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-3">
-                  <span className="text-gray-500">Session ID</span>
-                  <strong className="break-all text-right">{session?.id ?? id ?? 'N/A'}</strong>
-                </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Model version</span>
+                <strong className="text-gray-900 dark:text-gray-100">{report.modelVersion ?? 'Chưa có dữ liệu'}</strong>
               </div>
-            </Card>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Schema version</span>
+                <strong className="text-gray-900 dark:text-gray-100">{report.schemaVersion ?? 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <span className="text-gray-500 dark:text-gray-400">Session ID</span>
+                <strong className="break-all text-right text-gray-900 dark:text-gray-100">{session?.id ?? id ?? 'N/A'}</strong>
+              </div>
+            </div>
+          </Card>
 
-            <Card className="p-6 space-y-4">
-              <h3 className="font-bold text-lg text-gray-800">Tổng hợp câu hỏi & trả lời</h3>
-              {session?.questions && session.questions.length > 0 ? (
-                <div className="max-h-[520px] overflow-y-auto pr-2 space-y-4">
-                  {session.questions.map((q) => {
-                    const answer = session.answers?.find((a) => a.questionId === q.questionId);
-                    return (
-                      <div key={q.questionId} className="border rounded-xl p-4 bg-slate-50/40 space-y-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-semibold">
-                              {q.questionNumber}. {q.questionText}
-                            </p>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {q.questionType} • {q.difficulty} • {answer ? 'Đã trả lời' : 'Chưa trả lời'}
-                            </div>
+          <Card className="p-6 space-y-4">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Tổng hợp câu hỏi & trả lời</h3>
+            {session?.questions && session.questions.length > 0 ? (
+              <div className="max-h-[520px] overflow-y-auto pr-2 space-y-4">
+                {session.questions.map((q) => {
+                  const answer = session.answers?.find((a) => a.questionId === q.questionId);
+                  return (
+                    <div key={q.questionId} className="border dark:border-slate-800 rounded-xl p-4 bg-slate-50/40 dark:bg-slate-800/40 space-y-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">
+                            {q.questionNumber}. {q.questionText}
+                          </p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {q.questionType} • {q.difficulty} • {answer ? 'Đã trả lời' : 'Chưa trả lời'}
                           </div>
                         </div>
-
-                        {q.expectedAnswerPoints && q.expectedAnswerPoints.length > 0 && (
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {q.expectedAnswerPoints.map((point, index) => (
-                              <li key={`${q.questionId}-point-${index}`}>• {point}</li>
-                            ))}
-                          </ul>
-                        )}
-
-                        <div className="rounded-lg border bg-white p-3 text-sm text-gray-700">
-                          <p className="font-medium mb-1">Câu trả lời</p>
-                          <p>{answer?.answerText || 'Chưa có câu trả lời'}</p>
-                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
-              )}
-            </Card>
+
+                      {q.expectedAnswerPoints && q.expectedAnswerPoints.length > 0 && (
+                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                          {q.expectedAnswerPoints.map((point, index) => (
+                            <li key={`${q.questionId}-point-${index}`}>• {point}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm text-gray-700 dark:text-gray-300">
+                        <p className="font-medium mb-1 text-gray-900 dark:text-gray-100">Câu trả lời</p>
+                        <p>{answer?.answerText || 'Chưa có câu trả lời'}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+            )}
+          </Card>
 
           <div className="flex gap-3">
             <Button onClick={() => navigate('/phong-van-setup')}>
@@ -479,6 +479,7 @@ export const InterviewReportPage: React.FC = () => {
 // Notifications Page
 export const NotificationsPage: React.FC = () => {
   const { state, markNotificationRead, syncNotifications } = useApp();
+  const navigate = useNavigate();
   const [remoteNotifications, setRemoteNotifications] = useState<NotificationItem[]>([]);
   const [hasRemoteData, setHasRemoteData] = useState(false);
   const [remoteTotalPages, setRemoteTotalPages] = useState(1);
@@ -538,14 +539,14 @@ export const NotificationsPage: React.FC = () => {
   const notifications = hasRemoteData
     ? remoteNotifications
     : state.notifications.map((item) => ({
-        id: item.id,
-        title: item.title,
-        message: item.message,
-        type: item.type,
-        priority: item.type,
-        isRead: item.read,
-        createdAt: item.createdAt.toISOString(),
-      }));
+      id: item.id,
+      title: item.title,
+      message: item.message,
+      type: item.type,
+      priority: item.type,
+      isRead: item.read,
+      createdAt: item.createdAt.toISOString(),
+    }));
 
   const unreadCount = hasRemoteData ? remoteUnreadCount : state.notifications.filter((item) => !item.read).length;
 
@@ -557,18 +558,32 @@ export const NotificationsPage: React.FC = () => {
     setPage(1);
   }, [unreadOnly, typeFilter, priorityFilter, pageSize]);
 
-  const handleMarkRead = async (notificationId: string) => {
+  const handleNotificationClick = async (notif: NotificationItem | (typeof state.notifications)[number]) => {
+    const notificationId = notif.id;
     if (!hasRemoteData) {
       markNotificationRead(notificationId);
-      return;
+    } else {
+      try {
+        await notificationService.markRead(notificationId);
+        setRemoteNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, isRead: true } : item)));
+        void syncNotifications().catch(() => undefined);
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể cập nhật thông báo.');
+      }
     }
 
-    try {
-      await notificationService.markRead(notificationId);
-      setRemoteNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, isRead: true } : item)));
-      void syncNotifications().catch(() => undefined);
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.getUserMessage() : 'Không thể cập nhật thông báo.');
+    if ('actionUrl' in notif && notif.actionUrl) {
+      let finalUrl = notif.actionUrl.replace('/interviews', '/phong-van-report');
+      if (finalUrl.endsWith('/report')) {
+        finalUrl = finalUrl.replace(/\/report$/, '');
+      }
+      navigate(finalUrl);
+    } else if (notif.title.includes('Báo cáo') || notif.title.includes('báo cáo')) {
+      navigate('/bao-cao');
+    } else if (notif.title.includes('giới hạn') || notif.title.includes('hết lượt')) {
+      navigate('/goi-dich-vu');
+    } else if (notif.title.includes('CV')) {
+      navigate('/cv-matching');
     }
   };
 
@@ -687,10 +702,10 @@ export const NotificationsPage: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {pagedNotifications.map(notification => (
-            <Card 
-              key={notification.id} 
+            <Card
+              key={notification.id}
               className={`p-6 cursor-pointer ${!notification.isRead ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : ''}`}
-              onClick={() => void handleMarkRead(notification.id)}
+              onClick={() => void handleNotificationClick(notification)}
             >
               <div className="flex items-start gap-3">
                 <Bell className="flex-shrink-0 mt-1" size={20} />
@@ -763,58 +778,6 @@ const ToggleRow: React.FC<{ label: string; checked: boolean; onCheckedChange: (c
   </div>
 );
 
-// Settings Page
-export const SettingsPage: React.FC = () => {
-  const { state, updateUser } = useApp();
-  const navigate = useNavigate();
-  const [name, setName] = useState(state.user?.name || '');
-  const [email, setEmail] = useState(state.user?.email || '');
-  const [emailNotifs, setEmailNotifs] = useState(true);
-
-  const handleSave = () => {
-    updateUser({ name, email });
-    alert('Đã lưu thay đổi!');
-  };
-
-  return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <AppPageHeader
-        title="Cài đặt tài khoản"
-        subtitle="Thông tin cá nhân, thông báo và bảo mật"
-        icon={Activity}
-        iconGradient="from-slate-600 to-slate-800"
-      />
-
-      <Card className="glass-card p-6">
-        <h3 className="font-bold mb-4">Thông tin cá nhân</h3>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Họ và tên</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <Button onClick={handleSave}>Lưu thay đổi</Button>
-        </div>
-      </Card>
-
-      <Card className="glass-card p-6">
-        <h3 className="font-bold mb-4">Thông báo</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Email thông báo</h4>
-              <p className="text-sm text-gray-600">Nhận thông báo qua email</p>
-            </div>
-            <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-};
 
 // Subscription Page
 export const SubscriptionPage: React.FC = () => {
@@ -840,9 +803,9 @@ export const SubscriptionPage: React.FC = () => {
     if (planId === currentPlan) {
       return; // Already on this plan
     }
-    
+
     const actionType = getPlanActionType(currentPlan, planId);
-    
+
     if (actionType === 'downgrade') {
       // Show downgrade modal
       setSelectedDowngradePlan(planId);
@@ -855,15 +818,15 @@ export const SubscriptionPage: React.FC = () => {
 
   const handleDowngradeConfirm = () => {
     setDowngradeLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setDowngradeLoading(false);
       setShowDowngradeModal(false);
       toast.success(`Đã đặt lịch chuyển xuống ${CANDIDATE_PLANS[selectedDowngradePlan].name} vào kỳ tiếp theo`);
-      eventTracker.track('plan_downgrade_scheduled', { 
+      eventTracker.track('plan_downgrade_scheduled', {
         fromPlan: currentPlan,
-        toPlan: selectedDowngradePlan 
+        toPlan: selectedDowngradePlan
       });
     }, 1500);
   };
@@ -924,8 +887,8 @@ export const SubscriptionPage: React.FC = () => {
                     {currentPlan === 'free' ? 3 : currentPlan === 'monthly' ? 3 : 5} lần
                   </span>
                 </div>
-                <Progress 
-                  value={(state.user.cvOptimizationsDaily / (currentPlan === 'free' ? 3 : currentPlan === 'monthly' ? 3 : 5)) * 100} 
+                <Progress
+                  value={(state.user.cvOptimizationsDaily / (currentPlan === 'free' ? 3 : currentPlan === 'monthly' ? 3 : 5)) * 100}
                 />
               </div>
               <div>
@@ -936,8 +899,8 @@ export const SubscriptionPage: React.FC = () => {
                     {currentPlan === 'free' ? 1 : currentPlan === 'monthly' ? 1 : 3} lần
                   </span>
                 </div>
-                <Progress 
-                  value={(state.user.interviewsDaily / (currentPlan === 'free' ? 1 : currentPlan === 'monthly' ? 1 : 3)) * 100} 
+                <Progress
+                  value={(state.user.interviewsDaily / (currentPlan === 'free' ? 1 : currentPlan === 'monthly' ? 1 : 3)) * 100}
                 />
               </div>
             </div>
@@ -1001,9 +964,9 @@ export const SubscriptionPage: React.FC = () => {
               <span className="text-gray-600">Phương thức thanh toán</span>
               <span className="font-semibold">
                 {state.user?.paymentMethod === 'vnpay' ? 'VNPay' :
-                 state.user?.paymentMethod === 'momo' ? 'MoMo' :
-                 state.user?.paymentMethod === 'credit_card' ? 'Thẻ tín dụng' :
-                 state.user?.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 'Chưa thiết lập'}
+                  state.user?.paymentMethod === 'momo' ? 'MoMo' :
+                    state.user?.paymentMethod === 'credit_card' ? 'Thẻ tín dụng' :
+                      state.user?.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 'Chưa thiết lập'}
               </span>
             </div>
           </div>
@@ -1015,7 +978,7 @@ export const SubscriptionPage: React.FC = () => {
         <h2 className="text-2xl font-bold mb-6">
           {currentPlan === 'free' ? 'Các gói phù hợp với bạn' : 'Các gói nâng cấp'}
         </h2>
-        
+
         <div className="grid md:grid-cols-3 gap-6">
           {/* Monthly Plan */}
           <Card className={`p-6 flex flex-col ${currentPlan === 'monthly' ? 'border-2 border-blue-600 shadow-lg' : ''}`}>
@@ -1162,7 +1125,7 @@ export const SubscriptionPage: React.FC = () => {
       {/* Comparison Table Section */}
       <div id="comparison-section" className="scroll-mt-6">
         <h2 className="text-2xl font-bold mb-6">Bảng so sánh chi tiết</h2>
-        
+
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -1307,30 +1270,30 @@ export const InvoicesPage: React.FC = () => {
           </p>
         </Card>
       ) : (
-      <div className="space-y-4">
-        {invoices.map(invoice => (
-          <Card key={invoice.id} className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold">Hóa đơn #{invoice.id}</h3>
-                <p className="text-sm text-gray-600">
-                  {new Date(invoice.date).toLocaleDateString('vi-VN')}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="font-bold">{invoice.amount.toLocaleString('vi-VN')}₫</div>
-                  <Badge variant="secondary">{invoice.status}</Badge>
+        <div className="space-y-4">
+          {invoices.map(invoice => (
+            <Card key={invoice.id} className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold">Hóa đơn #{invoice.id}</h3>
+                  <p className="text-sm text-gray-600">
+                    {new Date(invoice.date).toLocaleDateString('vi-VN')}
+                  </p>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2" size={14} />
-                  Tải PDF
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="font-bold">{invoice.amount.toLocaleString('vi-VN')}₫</div>
+                    <Badge variant="secondary">{invoice.status}</Badge>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2" size={14} />
+                    Tải PDF
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -1725,18 +1688,16 @@ export const HelpCenterPage: React.FC = () => {
                   key={ticket.id}
                   type="button"
                   onClick={() => selectTicket(ticket.id)}
-                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
-                    selectedTicketId === ticket.id
+                  className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedTicketId === ticket.id
                       ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/30'
                       : 'border-gray-200 hover:border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:bg-blue-900/30'
-                  }`}
+                    }`}
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <p className="line-clamp-1 text-sm font-semibold text-gray-900">{ticket.subject}</p>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        statusBadgeClass[ticket.status] || 'bg-gray-100 text-gray-700'
-                      }`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass[ticket.status] || 'bg-gray-100 text-gray-700'
+                        }`}
                     >
                       {statusLabel[ticket.status] || ticket.status}
                     </span>
@@ -1796,9 +1757,8 @@ export const HelpCenterPage: React.FC = () => {
                   <p className="text-sm text-gray-500">#{selectedTicket.ticketNumber}</p>
                 </div>
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    statusBadgeClass[selectedTicket.status] || 'bg-gray-100 text-gray-700'
-                  }`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeClass[selectedTicket.status] || 'bg-gray-100 text-gray-700'
+                    }`}
                 >
                   {statusLabel[selectedTicket.status] || selectedTicket.status}
                 </span>
@@ -1825,11 +1785,10 @@ export const HelpCenterPage: React.FC = () => {
                     selectedTicket.messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`rounded-lg p-3 ${
-                          message.senderType === 'user'
+                        className={`rounded-lg p-3 ${message.senderType === 'user'
                             ? 'bg-blue-50 dark:bg-blue-900/30'
                             : 'bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div className="mb-1 flex items-center justify-between gap-2">
                           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -1878,15 +1837,15 @@ export const HelpCenterPage: React.FC = () => {
       </div>
 
       {/* Contact Support */}
-      <Card className="p-8 bg-gradient-to-r from-blue-50 to-purple-50">
+      <Card className="p-8 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800/80 dark:to-slate-900/80 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold mb-2">Vẫn cần hỗ trợ?</h3>
-            <p className="text-gray-600">
+            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-slate-100">Vẫn cần hỗ trợ?</h3>
+            <p className="text-gray-600 dark:text-gray-400">
               Đội ngũ INTER-VIET sẵn sàng hỗ trợ bạn 24/7
             </p>
           </div>
-          <Button 
+          <Button
             type="button"
             onClick={() => setIsContactModalOpen(true)}
           >

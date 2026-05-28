@@ -19,7 +19,11 @@ export const PublicOnlyRoute: React.FC<PublicOnlyRouteProps> = ({ children }) =>
   }
 
   if (state.isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    let dashboardPath = '/dashboard';
+    if (state.user?.systemRole === 'admin') dashboardPath = '/admin/dashboard';
+    else if (state.user?.systemRole === 'support') dashboardPath = '/support/dashboard';
+    else if (state.user?.systemRole === 'mentor') dashboardPath = '/mentor/dashboard';
+    return <Navigate to={dashboardPath} replace />;
   }
 
   return <>{children}</>;

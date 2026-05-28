@@ -172,11 +172,11 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <span>Điểm trung bình</span>
-              <strong>{stats.averageScore ?? '—'}</strong>
+              <strong>{typeof stats.averageScore === 'number' ? Number(stats.averageScore.toFixed(2)) : (stats.averageScore ?? '—')}</strong>
             </div>
             <div className="flex items-center justify-between">
               <span>Điểm cao nhất</span>
-              <strong>{stats.bestScore ?? '—'}</strong>
+              <strong>{typeof stats.bestScore === 'number' ? Number(stats.bestScore.toFixed(2)) : (stats.bestScore ?? '—')}</strong>
             </div>
           </div>
         </Card>
@@ -214,21 +214,21 @@ export const ReportsPage: React.FC = () => {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm">
-                    <div className="rounded-xl bg-slate-50 p-3">
-                      <p className="text-xs text-gray-500">Số câu hỏi</p>
-                      <p className="font-semibold text-gray-900">{interview.totalExpectedQuestions ?? 0}</p>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Số câu hỏi</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{interview.totalExpectedQuestions ?? 0}</p>
                     </div>
-                    <div className="rounded-xl bg-slate-50 p-3">
-                      <p className="text-xs text-gray-500">Đã trả lời</p>
-                      <p className="font-semibold text-gray-900">{interview.answeredCount ?? 0}</p>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Đã trả lời</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{interview.answeredCount ?? 0}</p>
                     </div>
-                    <div className="rounded-xl bg-slate-50 p-3">
-                      <p className="text-xs text-gray-500">Điểm tổng</p>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Điểm tổng</p>
                       <p className="font-semibold text-blue-600 dark:text-blue-400">{interview.overallScore ?? '—'}</p>
                     </div>
-                    <div className="rounded-xl bg-slate-50 p-3">
-                      <p className="text-xs text-gray-500">Tỷ lệ hoàn thành</p>
-                      <p className="font-semibold text-gray-900">
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Tỷ lệ hoàn thành</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
                         {interview.totalExpectedQuestions
                           ? `${Math.round(((interview.answeredCount ?? 0) / interview.totalExpectedQuestions) * 100)}%`
                           : '—'}
@@ -236,20 +236,20 @@ export const ReportsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3 text-xs text-gray-600">
-                    <div className="rounded-xl border bg-white p-3">
-                      <p className="text-gray-500 mb-1">Ngày tạo</p>
-                      <p className="font-medium text-gray-900">{new Date(interview.createdAt).toLocaleString('vi-VN')}</p>
+                  <div className="grid gap-3 sm:grid-cols-3 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+                      <p className="text-gray-500 dark:text-gray-400 mb-1">Ngày tạo</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{new Date(interview.createdAt).toLocaleString('vi-VN')}</p>
                     </div>
-                    <div className="rounded-xl border bg-white p-3">
-                      <p className="text-gray-500 mb-1">Bắt đầu</p>
-                      <p className="font-medium text-gray-900">
+                    <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+                      <p className="text-gray-500 dark:text-gray-400 mb-1">Bắt đầu</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {interview.startedAt ? new Date(interview.startedAt).toLocaleString('vi-VN') : 'Chưa bắt đầu'}
                       </p>
                     </div>
-                    <div className="rounded-xl border bg-white p-3">
-                      <p className="text-gray-500 mb-1">Hoàn tất</p>
-                      <p className="font-medium text-gray-900">
+                    <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+                      <p className="text-gray-500 dark:text-gray-400 mb-1">Hoàn tất</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {interview.completedAt ? new Date(interview.completedAt).toLocaleString('vi-VN') : 'Chưa hoàn tất'}
                       </p>
                     </div>
@@ -322,15 +322,7 @@ export const ReportsPage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="share-pdf">PDF</Label>
-                <select
-                  id="share-pdf"
-                  value={allowPdfDownload ? 'true' : 'false'}
-                  onChange={(e) => setAllowPdfDownload(e.target.value === 'true')}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
-                >
-                  <option value="true">Cho phép tải PDF</option>
-                  <option value="false">Không cho phép tải PDF</option>
-                </select>
+                <option value="false">Không cho phép tải PDF</option>
               </div>
             </div>
 

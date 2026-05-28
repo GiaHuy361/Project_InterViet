@@ -426,9 +426,11 @@ export class GeminiLiveClient {
   public endTurn(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
+    // Gemini BidiGenerateContent API expects activityEnd to be an empty object {},
+    // NOT a boolean true. Sending boolean causes 1007 "Invalid value at 'realtime_input.activity_end'".
     const endMsg = {
       realtimeInput: {
-        activityEnd: true
+        activityEnd: {}
       }
     };
 
