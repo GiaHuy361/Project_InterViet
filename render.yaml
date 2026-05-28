@@ -58,4 +58,3 @@ databases:
   - name: interviet-db
     plan: free
     databaseName: interviet
-    user: postgres
