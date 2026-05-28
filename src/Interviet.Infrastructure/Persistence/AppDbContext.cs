@@ -158,9 +158,9 @@ public sealed class AppDbContext : DbContext, IAppDbContext
                 var rowVersionProp = entityType.FindProperty("RowVersion");
                 if (rowVersionProp != null && rowVersionProp.ClrType == typeof(byte[]))
                 {
-                    rowVersionProp.SetValueGenerated(Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never);
-                    rowVersionProp.SetIsConcurrencyToken(false);
-                    rowVersionProp.SetIsNullable(true);
+                    rowVersionProp.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+                    rowVersionProp.IsConcurrencyToken = false;
+                    rowVersionProp.IsNullable = true;
                 }
 
                 foreach (var index in entityType.GetIndexes())
