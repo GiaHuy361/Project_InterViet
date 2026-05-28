@@ -233,6 +233,28 @@ public sealed class MentorWorkspaceController : ApiControllerBase
     }
 
     /// <summary>
+    /// Gets all active specialties from the system catalog for the mentor to choose.
+    /// Route: GET /api/v1/mentor/specialties
+    /// </summary>
+    [Authorize(Policy = "MentorOnly")]
+    [HttpGet("specialties")]
+    public async Task<IActionResult> GetSpecialtiesCatalog()
+    {
+        var specialties = await _context.MentorSpecialties
+            .OrderBy(s => s.Code)
+            .Select(s => new MentorSpecialtyDto
+            {
+                Id = s.Id,
+                Code = s.Code,
+                Name = s.Name,
+                Description = s.Description
+            })
+            .ToListAsync();
+
+        return Ok(specialties);
+    }
+
+    /// <summary>
     /// Self assigns/replaces specialties for the logged-in mentor profile.
     /// Route: POST /api/v1/mentor/profile/specialties
     /// </summary>

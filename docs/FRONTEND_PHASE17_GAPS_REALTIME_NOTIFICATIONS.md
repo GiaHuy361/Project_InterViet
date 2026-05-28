@@ -208,6 +208,65 @@ Mỗi bản ghi chuyên môn trong catalog hệ thống tuân thủ cấu trúc 
 }
 ```
 
+#### 1. Lấy danh sách chuyên môn (Admin Catalog)
+* **Route**: `GET /api/v1/admin/mentors/specialties`
+* **Quyền**: `AdminOnly`
+* **Phản hồi thành công (200 OK)**:
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": "76d16c5b-9bbf-4d8e-be99-2e213bf9cf01",
+      "code": "backend_dev",
+      "name": "Lập trình Backend",
+      "description": "Database, API, System Design"
+    },
+    {
+      "id": "c1f76d49-47e2-4be7-aa23-8c432d0af4d2",
+      "code": "frontend_dev",
+      "name": "Lập trình Frontend",
+      "description": "React, Vue, Web Performance"
+    }
+  ],
+  "meta": {
+    "requestId": "0HMA12345ABCD:00000003",
+    "timestamp": "2026-05-28T07:37:00Z"
+  }
+}
+```
+
+#### 1b. Lấy danh sách chuyên môn hoạt động (Dành cho Mentor chọn)
+* **Route**: `GET /api/v1/mentor/specialties`
+* **Quyền**: `MentorOnly`
+* **Mục đích**: Trả về danh sách chuyên môn đang hoạt động (`active`) để Mentor chọn trong form cấu hình Profile cá nhân.
+* **Phản hồi thành công (200 OK)**:
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": "76d16c5b-9bbf-4d8e-be99-2e213bf9cf01",
+      "code": "backend_dev",
+      "name": "Lập trình Backend",
+      "description": "Database, API, System Design"
+    },
+    {
+      "id": "c1f76d49-47e2-4be7-aa23-8c432d0af4d2",
+      "code": "frontend_dev",
+      "name": "Lập trình Frontend",
+      "description": "React, Vue, Web Performance"
+    }
+  ],
+  "meta": {
+    "requestId": "0HMA12345ABCD:00000003b",
+    "timestamp": "2026-05-28T07:37:30Z"
+  }
+}
+```
+
 #### 2. Tạo mới chuyên môn
 * **Route**: `POST /api/v1/admin/mentors/specialties`
 * **Quyền**: `AdminOnly`
@@ -419,8 +478,12 @@ Frontend có thể nhận về mảng dữ liệu chuyên môn `specialties` d�
 ```
 
 > [!TIP]  
-> **Gợi ý cho Frontend**:  
-> * **Màn hình cập nhật Profile**: Dùng danh sách `specialties` nhận về từ `GET /api/v1/mentor/profile` để đánh dấu sẵn (pre-select) các ô checkbox lựa chọn.
+> **Luồng tích hợp cho Mentor Profile Form**:
+> Cập nhật chuyên môn của Mentor tuân thủ đúng luồng 3 bước:
+> 1. **`GET /api/v1/mentor/profile`**: Lấy thông tin chi tiết profile hiện tại của Mentor, bao gồm danh sách các chuyên môn đã chọn (`data.specialties`).
+> 2. **`GET /api/v1/mentor/specialties`**: Lấy danh mục tất cả chuyên môn hoạt động trong hệ thống để hiển thị thành các ô checkbox lựa chọn. Đối chiếu với dữ liệu ở Bước 1 để tự động tích chọn (pre-select) những chuyên môn Mentor đã gán.
+> 3. **`POST /api/v1/mentor/profile/specialties`**: Gửi danh sách các `specialtyIds` được tích chọn lên Backend để lưu thay đổi.
+> 
 > * **Thẻ hiển thị Mentor (Card)**: Render các chuyên môn dưới dạng các tag màu sắc (Badge) bắt mắt ngoài trang chủ.
 
 ---
