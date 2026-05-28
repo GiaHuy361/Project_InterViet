@@ -261,42 +261,59 @@ try
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     var app = builder.Build();
 
-    // ── Auto-migrate on startup (all environments) ───────────────────────
-    if (true) // Always run migrations including Production (safe: EF Core is idempotent)
+    // ── Database schema + seed on startup (all environments) ────────────
     {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Interviet.Infrastructure.Persistence.AppDbContext>();
-        await db.Database.MigrateAsync();
-        Log.Information("Database migrations applied successfully.");
-
-        var mentorOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.MentorNetworkOptions>>().Value;
-        if (mentorOpts.EnableSeedData)
+        try
         {
-            await Interviet.Infrastructure.Persistence.DbSeeder.SeedMentorsAsync(db);
-            Log.Information("Mentor seed data applied successfully.");
-        }
-
-        var adminOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.AdminOptions>>().Value;
-        if (adminOpts.EnableDevBootstrap && !string.IsNullOrWhiteSpace(adminOpts.SeedAdminEmail))
-        {
-            var seedEmailNormalized = adminOpts.SeedAdminEmail.ToUpperInvariant();
-            var seedUser = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == seedEmailNormalized);
-            if (seedUser != null && seedUser.RoleCode != Interviet.Domain.Identity.RoleCodes.Admin)
+            var isPostgres = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+            if (isPostgres)
             {
-                seedUser.RoleCode = Interviet.Domain.Identity.RoleCodes.Admin;
-                await db.SaveChangesAsync();
-                Log.Information("Seed user {Email} successfully promoted to Admin on startup.", adminOpts.SeedAdminEmail);
+                // PostgreSQL: EnsureCreated creates all tables from model directly.
+                // (No Postgres-specific migration files exist yet — EnsureCreated is safe for fresh DB.)
+                await db.Database.EnsureCreatedAsync();
+                Log.Information("PostgreSQL schema ensured via EnsureCreatedAsync.");
             }
+            else
+            {
+                await db.Database.MigrateAsync();
+                Log.Information("Database migrations applied successfully.");
+            }
+
+            var mentorOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.MentorNetworkOptions>>().Value;
+            if (mentorOpts.EnableSeedData)
+            {
+                await Interviet.Infrastructure.Persistence.DbSeeder.SeedMentorsAsync(db);
+                Log.Information("Mentor seed data applied successfully.");
+            }
+
+            var adminOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.AdminOptions>>().Value;
+            if (adminOpts.EnableDevBootstrap && !string.IsNullOrWhiteSpace(adminOpts.SeedAdminEmail))
+            {
+                var seedEmailNormalized = adminOpts.SeedAdminEmail.ToUpperInvariant();
+                var seedUser = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == seedEmailNormalized);
+                if (seedUser != null && seedUser.RoleCode != Interviet.Domain.Identity.RoleCodes.Admin)
+                {
+                    seedUser.RoleCode = Interviet.Domain.Identity.RoleCodes.Admin;
+                    await db.SaveChangesAsync();
+                    Log.Information("Seed user {Email} successfully promoted to Admin on startup.", adminOpts.SeedAdminEmail);
+                }
+            }
+
+            // Seed the requested admin user
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<Interviet.Application.Common.Interfaces.IPasswordHasher>();
+            await Interviet.Infrastructure.Persistence.DbSeeder.SeedAdminUserAsync(db, passwordHasher);
+            Log.Information("Admin user seeded successfully.");
+
+            // Phase 15 - Seed public content
+            await Interviet.Infrastructure.Persistence.DbSeeder.SeedPublicContentAsync(db);
+            Log.Information("Public content (stats, testimonials, FAQs, blog) seeded successfully.");
         }
-
-        // Seed the requested admin user
-        var passwordHasher = scope.ServiceProvider.GetRequiredService<Interviet.Application.Common.Interfaces.IPasswordHasher>();
-        await Interviet.Infrastructure.Persistence.DbSeeder.SeedAdminUserAsync(db, passwordHasher);
-        Log.Information("Admin user hienngochuy3@gmail.com seeded successfully.");
-
-        // Phase 15 - Seed public content
-        await Interviet.Infrastructure.Persistence.DbSeeder.SeedPublicContentAsync(db);
-        Log.Information("Public content (stats, testimonials, FAQs, blog) seeded successfully.");
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Database startup initialization failed. App will continue but some features may not work.");
+        }
     }
 
     // ── Middleware pipeline (ORDER MATTERS) ───────────────────────────────
