@@ -14,8 +14,8 @@ public class User : AuditableEntity
     public string? PhoneNumber { get; set; }
     public string? AvatarUrl { get; set; }
 
-    /// <summary>UserState: visitor | free | trial | premium | cancelled | expired | suspended</summary>
-    public string Status { get; set; } = UserStatus.Free;
+    /// <summary>UserState: active | suspended | disabled</summary>
+    public string Status { get; set; } = UserStatus.Active;
 
     public string? CurrentPlanCode { get; set; }
     public bool IsEmailVerified { get; set; }
@@ -45,13 +45,9 @@ public class User : AuditableEntity
 
 public static class UserStatus
 {
-    public const string Visitor = "visitor";
-    public const string Free = "free";
-    public const string Trial = "trial";
-    public const string Premium = "premium";
-    public const string Cancelled = "cancelled";
-    public const string Expired = "expired";
+    public const string Active = "active";
     public const string Suspended = "suspended";
+    public const string Disabled = "disabled";
 }
 
 // ──────────────────────────────────────────────

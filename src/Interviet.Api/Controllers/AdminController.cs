@@ -11,6 +11,8 @@ using Interviet.Contracts.Admin;
 using Interviet.Domain.Identity;
 using Interviet.Domain.Notifications;
 using Interviet.Domain.Support;
+using Interviet.Contracts.Mentors;
+using Interviet.Domain.Mentors;
 using System.Text.Json;
 
 namespace Interviet.Api.Controllers;
@@ -441,7 +443,7 @@ public sealed class AdminController : ApiControllerBase
         }
 
         var prevStatus = user.Status;
-        user.Status = newStatus == "active" ? UserStatus.Free : newStatus!;
+        user.Status = newStatus!;
         await _context.SaveChangesAsync();
 
         await _auditLogService.LogAsync(
@@ -477,7 +479,7 @@ public sealed class AdminController : ApiControllerBase
         var newRole = req.Roles.First().Trim().ToLowerInvariant();
         if (newRole == "user")
         {
-            newRole = RoleCodes.Candidate;
+            return BadRequest(new { message = "Role 'user' is invalid. Did you mean 'candidate'?" });
         }
 
         var validRoles = new[] { RoleCodes.Admin, RoleCodes.Support, RoleCodes.Mentor, RoleCodes.Candidate };
@@ -507,6 +509,18 @@ public sealed class AdminController : ApiControllerBase
             resourceId: user.Id.ToString(),
             metadata: new { email = user.Email, previousRole = prevRole, newRole = user.RoleCode }
         );
+
+        try
+        {
+            await _notificationService.CreateAsync(
+                userId: user.Id,
+                type: "role_updated",
+                title: "Quyền truy cập thay đổi",
+                message: $"Tài khoản của bạn đã được cập nhật vai trò mới thành: {newRole}.",
+                actionUrl: "/dashboard"
+            );
+        }
+        catch {}
 
         return Ok(new { message = "User role updated successfully.", email = user.Email, previousRole = prevRole, newRole = user.RoleCode });
     }
@@ -875,5 +889,238 @@ public sealed class AdminController : ApiControllerBase
         );
 
         return Ok(response);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ADMIN MENTOR SPECIALTIES & CRUD (Admin Only)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /// <summary>
+    /// Assigns specialties to a specific mentor.
+    /// Route: POST /api/v1/admin/mentors/{id}/specialties
+    /// </summary>
+    [HttpPost("mentors/{id:guid}/specialties")]
+    public async Task<IActionResult> AdminAssignSpecialties(Guid id, [FromBody] AdminAssignSpecialtiesRequest req)
+    {
+        if (req == null)
+            return BadRequest(new { message = "Request body is required." });
+
+        // Resolve mentor profile by either ProfileId or UserId
+        var profile = await _context.MentorProfiles
+            .Include(p => p.Specialties)
+            .FirstOrDefaultAsync(p => p.Id == id || p.UserId == id);
+
+        if (profile == null)
+        {
+            return NotFound(new { message = "Mentor profile not found for the given ID." });
+        }
+
+        // Validate all specialtyIds exist
+        var validSpecialties = new List<MentorSpecialty>();
+        if (req.SpecialtyIds != null && req.SpecialtyIds.Any())
+        {
+            validSpecialties = await _context.MentorSpecialties
+                .Where(s => req.SpecialtyIds.Contains(s.Id))
+                .ToListAsync();
+
+            if (validSpecialties.Count != req.SpecialtyIds.Distinct().Count())
+            {
+                return BadRequest(new { message = "Một hoặc nhiều mã chuyên môn không tồn tại trong hệ thống." });
+            }
+        }
+
+        // Replace specialties
+        profile.Specialties.Clear();
+        foreach (var s in validSpecialties)
+        {
+            profile.Specialties.Add(s);
+        }
+
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "admin_mentor_specialties_updated",
+                resource: "MentorProfile",
+                resourceId: profile.Id.ToString(),
+                metadata: new { mentorId = id, specialtyIds = req.SpecialtyIds }
+            );
+        }
+        catch {}
+
+        var specialtiesMapped = profile.Specialties.Select(s => new MentorSpecialtyDto
+        {
+            Id = s.Id,
+            Code = s.Code,
+            Name = s.Name,
+            Description = s.Description
+        }).ToList();
+
+        return Ok(new
+        {
+            mentorProfileId = profile.Id,
+            specialties = specialtiesMapped
+        }, "Admin gán chuyên môn cho Mentor thành công.");
+    }
+
+    /// <summary>
+    /// Gets all mentor specialties in the system catalog.
+    /// Route: GET /api/v1/admin/mentors/specialties
+    /// </summary>
+    [HttpGet("mentors/specialties")]
+    public async Task<IActionResult> AdminGetSpecialties()
+    {
+        var specialties = await _context.MentorSpecialties
+            .OrderBy(s => s.Code)
+            .Select(s => new MentorSpecialtyDto
+            {
+                Id = s.Id,
+                Code = s.Code,
+                Name = s.Name,
+                Description = s.Description
+            })
+            .ToListAsync();
+
+        return Ok(specialties);
+    }
+
+    /// <summary>
+    /// Creates a new specialty in the catalog.
+    /// Route: POST /api/v1/admin/mentors/specialties
+    /// </summary>
+    [HttpPost("mentors/specialties")]
+    public async Task<IActionResult> AdminCreateSpecialty([FromBody] MentorSpecialtyDto req)
+    {
+        if (req == null)
+            return BadRequest(new { message = "Request body is required." });
+
+        if (string.IsNullOrWhiteSpace(req.Code))
+            return BadRequest(new { message = "Mã chuyên môn (code) là bắt buộc." });
+
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { message = "Tên chuyên môn (name) là bắt buộc." });
+
+        var codeLower = req.Code.Trim().ToLowerInvariant();
+        var codeExists = await _context.MentorSpecialties
+            .AnyAsync(s => s.Code.ToLower() == codeLower);
+
+        if (codeExists)
+        {
+            return BadRequest(new { message = $"Mã chuyên môn '{req.Code}' đã tồn tại trong hệ thống." });
+        }
+
+        var specialty = new MentorSpecialty
+        {
+            Id = Guid.NewGuid(),
+            Code = req.Code.Trim(),
+            Name = req.Name.Trim(),
+            Description = req.Description?.Trim()
+        };
+
+        _context.MentorSpecialties.Add(specialty);
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "admin.specialty_created",
+                resource: "MentorSpecialty",
+                resourceId: specialty.Id.ToString(),
+                metadata: new { code = specialty.Code, name = specialty.Name }
+            );
+        }
+        catch {}
+
+        return Ok(new MentorSpecialtyDto
+        {
+            Id = specialty.Id,
+            Code = specialty.Code,
+            Name = specialty.Name,
+            Description = specialty.Description
+        }, "Tạo mới chuyên môn thành công.");
+    }
+
+    /// <summary>
+    /// Updates an existing specialty's name and description.
+    /// Route: PUT /api/v1/admin/mentors/specialties/{id}
+    /// </summary>
+    [HttpPut("mentors/specialties/{id:guid}")]
+    public async Task<IActionResult> AdminUpdateSpecialty(Guid id, [FromBody] MentorSpecialtyDto req)
+    {
+        if (req == null)
+            return BadRequest(new { message = "Request body is required." });
+
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { message = "Tên chuyên môn (name) là bắt buộc." });
+
+        var specialty = await _context.MentorSpecialties.FirstOrDefaultAsync(s => s.Id == id);
+        if (specialty == null)
+        {
+            return NotFound(new { message = "Không tìm thấy chuyên môn này." });
+        }
+
+        specialty.Name = req.Name.Trim();
+        specialty.Description = req.Description?.Trim();
+
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "admin.specialty_updated",
+                resource: "MentorSpecialty",
+                resourceId: specialty.Id.ToString(),
+                metadata: new { code = specialty.Code, name = specialty.Name }
+            );
+        }
+        catch {}
+
+        return Ok(new MentorSpecialtyDto
+        {
+            Id = specialty.Id,
+            Code = specialty.Code,
+            Name = specialty.Name,
+            Description = specialty.Description
+        }, "Cập nhật chuyên môn thành công.");
+    }
+
+    /// <summary>
+    /// Deletes a specialty from the catalog if not assigned to any mentor.
+    /// Route: DELETE /api/v1/admin/mentors/specialties/{id}
+    /// </summary>
+    [HttpDelete("mentors/specialties/{id:guid}")]
+    public async Task<IActionResult> AdminDeleteSpecialty(Guid id)
+    {
+        var specialty = await _context.MentorSpecialties.FirstOrDefaultAsync(s => s.Id == id);
+        if (specialty == null)
+        {
+            return NotFound(new { message = "Không tìm thấy chuyên môn này." });
+        }
+
+        // Check if assigned to any mentor
+        var isAssigned = await _context.MentorProfiles
+            .AnyAsync(m => m.Specialties.Any(s => s.Id == id));
+
+        if (isAssigned)
+        {
+            return BadRequest(new { message = "Chuyên môn này đang được sử dụng bởi Mentor và không thể xóa." });
+        }
+
+        _context.MentorSpecialties.Remove(specialty);
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "admin.specialty_deleted",
+                resource: "MentorSpecialty",
+                resourceId: id.ToString(),
+                metadata: new { code = specialty.Code, name = specialty.Name }
+            );
+        }
+        catch {}
+
+        return Ok(new { id }, "Xóa chuyên môn thành công.");
     }
 }

@@ -129,7 +129,7 @@ public sealed class GoogleLoginCommandHandler : IRequestHandler<GoogleLoginComma
                     PasswordHash = null,
                     RoleCode = RoleCodes.Candidate,
                     AvatarUrl = payload.Picture,
-                    Status = UserStatus.Free,
+                    Status = UserStatus.Active,
                     IsEmailVerified = true,
                     EmailVerifiedAt = now,
                     CreatedAt = now,

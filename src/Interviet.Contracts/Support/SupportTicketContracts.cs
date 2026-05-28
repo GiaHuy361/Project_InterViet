@@ -19,7 +19,10 @@ public sealed record SupportTicketDetailResponse(
     DateTime CreatedAt,
     DateTime? ClosedAt,
     DateTime? LastMessageAt,
-    List<SupportTicketMessageResponse> Messages
+    List<SupportTicketMessageResponse> Messages,
+    string? AssignedToId = null,
+    string? AssignedToName = null,
+    string? AssignedToAvatarUrl = null
 );
 
 public sealed record SupportTicketMessageResponse(

@@ -46,6 +46,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
 
         // Fetch existing mentor profile
         var profile = await _context.MentorProfiles
+            .Include(p => p.Specialties)
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
         if (profile == null)
@@ -90,6 +91,9 @@ public sealed class MentorWorkspaceController : ApiControllerBase
                 );
             }
             catch {}
+            
+            // Reload to ensure specialties collection is initialized
+            profile.Specialties = new List<MentorSpecialty>();
         }
 
         // Deserialize lists from JSON columns
@@ -104,6 +108,14 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         var languages = string.IsNullOrWhiteSpace(profile.LanguagesJson)
             ? new List<string>()
             : System.Text.Json.JsonSerializer.Deserialize<List<string>>(profile.LanguagesJson) ?? new List<string>();
+
+        var specialtiesMapped = profile.Specialties.Select(s => new MentorSpecialtyDto
+        {
+            Id = s.Id,
+            Code = s.Code,
+            Name = s.Name,
+            Description = s.Description
+        }).ToList();
 
         var response = new MentorProfileResponse
         {
@@ -120,7 +132,8 @@ public sealed class MentorWorkspaceController : ApiControllerBase
             Status = profile.Status,
             Expertise = expertise,
             Industries = industries,
-            Languages = languages
+            Languages = languages,
+            Specialties = specialtiesMapped
         };
 
         return Ok(response);
@@ -142,6 +155,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         var userId = _currentUserService.UserId;
 
         var profile = await _context.MentorProfiles
+            .Include(p => p.Specialties)
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
         if (profile == null)
@@ -188,6 +202,14 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         var industries = req.Industries ?? new List<string>();
         var languages = req.Languages ?? new List<string>();
 
+        var specialtiesMapped = profile.Specialties.Select(s => new MentorSpecialtyDto
+        {
+            Id = s.Id,
+            Code = s.Code,
+            Name = s.Name,
+            Description = s.Description
+        }).ToList();
+
         var response = new MentorProfileResponse
         {
             Id = profile.Id,
@@ -203,10 +225,126 @@ public sealed class MentorWorkspaceController : ApiControllerBase
             Status = profile.Status,
             Expertise = expertise,
             Industries = industries,
-            Languages = languages
+            Languages = languages,
+            Specialties = specialtiesMapped
         };
 
         return Ok(response, "Cập nhật hồ sơ Mentor thành công.");
+    }
+
+    /// <summary>
+    /// Self assigns/replaces specialties for the logged-in mentor profile.
+    /// Route: POST /api/v1/mentor/profile/specialties
+    /// </summary>
+    [Authorize(Policy = "MentorOnly")]
+    [HttpPost("profile/specialties")]
+    public async Task<IActionResult> SelfAssignSpecialties([FromBody] MentorSelfAssignSpecialtiesRequest req)
+    {
+        if (req == null)
+            return BadRequest(new { message = "Request body is required." });
+
+        var userId = _currentUserService.UserId;
+
+        // Fetch existing mentor profile
+        var profile = await _context.MentorProfiles
+            .Include(p => p.Specialties)
+            .FirstOrDefaultAsync(p => p.UserId == userId);
+
+        if (profile == null)
+        {
+            // Fetch current user details to initialize profile
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User account not found." });
+            }
+
+            // Create a default blank mentor profile
+            profile = new MentorProfile
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl,
+                Headline = "Chuyên gia / Mentor",
+                Bio = "",
+                YearsOfExperience = 0.0m,
+                RatingAverage = 5.0m,
+                RatingCount = 0,
+                Status = "active",
+                IsVerified = false,
+                ExpertiseJson = "[]",
+                IndustriesJson = "[]",
+                LanguagesJson = "[]",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.MentorProfiles.Add(profile);
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _auditLogService.LogAsync(
+                    action: "mentor.profile_autocreated",
+                    resource: "MentorProfile",
+                    resourceId: profile.Id.ToString(),
+                    metadata: new { email = user.Email }
+                );
+            }
+            catch {}
+            
+            profile.Specialties = new List<MentorSpecialty>();
+        }
+
+        // Validate specialties if specialtyIds is not empty
+        var validSpecialties = new List<MentorSpecialty>();
+        if (req.SpecialtyIds != null && req.SpecialtyIds.Any())
+        {
+            validSpecialties = await _context.MentorSpecialties
+                .Where(s => req.SpecialtyIds.Contains(s.Id))
+                .ToListAsync();
+
+            if (validSpecialties.Count != req.SpecialtyIds.Distinct().Count())
+            {
+                return BadRequest(new { message = "Một hoặc nhiều mã chuyên môn không tồn tại trong hệ thống." });
+            }
+        }
+
+        // Replace specialties
+        profile.Specialties.Clear();
+        foreach (var s in validSpecialties)
+        {
+            profile.Specialties.Add(s);
+        }
+
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "mentor_specialties_updated",
+                resource: "MentorProfile",
+                resourceId: profile.Id.ToString(),
+                metadata: new { specialtyIds = req.SpecialtyIds }
+            );
+        }
+        catch {}
+
+        var specialtiesMapped = profile.Specialties.Select(s => new MentorSpecialtyDto
+        {
+            Id = s.Id,
+            Code = s.Code,
+            Name = s.Name,
+            Description = s.Description
+        }).ToList();
+
+        var dataResponse = new MentorSelfAssignSpecialtiesResponse
+        {
+            MentorProfileId = profile.Id,
+            Specialties = specialtiesMapped
+        };
+
+        return Ok(dataResponse, "Cập nhật chuyên môn Mentor thành công.");
     }
 
     /// <summary>

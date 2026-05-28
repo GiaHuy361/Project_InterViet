@@ -125,6 +125,27 @@ public class MentorBookingsController : ApiControllerBase
 
         await _db.SaveChangesAsync(ct);
 
+        if (slot.Mentor.UserId.HasValue)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.CreateAsync(
+                        userId: slot.Mentor.UserId.Value,
+                        type: "mentor.booking_created",
+                        title: "Yêu cầu đặt lịch hẹn mới",
+                        message: $"Ứng viên đã gửi yêu cầu đặt lịch hẹn mới cho dịch vụ {booking.ServiceType}.",
+                        actionUrl: $"/mentor-bookings/{booking.Id}"
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create booking created notification for mentor {MentorId}", slot.Mentor.Id);
+                }
+            });
+        }
+
         var response = new BookMentorResponse
         {
             BookingId = bookingId,

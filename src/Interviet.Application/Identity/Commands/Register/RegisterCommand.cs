@@ -93,7 +93,7 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
             NormalizedEmail = normalizedEmail,
             PasswordHash = _passwordHasher.Hash(request.Password),
             RoleCode = RoleCodes.Candidate,
-            Status = "free",
+            Status = UserStatus.Active,
             IsEmailVerified = false,
             CreatedAt = now,
             UpdatedAt = now

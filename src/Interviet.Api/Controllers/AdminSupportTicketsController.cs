@@ -72,25 +72,13 @@ public sealed class AdminSupportTicketsController : ApiControllerBase
         }
 
         var total = await query.CountAsync();
-        var items = await query
+        var tickets = await query
             .OrderByDescending(t => t.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(t => new SupportTicketDetailResponse(
-                t.Id,
-                t.TicketNumber,
-                t.Category,
-                t.Priority,
-                t.Subject,
-                t.Status,
-                t.Description,
-                t.AssignedTo,
-                t.CreatedAt,
-                t.ClosedAt,
-                t.LastMessageAt,
-                new List<SupportTicketMessageResponse>()
-            ))
             .ToListAsync();
+
+        var items = await SupportTicketHelper.MapTicketsAsync(_context, tickets, maskEmail: false);
 
         return Ok(new { total, page, pageSize, items });
     }
@@ -111,32 +99,8 @@ public sealed class AdminSupportTicketsController : ApiControllerBase
             return NotFound(new { message = "Support ticket not found." });
         }
 
-        var messages = ticket.Messages
-            .OrderBy(m => m.CreatedAt)
-            .Select(m => new SupportTicketMessageResponse(
-                m.Id,
-                m.SenderType,
-                m.SenderUserId,
-                m.MessageBody,
-                m.CreatedAt,
-                m.IsInternalNote
-            ))
-            .ToList();
-
-        var res = new SupportTicketDetailResponse(
-            Id: ticket.Id,
-            TicketNumber: ticket.TicketNumber,
-            Category: ticket.Category,
-            Priority: ticket.Priority,
-            Subject: ticket.Subject,
-            Status: ticket.Status,
-            Description: ticket.Description,
-            AssignedTo: ticket.AssignedTo,
-            CreatedAt: ticket.CreatedAt,
-            ClosedAt: ticket.ClosedAt,
-            LastMessageAt: ticket.LastMessageAt,
-            Messages: messages
-        );
+        var mapped = await SupportTicketHelper.MapTicketsAsync(_context, new List<SupportTicket> { ticket }, maskEmail: false);
+        var res = mapped.First();
 
         return Ok(res);
     }

@@ -98,24 +98,12 @@ public sealed class SupportTicketsController : ApiControllerBase
             .OrderByDescending(t => t.CreatedAt);
 
         var total = await query.CountAsync();
-        var items = await query
+        var tickets = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(t => new SupportTicketDetailResponse(
-                t.Id,
-                t.TicketNumber,
-                t.Category,
-                t.Priority,
-                t.Subject,
-                t.Status,
-                t.Description,
-                t.AssignedTo,
-                t.CreatedAt,
-                t.ClosedAt,
-                t.LastMessageAt,
-                new List<SupportTicketMessageResponse>()
-            ))
             .ToListAsync();
+
+        var items = await SupportTicketHelper.MapTicketsAsync(_context, tickets, maskEmail: true);
 
         return Ok(new { total, page, pageSize, items });
     }
@@ -138,34 +126,16 @@ public sealed class SupportTicketsController : ApiControllerBase
             return NotFound(new { message = "Support ticket not found." });
         }
 
-        // Map messages, filtering out internal notes
+        // Filter out internal notes in memory before mapping messages
         var publicMessages = ticket.Messages
             .Where(m => !m.IsInternalNote)
-            .OrderBy(m => m.CreatedAt)
-            .Select(m => new SupportTicketMessageResponse(
-                m.Id,
-                m.SenderType,
-                m.SenderUserId,
-                m.MessageBody,
-                m.CreatedAt,
-                m.IsInternalNote
-            ))
             .ToList();
 
-        var res = new SupportTicketDetailResponse(
-            Id: ticket.Id,
-            TicketNumber: ticket.TicketNumber,
-            Category: ticket.Category,
-            Priority: ticket.Priority,
-            Subject: ticket.Subject,
-            Status: ticket.Status,
-            Description: ticket.Description,
-            AssignedTo: ticket.AssignedTo,
-            CreatedAt: ticket.CreatedAt,
-            ClosedAt: ticket.ClosedAt,
-            LastMessageAt: ticket.LastMessageAt,
-            Messages: publicMessages
-        );
+        // Temporarily clear internal messages on ticket object so SupportTicketHelper doesn't map them
+        ticket.Messages = publicMessages;
+
+        var mapped = await SupportTicketHelper.MapTicketsAsync(_context, new List<SupportTicket> { ticket }, maskEmail: true);
+        var res = mapped.First();
 
         return Ok(res);
     }

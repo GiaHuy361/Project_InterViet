@@ -150,7 +150,7 @@ public static class DbSeeder
                 NormalizedEmail = normalizedEmail,
                 PasswordHash = passwordHasher.Hash("Ae5saovjp@"),
                 RoleCode = RoleCodes.Admin,
-                Status = "free",
+                Status = "active",
                 IsEmailVerified = true,
                 EmailVerifiedAt = now,
                 CreatedAt = now,

@@ -142,6 +142,7 @@ public sealed class MentorProfileResponse
     public List<string> Expertise { get; init; } = [];
     public List<string> Industries { get; init; } = [];
     public List<string> Languages { get; init; } = [];
+    public List<MentorSpecialtyDto> Specialties { get; init; } = [];
 }
 
 public sealed class MentorDashboardSummaryResponse
@@ -196,4 +197,20 @@ public sealed class MentorBookingDetailForMentorResponse
     public DateTime? CompletedAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public ReviewResponse? Review { get; init; }
+}
+
+public sealed class MentorSelfAssignSpecialtiesRequest
+{
+    public List<Guid> SpecialtyIds { get; init; } = [];
+}
+
+public sealed class MentorSelfAssignSpecialtiesResponse
+{
+    public Guid MentorProfileId { get; init; }
+    public List<MentorSpecialtyDto> Specialties { get; init; } = [];
+}
+
+public sealed class AdminAssignSpecialtiesRequest
+{
+    public List<Guid> SpecialtyIds { get; init; } = [];
 }

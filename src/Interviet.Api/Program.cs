@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Interviet.Application;
 using Interviet.Infrastructure;
+using Interviet.Infrastructure.Hubs;
 using Interviet.Api.Middleware;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -90,6 +91,22 @@ try
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
                 ClockSkew = TimeSpan.FromSeconds(30)
             };
+            options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+
+                    // If request path is for the notification hub, read the token from the query string
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        path.StartsWithSegments("/hubs/notifications"))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
     builder.Services.AddAuthorization(options =>
@@ -109,6 +126,8 @@ try
         options.AddPolicy("MentorOrAdmin", policy =>
             policy.RequireRole(Interviet.Domain.Identity.RoleCodes.Mentor, Interviet.Domain.Identity.RoleCodes.Admin));
     });
+
+    builder.Services.AddSignalR();
 
     // ── Controllers ───────────────────────────────────────────────────────
     builder.Services.AddControllers()
@@ -288,6 +307,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
+    app.MapHub<NotificationHub>("/hubs/notifications");
     app.MapHealthChecks("/api/v1/health");
 
     Log.Information("INTER-VIET API started. Swagger: http://localhost:5000/swagger");

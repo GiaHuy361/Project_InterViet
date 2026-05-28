@@ -8,6 +8,9 @@ using Interviet.Contracts.Notifications;
 using Interviet.Domain.Notifications;
 using Interviet.Shared.Results;
 
+using Microsoft.AspNetCore.SignalR;
+using Interviet.Infrastructure.Hubs;
+
 namespace Interviet.Infrastructure.Services;
 
 /// <summary>
@@ -19,15 +22,18 @@ public sealed class NotificationService : INotificationService
     private readonly IAppDbContext _db;
     private readonly NotificationOptions _opts;
     private readonly ILogger<NotificationService> _logger;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
     public NotificationService(
         IAppDbContext db,
         IOptions<NotificationOptions> opts,
-        ILogger<NotificationService> logger)
+        ILogger<NotificationService> logger,
+        IHubContext<NotificationHub> hubContext)
     {
         _db     = db;
         _opts   = opts.Value;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     // ── Category → preference flag mapping ────────────────────────────────────
@@ -114,6 +120,59 @@ public sealed class NotificationService : INotificationService
             _logger.LogDebug(
                 "Notification created. UserId={UserId} Type={Type} Id={Id}",
                 userId, type, notification.Id);
+
+            // ── Trigger SignalR Real-time Push ──
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var unreadCount = await GetUnreadCountAsync(userId, CancellationToken.None);
+
+                    var feType = type switch
+                    {
+                        "support.ticket_reply" => "support_ticket_reply",
+                        "mentor.booking_cancelled" => "mentor_booking_status_changed",
+                        "mentor.booking_confirmed" => "mentor_booking_status_changed",
+                        "mentor.booking_completed" => "mentor_booking_status_changed",
+                        "mentor.booking_created" => "mentor_booking_created",
+                        _ => type
+                    };
+
+                    var feUrl = actionUrl;
+                    if (feUrl != null && feUrl.StartsWith("/mentor-bookings/"))
+                    {
+                        feUrl = feUrl.Replace("/mentor-bookings/", "/mentor/bookings/");
+                    }
+
+                    object? parsedData = null;
+                    if (!string.IsNullOrWhiteSpace(dataJson))
+                    {
+                        try { parsedData = JsonSerializer.Deserialize<object>(dataJson); }
+                        catch { parsedData = dataJson; }
+                    }
+
+                    await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification.created", new
+                    {
+                        id = notification.Id,
+                        type = feType,
+                        title = notification.Title,
+                        message = notification.Message,
+                        linkUrl = feUrl,
+                        metadata = parsedData ?? new object(),
+                        isRead = notification.IsRead,
+                        createdAt = notification.CreatedAt
+                    });
+
+                    await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification.unread_count_changed", new
+                    {
+                        unreadCount = unreadCount
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to push SignalR notification events for user {UserId}", userId);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -154,6 +213,22 @@ public sealed class NotificationService : INotificationService
         notification.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
 
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var unreadCount = await GetUnreadCountAsync(userId, CancellationToken.None);
+                await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification.unread_count_changed", new
+                {
+                    unreadCount = unreadCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push unread count after marking read for user {UserId}", userId);
+            }
+        });
+
         return new MarkReadResponse { Id = notification.Id, IsRead = true, ReadAt = now };
     }
 
@@ -181,6 +256,23 @@ public sealed class NotificationService : INotificationService
         }
 
         await _db.SaveChangesAsync(ct);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var unreadCount = await GetUnreadCountAsync(userId, CancellationToken.None);
+                await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification.unread_count_changed", new
+                {
+                    unreadCount = unreadCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push unread count after marking all read for user {UserId}", userId);
+            }
+        });
+
         return new MarkAllReadResponse { UpdatedCount = notifications.Count, ReadAt = now };
     }
 

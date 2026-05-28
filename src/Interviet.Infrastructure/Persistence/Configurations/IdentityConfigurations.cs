@@ -15,7 +15,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         b.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         b.Property(x => x.PhoneNumber).HasMaxLength(30);
         b.Property(x => x.AvatarUrl).HasMaxLength(500);
-        b.Property(x => x.Status).HasMaxLength(30).IsRequired().HasDefaultValue("free");
+        b.Property(x => x.Status).HasMaxLength(30).IsRequired().HasDefaultValue("active");
         b.Property(x => x.CurrentPlanCode).HasMaxLength(50);
         b.Property(x => x.IsEmailVerified).HasDefaultValue(false);
         b.Property(x => x.TimeZone).HasMaxLength(100);
