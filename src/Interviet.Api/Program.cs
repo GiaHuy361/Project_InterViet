@@ -261,8 +261,8 @@ try
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     var app = builder.Build();
 
-    // ── Auto-migrate on startup (dev/staging only) ────────────────────────
-    if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+    // ── Auto-migrate on startup (all environments) ───────────────────────
+    if (true) // Always run migrations including Production (safe: EF Core is idempotent)
     {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Interviet.Infrastructure.Persistence.AppDbContext>();
