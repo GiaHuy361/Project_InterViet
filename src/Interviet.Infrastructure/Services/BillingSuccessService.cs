@@ -133,8 +133,14 @@ public sealed class BillingSuccessService : IBillingSuccessService
 
         if (session is null)
         {
-            _logger.LogWarning("PayOS Webhook: Checkout session with OrderCode {OrderCode} not found in database.", webhookData.OrderCode);
-            return Error.NotFound("CheckoutSession.NotFound", $"Checkout session with OrderCode {webhookData.OrderCode} not found.");
+            _logger.LogWarning("PayOS Webhook: Checkout session with OrderCode {OrderCode} not found in database. Treating as a test/ping request for PayOS validation.", webhookData.OrderCode);
+            return new SimulateSuccessResponse
+            {
+                CheckoutSessionId = Guid.Empty,
+                InvoiceNumber = "PING-SUCCESS",
+                IsIdempotent = true,
+                EmailSent = false
+            };
         }
 
         // 3. Idempotency check: already succeeded
