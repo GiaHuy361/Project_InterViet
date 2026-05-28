@@ -31,6 +31,12 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    var port = Environment.GetEnvironmentVariable("PORT");
+    if (!string.IsNullOrEmpty(port))
+    {
+        builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+    }
+
     Log.Information("Active environment: {Environment}", builder.Environment.EnvironmentName);
 
     // ── Serilog ───────────────────────────────────────────────────────────
@@ -178,13 +184,31 @@ try
     // ── Health Checks ─────────────────────────────────────────────────────
     var healthBuilder = builder.Services.AddHealthChecks();
 
+    var dbProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+    if (connectionString != null && (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)))
+    {
+        dbProvider = "Postgres";
+    }
+
     if (!string.IsNullOrWhiteSpace(connectionString))
     {
-        healthBuilder.AddSqlServer(
-            connectionString,
-            name: "sqlserver",
-            tags: ["db", "sql"]);
+        if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedConnString = ConvertPostgresUrlToConnectionString(connectionString);
+            healthBuilder.AddNpgSql(
+                parsedConnString!,
+                name: "postgresql",
+                tags: ["db", "sql"]);
+        }
+        else
+        {
+            healthBuilder.AddSqlServer(
+                connectionString,
+                name: "sqlserver",
+                tags: ["db", "sql"]);
+        }
     }
 
     // Redis health check is optional — won't fail startup if Redis is unavailable
@@ -321,4 +345,32 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+string? ConvertPostgresUrlToConnectionString(string? connString)
+{
+    if (string.IsNullOrEmpty(connString))
+        return connString;
+
+    if (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var uri = new Uri(connString);
+            var userInfo = uri.UserInfo.Split(':');
+            var username = userInfo[0];
+            var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.AbsolutePath.TrimStart('/');
+
+            return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        }
+        catch
+        {
+            return connString;
+        }
+    }
+
+    return connString;
 }

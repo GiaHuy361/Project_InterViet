@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PayOS;
@@ -20,16 +21,46 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // ── EF Core + SQL Server ──────────────────────────────────────────
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                sql =>
-                {
-                    sql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
-                    sql.CommandTimeout(60);
-                    sql.EnableRetryOnFailure(maxRetryCount: 3);
-                }));
+        // ── EF Core + Dynamic Provider Switching ──────────────────────────
+        var dbProvider = configuration["Database:Provider"] ?? "SqlServer";
+        var connString = configuration.GetConnectionString("DefaultConnection");
+
+        if (connString != null && (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || connString.Contains("Host=", StringComparison.OrdinalIgnoreCase)))
+        {
+            dbProvider = "Postgres";
+        }
+
+        if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedConnString = ConvertPostgresUrlToConnectionString(connString);
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseNpgsql(
+                    parsedConnString,
+                    npgsql =>
+                    {
+                        npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
+                        npgsql.CommandTimeout(60);
+                        npgsql.EnableRetryOnFailure(maxRetryCount: 3);
+                    });
+                options.ReplaceService<IMigrationsAssembly, DbProviderMigrationsAssembly>();
+            });
+        }
+        else
+        {
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlServer(
+                    connString,
+                    sql =>
+                    {
+                        sql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
+                        sql.CommandTimeout(60);
+                        sql.EnableRetryOnFailure(maxRetryCount: 3);
+                    });
+                options.ReplaceService<IMigrationsAssembly, DbProviderMigrationsAssembly>();
+            });
+        }
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
@@ -133,6 +164,34 @@ public static class DependencyInjection
         });
 
         return services;
+    }
+
+    private static string? ConvertPostgresUrlToConnectionString(string? connString)
+    {
+        if (string.IsNullOrEmpty(connString))
+            return connString;
+
+        if (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(connString);
+                var userInfo = uri.UserInfo.Split(':');
+                var username = userInfo[0];
+                var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.AbsolutePath.TrimStart('/');
+
+                return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+            }
+            catch
+            {
+                return connString;
+            }
+        }
+
+        return connString;
     }
 }
 

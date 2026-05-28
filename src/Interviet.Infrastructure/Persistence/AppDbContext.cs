@@ -141,6 +141,30 @@ public sealed class AppDbContext : DbContext, IAppDbContext
         // Set default schema for all tables
         modelBuilder.HasDefaultSchema("app");
 
+        if (Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.GetColumnType() == "nvarchar(max)")
+                    {
+                        property.SetColumnType("text");
+                    }
+                }
+
+                foreach (var index in entityType.GetIndexes())
+                {
+                    var filter = index.GetFilter();
+                    if (!string.IsNullOrEmpty(filter))
+                    {
+                        var newFilter = filter.Replace("[", "\"").Replace("]", "\"");
+                        index.SetFilter(newFilter);
+                    }
+                }
+            }
+        }
+
         base.OnModelCreating(modelBuilder);
     }
 

@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: interviet-backend-api
+    env: docker
+    plan: free
+    branch: backend-csharp
+    dockerfilePath: Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__Provider
+        value: Postgres
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: interviet-db
+          property: connectionString
+      - key: JwtSettings__Secret
+        generateValue: true
+      - key: JwtSettings__Issuer
+        value: IntervietApi
+      - key: JwtSettings__Audience
+        value: IntervietClient
+      - key: JwtSettings__ExpiryMinutes
+        value: 120
+      - key: Google__ClientId
+        sync: false
+      - key: Google__ClientSecret
+        sync: false
+      - key: Google__RedirectUri
+        value: https://interviet-backend-api.onrender.com/api/v1/auth/google/callback
+      - key: Frontend__BaseUrl
+        value: https://interviet-frontend.vercel.app
+      - key: PayOS__ClientId
+        sync: false
+      - key: PayOS__ApiKey
+        sync: false
+      - key: PayOS__ChecksumKey
+        sync: false
+      - key: PayOS__WebhookUrl
+        value: https://interviet-backend-api.onrender.com/api/v1/billing/payos/webhook
+      - key: PayOS__Enabled
+        value: "true"
+      - key: PaymentRedirect__ReturnUrl
+        value: https://interviet-frontend.vercel.app/subscription/success
+      - key: PaymentRedirect__CancelUrl
+        value: https://interviet-frontend.vercel.app/subscription/cancel
+      - key: Billing__MockPaymentsEnabled
+        value: "false"
+      - key: AiServices__CvServiceBaseUrl
+        value: https://interviet-ai.onrender.com
+      - key: AiServices__InterviewBaseUrl
+        value: https://interviet-ai-interview.onrender.com
+      - key: Admin__SeedAdminEmail
+        value: admin@interviet.vn
+
+databases:
+  - name: interviet-db
+    plan: free
+    databaseName: interviet
+    user: postgres
