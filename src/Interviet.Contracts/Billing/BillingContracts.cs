@@ -185,15 +185,12 @@ public static class MockProvider
 
     private static readonly Dictionary<string, string> DisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        [VnPay]  = "VNPay",
-        [Momo]   = "Momo",
-        [Stripe] = "Stripe",
         [PayOs]  = "PayOS"
     };
 
     public static readonly HashSet<string> Valid = new(StringComparer.OrdinalIgnoreCase)
     {
-        VnPay, Momo, Stripe, PayOs
+        PayOs
     };
 
     public static string GetDisplayName(string provider) =>
