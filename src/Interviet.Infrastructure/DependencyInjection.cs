@@ -25,7 +25,10 @@ public static class DependencyInjection
         var dbProvider = configuration["Database:Provider"] ?? "SqlServer";
         var connString = configuration.GetConnectionString("DefaultConnection");
 
-        if (connString != null && (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || connString.Contains("Host=", StringComparison.OrdinalIgnoreCase)))
+        if (connString != null && (
+            connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+            connString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connString.Contains("Host=", StringComparison.OrdinalIgnoreCase)))
         {
             dbProvider = "Postgres";
         }
@@ -171,14 +174,18 @@ public static class DependencyInjection
         if (string.IsNullOrEmpty(connString))
             return connString;
 
-        if (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        // Handle both postgres:// and postgresql:// URI formats (Render uses postgresql://)
+        var isPostgresUri = connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+                         || connString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+        if (isPostgresUri)
         {
             try
             {
                 var uri = new Uri(connString);
                 var userInfo = uri.UserInfo.Split(':');
-                var username = userInfo[0];
-                var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+                var username = Uri.UnescapeDataString(userInfo[0]);
+                var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
                 var host = uri.Host;
                 var port = uri.Port > 0 ? uri.Port : 5432;
                 var database = uri.AbsolutePath.TrimStart('/');
@@ -187,6 +194,7 @@ public static class DependencyInjection
             }
             catch
             {
+                // If parsing fails, return original and hope Npgsql handles it
                 return connString;
             }
         }
