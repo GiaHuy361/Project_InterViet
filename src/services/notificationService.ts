@@ -62,4 +62,6 @@ export const notificationService = {
 
   updatePreferences: (payload: NotificationPreferences) =>
     apiClient.put<NotificationPreferences>('/notifications/preferences', payload),
+
+  deleteNotification: (id: string) => apiClient.delete<void>(`/notifications/${encodeURIComponent(id)}`),
 };

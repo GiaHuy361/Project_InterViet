@@ -8,10 +8,12 @@ import {
   Briefcase,
   Lightbulb,
   Globe,
-  CheckCircle2
+  CheckCircle2,
+  ListChecks
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import mentorWorkspaceService from '../../../services/mentorWorkspaceService';
+import mentorSpecialtyService, { MentorSpecialtyDto } from '../../../services/mentorSpecialtyService';
 import type { MentorProfile, UpdateMentorProfileRequest } from '../../../lib/api/publicTypes';
 import { toast } from 'sonner';
 
@@ -37,10 +39,17 @@ export const MentorProfilePage: React.FC = () => {
   const [newIndustry, setNewIndustry] = useState('');
   const [newLanguage, setNewLanguage] = useState('');
 
+  // Specialties State
+  const [availableSpecialties, setAvailableSpecialties] = useState<MentorSpecialtyDto[]>([]);
+  const [selectedSpecialtyIds, setSelectedSpecialtyIds] = useState<string[]>([]);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
-      const data = await mentorWorkspaceService.getMentorProfile();
+      const [data, specialtiesRes] = await Promise.all([
+        mentorWorkspaceService.getMentorProfile(),
+        mentorSpecialtyService.getSpecialtiesCatalog().catch(() => [])
+      ]);
       setProfile(data);
       setFullName(data.fullName || '');
       setHeadline(data.headline || '');
@@ -50,6 +59,8 @@ export const MentorProfilePage: React.FC = () => {
       setExpertise(data.expertise || []);
       setIndustries(data.industries || []);
       setLanguages(data.languages || []);
+      setSelectedSpecialtyIds(data.specialties?.map(s => s.id) || []);
+      setAvailableSpecialties(specialtiesRes || []);
     } catch (err) {
       console.error('Failed to load mentor profile', err);
       toast.error('Không thể tải thông tin hồ sơ');
@@ -75,8 +86,19 @@ export const MentorProfilePage: React.FC = () => {
         industries,
         languages
       };
-      const data = await mentorWorkspaceService.updateMentorProfile(payload);
-      setProfile(data);
+
+      const [updatedProfile] = await Promise.all([
+        mentorWorkspaceService.updateMentorProfile(payload),
+        mentorSpecialtyService.selfAssignSpecialties(selectedSpecialtyIds).catch(err => {
+          console.error('Failed to assign specialties', err);
+          toast.error('Lỗi khi lưu danh mục chuyên môn');
+          return { data: null };
+        })
+      ]);
+
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+      }
       toast.success('Đã lưu hồ sơ thành công');
     } catch (err) {
       console.error('Failed to save profile', err);
@@ -218,6 +240,68 @@ export const MentorProfilePage: React.FC = () => {
             ) : (
               <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-slate-900/10 text-gray-300 px-3 py-1 text-xs font-semibold">
                 Chưa xác thực
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 mb-4 text-orange-700 dark:text-orange-400">
+              <ListChecks className="h-5 w-5" />
+              <h3 className="font-bold">Danh mục Chuyên môn</h3>
+            </div>
+            {availableSpecialties.length === 0 ? (
+              <p className="text-sm text-gray-500">Chưa có danh mục chuyên môn nào.</p>
+            ) : (
+              <div className="space-y-3">
+                {availableSpecialties.map(spec => {
+                  const isSelected = selectedSpecialtyIds.includes(spec.id);
+                  return (
+                    <label 
+                      key={spec.id} 
+                      className={`
+                        relative flex items-start gap-4 cursor-pointer group p-4 rounded-2xl border-2 transition-all duration-200
+                        ${isSelected 
+                          ? 'border-orange-500 bg-orange-50/50 dark:border-orange-500/50 dark:bg-orange-900/10 shadow-sm shadow-orange-100 dark:shadow-none' 
+                          : 'border-gray-100 bg-gray-50/30 hover:border-orange-200 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-orange-900/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center h-5 mt-0.5">
+                        <div className={`
+                          flex items-center justify-center w-5 h-5 rounded border transition-colors
+                          ${isSelected
+                            ? 'bg-orange-500 border-orange-500 text-white'
+                            : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-slate-800 group-hover:border-orange-400'
+                          }
+                        `}>
+                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSpecialtyIds(prev => [...prev, spec.id]);
+                            } else {
+                              setSelectedSpecialtyIds(prev => prev.filter(id => id !== spec.id));
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-bold transition-colors ${isSelected ? 'text-orange-700 dark:text-orange-400' : 'text-gray-900 dark:text-gray-300 group-hover:text-orange-600'}`}>
+                          {spec.name}
+                        </span>
+                        {spec.description && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                            {spec.description}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>

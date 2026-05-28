@@ -676,10 +676,6 @@ export const AdminBillingPage: React.FC = () => {
               <CreditCard className="h-7 w-7 text-white" />
             </div>
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 shadow-sm">
-                <Sparkles className="h-3.5 w-3.5" />
-                Đối soát thanh toán Phase 14
-              </div>
               <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Bảng kê thanh toán</h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
                 Đối soát giao dịch thanh toán, hóa đơn, gói đăng ký, đặt lịch mentor và báo cáo trong một màn hình.

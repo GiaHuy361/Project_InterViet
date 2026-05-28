@@ -62,6 +62,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Quản lý nội dung (CMS)', icon: FileText, path: '/admin/cms' },
   { label: 'Lịch Mentor', icon: Briefcase, path: '/admin/mentor-bookings' },
   { label: 'Quản lý người dùng', icon: Users, path: '/admin/users' },
+  { label: 'Quản lý chuyên môn', icon: Shield, path: '/admin/specialties' },
   { label: 'Billing & Hóa đơn', icon: CreditCard, path: '/admin/billing' },
   { label: 'Audit Logs', icon: Activity, path: '/admin/audit-logs' },
   { label: 'Health Check', icon: Server, path: '/admin/health' },
@@ -162,11 +163,11 @@ export const AppSidebar: React.FC = () => {
     return stored === 'true';
   });
 
-  const systemRole: SystemRole = state.user?.systemRole || 'user';
+  const systemRole: SystemRole = state.user?.systemRole || 'candidate';
   const isAdmin = systemRole === 'admin';
   const isSupport = systemRole === 'support';
   const isMentor = systemRole === 'mentor';
-  const isUser = systemRole === 'user';
+  const isUser = systemRole === 'candidate';
 
   // Feature gate state — hide menu sections when features are disabled by backend
   const [adminDisabled, setAdminDisabled] = useState(() => isFeatureDisabled('admin'));

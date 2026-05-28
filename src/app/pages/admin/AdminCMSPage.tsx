@@ -14,19 +14,23 @@ import {
   getAdminReportShares
 } from '../../../services/adminContentService';
 import type { AdminCmsSummary, Testimonial, FaqItem, BlogPost, AdminContactRequest, AdminReportShare } from '../../../lib/api/publicTypes';
+import { FileText as FileTextIcon } from 'lucide-react';
 
 export const AdminCMSPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('stats');
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">
-          Quản lý Nội dung (CMS)
-        </h1>
-        <p className="mt-2 text-slate-600 dark:text-slate-400">
-          Quản lý dữ liệu hiển thị trên Landing Page, Help Center và các trang công cộng.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-200 dark:shadow-none">
+            <FileTextIcon className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Quản lý Nội dung (CMS)</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Quản lý dữ liệu hiển thị trên Landing Page, Help Center và các trang công cộng.</p>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -36,7 +40,6 @@ export const AdminCMSPage: React.FC = () => {
           <TabsTrigger value="testimonials">Đánh giá</TabsTrigger>
           <TabsTrigger value="faqs">FAQs</TabsTrigger>
           <TabsTrigger value="blog">Blog</TabsTrigger>
-          <TabsTrigger value="contacts">Liên hệ</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stats">
@@ -53,9 +56,6 @@ export const AdminCMSPage: React.FC = () => {
         </TabsContent>
         <TabsContent value="blog">
           <AdminBlogTab />
-        </TabsContent>
-        <TabsContent value="contacts">
-          <AdminContactRequestsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -96,12 +96,12 @@ const AdminStatsTab = () => {
           <p className="text-2xl font-bold mt-1">{summary.pendingContactRequests} / {summary.totalContactRequests}</p>
         </Card>
       </div>
-      
-      <Card className="p-6">
+
+      {/* <Card className="p-6">
         <h3 className="font-bold mb-2">Thêm chỉ số động (Dynamic Stats)</h3>
         <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Các chỉ số này có thể hiển thị trên Landing Page. Hiện tại chưa có giao diện danh sách.</p>
         <Button onClick={() => toast.info('Tính năng thêm chỉ số động qua API chưa có UI đầy đủ.')}>Thêm chỉ số</Button>
-      </Card>
+      </Card> */}
     </div>
   );
 };
@@ -236,53 +236,6 @@ const AdminBlogTab = () => {
   );
 };
 
-const AdminContactRequestsTab = () => {
-  const [items, setItems] = useState<AdminContactRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getAdminContactRequests().then(setItems).catch(console.error).finally(() => setLoading(false));
-  }, []);
-
-  const handleUpdateStatus = async (id: string, status: any) => {
-    try {
-      await updateAdminContactRequestStatus(id, status);
-      setItems(items.map(i => i.id === id ? { ...i, status } : i));
-      toast.success('Đã cập nhật trạng thái');
-    } catch {
-      toast.error('Lỗi');
-    }
-  };
-
-  if (loading) return <div>Đang tải...</div>;
-
-  return (
-    <Card className="p-6">
-      <h2 className="text-xl font-bold mb-4">Danh sách Yêu cầu Liên hệ</h2>
-      <div className="space-y-4">
-        {Array.isArray(items) ? items.map(item => (
-          <div key={item.id} className="p-4 border rounded">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <p className="font-bold">{item.fullName} &lt;{item.email}&gt; - {item.phone}</p>
-                <p className="text-sm font-semibold">[{item.category}] {item.subject}</p>
-                <p className="text-sm text-gray-500 dark:text-slate-400">{new Date(item.createdAt).toLocaleString()}</p>
-              </div>
-              <select className="input-premium text-sm p-1" value={item.status} onChange={e => handleUpdateStatus(item.id, e.target.value)}>
-                <option value="pending">Chờ xử lý</option>
-                <option value="in_progress">Đang xử lý</option>
-                <option value="resolved">Đã giải quyết</option>
-                <option value="ignored">Bỏ qua</option>
-              </select>
-            </div>
-            <p className="text-sm text-gray-700 dark:text-slate-300 bg-gray-50 dark:bg-slate-950 p-3 rounded">{item.message}</p>
-          </div>
-        )) : null}
-        {items.length === 0 && <p>Chưa có dữ liệu</p>}
-      </div>
-    </Card>
-  );
-};
 
 const AdminSharesTab = () => {
   const [items, setItems] = useState<AdminReportShare[]>([]);

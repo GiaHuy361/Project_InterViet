@@ -19,7 +19,7 @@ export const useAuth = () => {
     resendVerificationEmail,
   } = useApp();
 
-  const systemRole: SystemRole = state.user?.systemRole || 'user';
+  const systemRole: SystemRole = state.user?.systemRole || 'candidate';
 
   return {
     // Auth state

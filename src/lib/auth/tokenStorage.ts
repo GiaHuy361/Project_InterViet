@@ -34,7 +34,9 @@ export type StoredAuthTokens = {
 
 function safeGet(key: string): string | null {
   try {
-    return localStorage.getItem(key);
+    const val = localStorage.getItem(key);
+    if (val === 'undefined' || val === 'null') return null;
+    return val;
   } catch {
     return null;
   }
@@ -83,6 +85,9 @@ export function loadAuthFromStorage(): StoredAuthTokens {
   if (authUserRaw) {
     try {
       authUser = JSON.parse(authUserRaw) as StoredAuthUser;
+      if (authUser.systemRole === 'user' as any) {
+        authUser.systemRole = 'candidate';
+      }
     } catch {
       authUser = null;
     }

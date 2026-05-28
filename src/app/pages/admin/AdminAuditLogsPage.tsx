@@ -80,10 +80,15 @@ export const AdminAuditLogsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">Lịch sử hành động hệ thống quan trọng</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 shadow-lg shadow-gray-200 dark:shadow-none">
+            <FileText className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Lịch sử hành động hệ thống quan trọng</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => void load()}>Làm mới</Button>

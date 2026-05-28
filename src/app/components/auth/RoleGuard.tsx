@@ -49,7 +49,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   }
 
   // Check if user's system role is in the allowed list
-  const userRole = state.user.systemRole || 'user';
+  const userRole = state.user.systemRole || 'candidate';
   if (!allowedRoles.includes(userRole)) {
     return <Navigate to={fallbackPath} replace />;
   }

@@ -18,10 +18,15 @@ export const AdminSystemHealthPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-gray-900 dark:text-slate-100">System Health Monitor</h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">Chẩn đoán tức thời trạng thái kết nối các tài nguyên của hệ thống.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-200 dark:shadow-none">
+            <Activity className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">System Health Monitor</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Chẩn đoán tức thời trạng thái kết nối các tài nguyên của hệ thống.</p>
+          </div>
         </div>
         <Button onClick={() => window.location.reload()} variant="outline">
           Làm mới (F5)

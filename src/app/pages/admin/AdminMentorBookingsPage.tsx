@@ -3,6 +3,8 @@ import { Card } from '../../components/ui/card';
 import { getAdminMentorBookings } from '../../../services/adminContentService';
 import type { AdminMentorBooking } from '../../../lib/api/publicTypes';
 
+import { Briefcase } from 'lucide-react';
+
 export const AdminMentorBookingsPage: React.FC = () => {
   const [items, setItems] = useState<AdminMentorBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,10 +15,15 @@ export const AdminMentorBookingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-gray-900 dark:text-slate-100">Quản lý Lịch Mentor</h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">Theo dõi toàn bộ lịch hẹn Mentor trên toàn hệ thống.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-200 dark:shadow-none">
+            <Briefcase className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Quản lý Lịch Mentor</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Theo dõi toàn bộ lịch hẹn Mentor trên toàn hệ thống.</p>
+          </div>
         </div>
       </div>
       

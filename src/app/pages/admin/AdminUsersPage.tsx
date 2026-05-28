@@ -30,19 +30,20 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import adminService, { AdminUserDetailResponse, AdminUserSummary } from '../../../services/adminManagementService';
+import mentorSpecialtyService, { MentorSpecialtyDto } from '../../../services/mentorSpecialtyService';
 import { toast } from 'sonner';
 
 type UserStatus = 'active' | 'suspended' | 'disabled';
 type EmailVerifiedFilter = 'all' | 'true' | 'false';
 
-const roleOptions = ['admin', 'support', 'mentor', 'user'] as const;
+const roleOptions = ['admin', 'support', 'mentor', 'candidate'] as const;
 const statusOptions: UserStatus[] = ['active', 'suspended', 'disabled'];
 
 const roleBadgeClass: Record<string, string> = {
   admin: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800',
   support: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
   mentor: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  user: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  candidate: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
 };
 
 const statusBadgeClass: Record<UserStatus, string> = {
@@ -89,6 +90,12 @@ export const AdminUsersPage: React.FC = () => {
   const [detailUser, setDetailUser] = useState<AdminUserDetailResponse | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<UserStatus | null>(null);
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
+
+  // Specialties assign states
+  const [specialtiesAssignOpen, setSpecialtiesAssignOpen] = useState(false);
+  const [availableSpecialties, setAvailableSpecialties] = useState<MentorSpecialtyDto[]>([]);
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [specialtiesSaving, setSpecialtiesSaving] = useState(false);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -186,6 +193,36 @@ export const AdminUsersPage: React.FC = () => {
       toast.error('Không thể cập nhật vai trò người dùng');
     } finally {
       setRoleUpdating(null);
+    }
+  };
+
+  const openSpecialtiesModal = async () => {
+    if (!detailUser?.userSummary.id) return;
+    setSpecialtiesAssignOpen(true);
+    try {
+      const { data } = await mentorSpecialtyService.getAdminSpecialties();
+      setAvailableSpecialties(data || []);
+      const existingIds = detailUser.profileSummary?.specialties?.map((s: any) => s.id) || [];
+      setSelectedSpecialties(existingIds);
+    } catch (error) {
+      console.error('Failed to load specialties', error);
+      toast.error('Không thể tải danh sách chuyên môn');
+    }
+  };
+
+  const handleAssignSpecialties = async () => {
+    if (!detailUser?.userSummary.id) return;
+    setSpecialtiesSaving(true);
+    try {
+      await mentorSpecialtyService.adminAssignSpecialties(detailUser.userSummary.id, selectedSpecialties);
+      toast.success('Đã cập nhật chuyên môn cho Mentor');
+      setSpecialtiesAssignOpen(false);
+      await refreshCurrentUserDetail();
+    } catch (error) {
+      console.error('Failed to assign specialties', error);
+      toast.error('Có lỗi xảy ra khi gán chuyên môn');
+    } finally {
+      setSpecialtiesSaving(false);
     }
   };
 
@@ -447,6 +484,23 @@ export const AdminUsersPage: React.FC = () => {
                       <p><span className="font-medium text-gray-700 dark:text-slate-300">Bio:</span> {detailUser.profileSummary.bio || '—'}</p>
                       <p><span className="font-medium text-gray-700 dark:text-slate-300">Years of experience:</span> {formatYearsOfExperience(detailUser.profileSummary.yearsOfExperience)}</p>
                       <p><span className="font-medium text-gray-700 dark:text-slate-300">Skills:</span> {detailUser.profileSummary.skills?.length ? detailUser.profileSummary.skills.join(', ') : '—'}</p>
+                      {detailUser.userSummary.role === 'mentor' && (
+                        <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-gray-700 dark:text-slate-300">Chuyên môn:</span>
+                            <Button variant="outline" size="sm" onClick={openSpecialtiesModal} className="h-7 text-xs">Sửa</Button>
+                          </div>
+                          {detailUser.profileSummary.specialties?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {detailUser.profileSummary.specialties.map((spec: any) => (
+                                <Badge key={spec.id} variant="secondary" className="bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-300">
+                                  {spec.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : <span className="text-gray-500">Chưa gán chuyên môn</span>}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 dark:text-slate-400">Chưa có profile summary.</p>
@@ -570,6 +624,53 @@ export const AdminUsersPage: React.FC = () => {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={closeDetail}>
               Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Specialties Assignment Modal */}
+      <Dialog open={specialtiesAssignOpen} onOpenChange={setSpecialtiesAssignOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gán chuyên môn cho Mentor</DialogTitle>
+            <DialogDescription>
+              Chọn các danh mục chuyên môn phù hợp cho {detailUser?.userSummary.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-2 py-4">
+            {availableSpecialties.length === 0 ? (
+              <div className="text-center text-sm text-gray-500 py-4">Chưa có danh mục chuyên môn nào trong hệ thống.</div>
+            ) : (
+              availableSpecialties.map(spec => {
+                const isSelected = selectedSpecialties.includes(spec.id);
+                return (
+                  <label key={spec.id} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${isSelected ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20' : 'border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
+                    <div className="flex h-5 items-center mt-0.5">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-cyan-600 rounded border-gray-300"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedSpecialties(prev => [...prev, spec.id]);
+                          else setSelectedSpecialties(prev => prev.filter(id => id !== spec.id));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <div className={`text-sm font-medium ${isSelected ? 'text-cyan-700 dark:text-cyan-400' : 'text-gray-900 dark:text-slate-100'}`}>{spec.name}</div>
+                      {spec.description && <div className="text-xs text-gray-500">{spec.description}</div>}
+                    </div>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSpecialtiesAssignOpen(false)}>Hủy</Button>
+            <Button onClick={handleAssignSpecialties} disabled={specialtiesSaving} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+              {specialtiesSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Lưu thay đổi
             </Button>
           </DialogFooter>
         </DialogContent>

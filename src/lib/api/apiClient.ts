@@ -53,16 +53,23 @@ class ApiClient {
     this.refreshToken = stored.refreshToken;
   }
 
-  public setAuthToken(accessToken: string, refreshToken?: string): void {
-    this.accessToken = accessToken;
-    if (refreshToken) {
-      this.refreshToken = refreshToken;
+  public setAuthToken(accessToken: string | null, refreshToken?: string | null): void {
+    this.accessToken = accessToken === 'undefined' || accessToken === 'null' ? null : accessToken;
+    if (refreshToken !== undefined) {
+      this.refreshToken = refreshToken === 'undefined' || refreshToken === 'null' ? null : refreshToken;
     }
 
     try {
-      localStorage.setItem(TOKEN_KEYS.accessToken, accessToken);
-      if (refreshToken) {
-        localStorage.setItem(TOKEN_KEYS.refreshToken, refreshToken);
+      if (this.accessToken) {
+        localStorage.setItem(TOKEN_KEYS.accessToken, this.accessToken);
+      } else {
+        localStorage.removeItem(TOKEN_KEYS.accessToken);
+      }
+      
+      if (this.refreshToken) {
+        localStorage.setItem(TOKEN_KEYS.refreshToken, this.refreshToken);
+      } else {
+        localStorage.removeItem(TOKEN_KEYS.refreshToken);
       }
     } catch {
       // ignore
