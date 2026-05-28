@@ -9,7 +9,7 @@ import type {
   AddExternalLinkRequest,
   AddWorkExperienceRequest,
   AddEducationRequest,
-} from '../lib/api/phase2Types';
+} from '../lib/api/dashboardTypes';
 
 type WithEntityIds = {
   id?: string;

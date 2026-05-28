@@ -3,6 +3,8 @@
  */
 
 import type { AuthResponse } from '../api/apiTypes';
+import { getRoleFromToken } from './jwtDecode';
+import type { SystemRole } from './jwtDecode';
 
 export const TOKEN_KEYS = {
   accessToken: 'interviet.accessToken',
@@ -18,6 +20,8 @@ export type StoredAuthUser = {
   fullName: string;
   status: string;
   emailVerified: boolean;
+  /** System role decoded from JWT: 'user' | 'support' | 'admin' */
+  systemRole: SystemRole;
 };
 
 export type StoredAuthTokens = {
@@ -58,12 +62,16 @@ export function saveAuthFromResponse(response: AuthResponse): void {
   safeSet(TOKEN_KEYS.accessTokenExpiry, response.accessTokenExpiry);
   safeSet(TOKEN_KEYS.refreshTokenExpiry, response.refreshTokenExpiry);
 
+  // Decode JWT to extract system role
+  const systemRole = getRoleFromToken(response.accessToken);
+
   const authUser: StoredAuthUser = {
     userId: response.userId,
     email: response.email,
     fullName: response.fullName,
     status: response.status,
     emailVerified: response.emailVerified,
+    systemRole,
   };
   safeSet(TOKEN_KEYS.authUser, JSON.stringify(authUser));
 }

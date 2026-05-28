@@ -81,8 +81,8 @@ export const ResetPasswordPage: React.FC = () => {
     return (
       <AuthFormCard badge="Hoàn tất" title="Mật khẩu đã được cập nhật" subtitle="Đang chuyển đến trang đăng nhập">
         <div className="py-4 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-            <CheckCircle className="h-8 w-8 text-emerald-600" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+            <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <p className="text-sm text-slate-600">Vui lòng đăng nhập lại bằng mật khẩu mới.</p>
         </div>
@@ -108,7 +108,7 @@ export const ResetPasswordPage: React.FC = () => {
       subtitle="Nhập mật khẩu mới cho tài khoản"
       footer={
         <p className="text-center text-sm text-slate-600">
-          <Link to="/dang-nhap" className="font-semibold text-blue-600 hover:text-blue-700">
+          <Link to="/dang-nhap" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Quay lại đăng nhập
           </Link>
         </p>

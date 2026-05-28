@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
 import { LoadingButton } from './design-system/LoadingButton';
+import { createSupportTicket } from '../../services/supportTicketService';
 
 interface FeedbackModalProps {
   open: boolean;
@@ -39,30 +40,34 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onOpenChange
 
     setLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const categoryMap: Record<string, string> = {
+        bug: 'technical',
+        feedback: 'other',
+        feature: 'feature',
+        other: 'other'
+      };
 
-    // Save to localStorage
-    const feedback: Feedback = {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      description,
-      email: email || undefined,
-      timestamp: new Date(),
-    };
+      await createSupportTicket({
+        subject: type === 'bug' ? 'Báo lỗi hệ thống' : type === 'feature' ? 'Đề xuất tính năng' : 'Góp ý',
+        description: email ? `[Email: ${email}]\n\n${description}` : description,
+        category: categoryMap[type] || 'other',
+        priority: type === 'bug' ? 'high' : 'medium',
+      });
 
-    const existingFeedback = JSON.parse(localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]');
-    existingFeedback.unshift(feedback);
-    localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(existingFeedback));
-
-    setLoading(false);
-    toast.success('Cảm ơn bạn đã gửi góp ý! Chúng tôi sẽ xem xét trong thời gian sớm nhất.');
-    
-    // Reset form
-    setDescription('');
-    setEmail('');
-    setType('feedback');
-    onOpenChange(false);
+      toast.success('Cảm ơn bạn đã gửi góp ý! Chúng tôi sẽ xem xét trong thời gian sớm nhất.');
+      
+      // Reset form
+      setDescription('');
+      setEmail('');
+      setType('feedback');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      toast.error('Có lỗi xảy ra, vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

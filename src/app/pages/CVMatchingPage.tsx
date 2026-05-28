@@ -1,402 +1,816 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp } from '../contexts/AppContext';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Textarea } from '../components/ui/textarea';
-import { Label } from '../components/ui/label';
-import { Progress } from '../components/ui/progress';
-import { Badge } from '../components/ui/badge';
-import { Skeleton } from '../components/ui/skeleton';
-import { UpgradeModal } from '../components/UpgradeModal';
-import { LoadingButton } from '../components/design-system/LoadingButton';
-import { eventTracker } from '../utils/eventTracker';
-import { 
-  Upload, 
-  FileText, 
-  Sparkles, 
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  Download,
-  History,
-  Lightbulb,
-  Lock,
-  Info,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
+import { AlertCircle, BriefcaseBusiness, CheckCircle2, FileText, Link2, Sparkles, Upload, History } from 'lucide-react';
+import { toast } from 'sonner';
+import { ApiError } from '../../lib/api/apiError';
+import { useApp } from '../contexts/AppContext';
+import {
+  cvMatchService,
+  type JobDescriptionItem,
+  type MatchSessionDetail,
+  type ResumeItem,
+  type StartSingleMatchResponse,
+} from '../../services/cvMatchService';
+import { useAsyncPolling } from '../../hooks/useAsyncPolling';
+import {
+  type PollingSessionSnapshot,
+  clearPollingSessionSnapshot,
+  readPollingSessionSnapshot,
+  writePollingSessionSnapshot,
+} from '../../utils/pollingSessionStorage';
+import { safeParseJson } from '../../utils/safeParseJson';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const MATCH_POLL_INTERVAL_MS = 5000;
+const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
+const RESUME_PARSE_TIMEOUT_MS = 180000;
+const CV_MATCH_POLLING_STORAGE_KEY = 'interviet.cv-matching.polling-state';
+
+type CVMatchPollingSnapshot = PollingSessionSnapshot<MatchSessionDetail> & {
+  cvTitle: string;
+  selectedResumeId: string | null;
+  jobDescription: JobDescriptionItem | null;
+  jdTitle: string;
+  companyName: string;
+  location: string;
+  jdRawText: string;
+};
+
+function extractList(value?: string | null): string[] {
+  if (!value) return [];
+  const parsed = safeParseJson<unknown>(value, value);
+
+  if (Array.isArray(parsed)) return parsed.map(String);
+  if (typeof parsed === 'string') {
+    return parsed
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function getNormalizedStatus(status?: string | null): string {
+  return status?.trim().toLowerCase() ?? '';
+}
+
+function isFinalMatchStatus(status?: string | null): boolean {
+  return ['completed', 'partially_completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
+}
+
+function isResumeParsed(status?: string | null): boolean {
+  return getNormalizedStatus(status) === 'parsed';
+}
+
+function isResumeParseFailed(status?: string | null): boolean {
+  return ['failed', 'cancelled'].includes(getNormalizedStatus(status));
+}
+
+function getSessionFromStartResponse(response: StartSingleMatchResponse): MatchSessionDetail | null {
+  if ('items' in response) {
+    return response.items[0] ?? null;
+  }
+
+  return {
+    sessionId: response.sessionId,
+    sessionType: 'Single',
+    status: response.status,
+    errorCode: null,
+    errorMessage: null,
+    result: null,
+    targets: null,
+  };
+}
 
 export const CVMatchingPage: React.FC = () => {
-  const { state, useCVOptimization, addCVVersion } = useApp();
   const navigate = useNavigate();
-  const [step, setStep] = useState<'upload' | 'analyzing' | 'results'>('upload');
-  const [cvText, setCvText] = useState('');
-  const [jdText, setJdText] = useState('');
-  const [matchScore, setMatchScore] = useState(0);
-  const [analyzingProgress, setAnalyzingProgress] = useState(0);
-  const [analyzingStep, setAnalyzingStep] = useState('');
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  const { addNotification, syncNotifications } = useApp();
+  const [cvTitle, setCvTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [jdTitle, setJdTitle] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [location, setLocation] = useState('');
+  const [jdRawText, setJdRawText] = useState('');
 
-  const isPremium = state.user?.role === 'premium' || state.user?.role === 'trial';
-  const canUse = isPremium || (state.user && state.user.cvOptimizationsDaily < 3);
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [jobDescription, setJobDescription] = useState<JobDescriptionItem | null>(null);
+  const [sessionDetail, setSessionDetail] = useState<MatchSessionDetail | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [lastNotifiedStatus, setLastNotifiedStatus] = useState<string | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
+  const activeSessionIdRef = useRef<string | null>(null);
+  const selectedResumeIdRef = useRef<string | null>(null);
 
-  const skillsData = [
-    { skill: 'Kỹ năng kỹ thuật', current: 75, required: 90 },
-    { skill: 'Kinh nghiệm', current: 80, required: 85 },
-    { skill: 'Học vấn', current: 95, required: 90 },
-    { skill: 'Kỹ năng mềm', current: 70, required: 85 },
-    { skill: 'Ngôn ngữ', current: 85, required: 80 },
-  ];
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isCreatingJd, setIsCreatingJd] = useState(false);
+  const [isStartingMatch, setIsStartingMatch] = useState(false);
 
-  const missingKeywords = [
-    'React', 'TypeScript', 'Node.js', 'AWS', 'Docker', 'Agile', 'CI/CD'
-  ];
+  const fetchMatchSession = useCallback(async () => {
+    if (!activeSessionIdRef.current) throw new Error('Missing session id');
+    return cvMatchService.getMatchSessionDetail(activeSessionIdRef.current);
+  }, []);
 
-  const suggestions = [
-    {
-      section: 'Kỹ năng kỹ thuật',
-      issue: 'Thiếu các công nghệ quan trọng trong JD',
-      suggestion: 'Thêm các từ khóa: React, TypeScript, Node.js vào phần kỹ năng của bạn'
-    },
-    {
-      section: 'Kinh nghiệm',
-      issue: 'Mô tả kinh nghiệm chưa cụ thể',
-      suggestion: 'Sử dụng số liệu cụ thể: \"Tăng hiệu suất 30%\" thay vì \"Cải thiện hiệu suất\"'
-    },
-    {
-      section: 'Thành tích',
-      issue: 'Thiếu các metric đo lường',
-      suggestion: 'Thêm các con số cụ thể về kết quả công việc của bạn'
+  const setCurrentSessionId = useCallback((sessionId: string | null) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
+
+  const notifyFinalStatus = useCallback((status: string) => {
+    if (['failed', 'cancelled'].includes(status)) {
+      toast.error('Phiên so khớp thất bại. Vui lòng thử lại.');
+      return;
     }
-  ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    addNotification({
+      title: 'CV + JD: Kết quả đối sánh đã sẵn sàng',
+      message: 'Phiên so khớp CV và JD đã hoàn tất. Mở lại trang CV Matching để xem chi tiết.',
+      type: 'success',
+      read: false,
+      actionUrl: '/cv-matching',
+      metadata: {
+        source: 'cv-matching',
+        status,
+      },
+    });
+    toast.success('Phân tích hoàn tất.');
+    // Sync notifications to ensure badge/inbox reflect server state
+    void syncNotifications().catch(() => undefined);
+  }, [addNotification]);
+
+  const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
+    fetchFn: fetchMatchSession,
+    getStatusFn: (data) => data.status,
+    intervalMs: MATCH_POLL_INTERVAL_MS,
+    onSuccess: (data) => {
+      setSessionDetail(data);
+      setCurrentSessionId(null);
+      const status = getNormalizedStatus(data.status);
+      setLastNotifiedStatus(status);
+      notifyFinalStatus(status);
+    },
+    onFailure: (error) => {
+      const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
+      toast.error(message);
+    },
+  });
+
+  const primaryTarget = sessionDetail?.targets?.[0] ?? null;
+  const primaryMatch = sessionDetail?.result ?? primaryTarget;
+  const totalScore = primaryMatch?.totalScore ?? 0;
+  const scoreBreakdown = [
+    { label: 'Kỹ thuật', value: primaryMatch?.technicalScore },
+    { label: 'Kinh nghiệm', value: primaryMatch?.experienceScore },
+    { label: 'Học vấn', value: primaryMatch?.educationScore },
+    { label: 'Ngôn ngữ', value: primaryMatch?.languageScore },
+  ].filter((item): item is { label: string; value: number } => typeof item.value === 'number');
+  const missingSkills = useMemo(() => extractList(primaryMatch?.missingSkillsJson), [primaryMatch]);
+  const matchedSkills = useMemo(() => extractList(primaryMatch?.matchedSkillsJson), [primaryMatch]);
+  const strengths = useMemo(() => extractList(primaryMatch?.strengthsJson), [primaryMatch]);
+  const weaknesses = useMemo(() => extractList(primaryMatch?.weaknessesJson), [primaryMatch]);
+  const suggestions = useMemo(() => extractList(primaryMatch?.suggestionsJson), [primaryMatch]);
+  const selectedResume = useMemo(
+    () => resumes.find((item) => item.resumeId === selectedResumeId) ?? null,
+    [resumes, selectedResumeId]
+  );
+  const canStartMatch = Boolean(selectedResume?.resumeId && jobDescription?.id);
+
+  const handleApiError = (error: unknown) => {
+    if (error instanceof ApiError) {
+      if (error.status === 403 && error.code === 'Quota.Exceeded') {
+        toast.error('Bạn đã sử dụng hết lượt trong gói hiện tại. Vui lòng nâng cấp gói.');
+        return;
+      }
+
+      if (error.status === 503 || error.code === 'Service.Unavailable') {
+        toast.error('Dịch vụ AI/CV tạm thời không khả dụng. Vui lòng thử lại sau vài phút.');
+        return;
+      }
+
+      toast.error(error.message);
+      return;
+    }
+
+    if (error instanceof Error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.error('Có lỗi không xác định.');
+  };
+
+  const clearMatchState = () => {
+    stopPolling();
+    setSessionDetail(null);
+    setLastNotifiedStatus(null);
+    setCurrentSessionId(null);
+    clearPollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY);
+  };
+  const loadResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
+    try {
+      const response = await cvMatchService.listResumes();
+      const items = response.items ?? [];
+      setResumes(items);
+      const currentSelectedResumeId = selectedResumeIdRef.current;
+      if (currentSelectedResumeId && !items.some((item) => item.resumeId === currentSelectedResumeId)) {
+        setSelectedResumeId(null);
+      }
+    } catch (error) {
+      // Bắt riêng lỗi 401 để tránh việc apiClient tự xóa token khi /resumes trả về 401
+      if (error instanceof ApiError && error.status === 401) {
+        console.warn('[CVMatchingPage] /resumes trả về 401 - có thể token chưa được gửi');
+        // Không gọi handleApiError vì sẽ không xóa token mà chỉ hiện thông báo
+        return;
+      }
+      handleApiError(error);
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    selectedResumeIdRef.current = selectedResumeId;
+  }, [selectedResumeId]);
+
+  useEffect(() => {
+    void loadResumes();
+  }, [loadResumes]);
+
+  useEffect(() => {
+    const restorePollingState = async () => {
+      const snapshot = readPollingSessionSnapshot<MatchSessionDetail>(CV_MATCH_POLLING_STORAGE_KEY) as CVMatchPollingSnapshot | null;
+
+      // XÓA LOCAL STORAGE ĐỂ TRÁNH GỌI GET /matches/:id GÂY LỖI 401 VĂNG APP
+      if (snapshot?.activeSessionId) {
+        clearPollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY);
+        setIsRestored(true);
+        return;
+      }
+
+      if (!snapshot) {
+        setIsRestored(true);
+        return;
+      }
+
+      setCvTitle(snapshot.cvTitle ?? '');
+      setSelectedResumeId(snapshot.selectedResumeId ?? null);
+      setJobDescription(snapshot.jobDescription ?? null);
+      setJdTitle(snapshot.jdTitle ?? '');
+      setCompanyName(snapshot.companyName ?? '');
+      setLocation(snapshot.location ?? '');
+      setJdRawText(snapshot.jdRawText ?? '');
+      setSessionDetail(snapshot.sessionDetail ?? null);
+      setLastNotifiedStatus(snapshot.lastNotifiedStatus ?? null);
+      setCurrentSessionId(snapshot.activeSessionId ?? null);
+
+      const savedStatus = getNormalizedStatus(snapshot.sessionDetail?.status);
+      if (snapshot.sessionDetail && isFinalMatchStatus(savedStatus)) {
+        if (snapshot.lastNotifiedStatus !== savedStatus) {
+          notifyFinalStatus(savedStatus);
+          setLastNotifiedStatus(savedStatus);
+        }
+        setCurrentSessionId(null);
+        setIsRestored(true);
+        return;
+      }
+
+      if (snapshot.activeSessionId) {
+        try {
+          const refreshedDetail = await cvMatchService.getMatchSessionDetail(snapshot.activeSessionId);
+          setSessionDetail(refreshedDetail);
+
+          const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+          if (isFinalMatchStatus(refreshedStatus)) {
+            setCurrentSessionId(null);
+            if (snapshot.lastNotifiedStatus !== refreshedStatus) {
+              notifyFinalStatus(refreshedStatus);
+              setLastNotifiedStatus(refreshedStatus);
+            }
+          } else {
+            startPolling();
+          }
+        } catch (error) {
+          handleApiError(error);
+        }
+      }
+
+      setIsRestored(true);
+    };
+
+    void restorePollingState();
+  }, [notifyFinalStatus, startPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    writePollingSessionSnapshot(CV_MATCH_POLLING_STORAGE_KEY, {
+      activeSessionId,
+      sessionDetail,
+      lastNotifiedStatus,
+      cvTitle,
+      selectedResumeId,
+      jobDescription,
+      jdTitle,
+      companyName,
+      location,
+      jdRawText,
+    });
+  }, [
+    activeSessionId,
+    companyName,
+    cvTitle,
+    isRestored,
+    jdRawText,
+    jdTitle,
+    jobDescription,
+    lastNotifiedStatus,
+    location,
+    selectedResumeId,
+    sessionDetail,
+  ]);
+
+  const refreshPollingState = useCallback(async () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      const refreshedDetail = await cvMatchService.getMatchSessionDetail(sessionId);
+      setSessionDetail(refreshedDetail);
+
+      const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+      if (isFinalMatchStatus(refreshedStatus)) {
+        stopPolling();
+        setCurrentSessionId(null);
+        if (lastNotifiedStatus !== refreshedStatus) {
+          notifyFinalStatus(refreshedStatus);
+          setLastNotifiedStatus(refreshedStatus);
+        }
+      } else if (!isPolling) {
+        startPolling();
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
+  }, [isPolling, lastNotifiedStatus, notifyFinalStatus, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!activeSessionIdRef.current) return;
+      if (isFinalMatchStatus(sessionDetail?.status)) return;
+
+      void refreshPollingState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRestored, refreshPollingState, sessionDetail?.status]);
+
+  const waitForResumeParsed = async (resumeId: string): Promise<ResumeItem> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt <= RESUME_PARSE_TIMEOUT_MS) {
+      const detail = await cvMatchService.getResumeDetail(resumeId);
+
+      if (isResumeParsed(detail.parseStatus)) {
+        return detail;
+      }
+
+      if (isResumeParseFailed(detail.parseStatus)) {
+        throw new Error('AI phân tích CV thất bại. Vui lòng thử lại với file khác.');
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, RESUME_PARSE_POLL_INTERVAL_MS));
+    }
+
+    throw new Error('Hết thời gian chờ AI phân tích CV. Vui lòng thử lại sau.');
+  };
+
+  const resetJobDescription = () => {
+    setJobDescription(null);
+    clearMatchState();
+  };
+
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
     if (!file) return;
 
-    // Validate file
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setUploadError('File quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
-      toast.error('File quá lớn');
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      toast.error('Định dạng file không hợp lệ. Chỉ hỗ trợ PDF, DOCX, JPG, JPEG, PNG.');
       return;
     }
 
-    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError('Định dạng file không được hỗ trợ. Vui lòng chọn file PDF hoặc DOCX.');
-      toast.error('Định dạng file không hợp lệ');
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File vượt quá 10MB.');
       return;
     }
 
-    setUploadError('');
-    toast.success('File đã được tải lên thành công');
-    eventTracker.track('cv_file_upload', { fileName: file.name, fileSize: file.size });
+    setSelectedFile(file);
+    clearMatchState();
   };
 
-  const handleAnalyze = () => {
-    if (!canUse) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'cv_limit_reached' });
+  const handleUploadResume = async () => {
+    if (!selectedFile) {
+      toast.error('Vui lòng chọn file CV.');
       return;
     }
 
-    if (!cvText || !jdText) {
-      toast.error('Vui lòng nhập đầy đủ CV và JD');
+    setIsUploadingResume(true);
+    clearMatchState();
+
+    try {
+      const uploadedResume = await cvMatchService.uploadResume(selectedFile, cvTitle);
+      const parsedResume = isResumeParsed(uploadedResume.parseStatus)
+        ? uploadedResume
+        : await waitForResumeParsed(uploadedResume.resumeId);
+
+      setSelectedResumeId(parsedResume.resumeId);
+      await loadResumes();
+      toast.success('Upload và phân tích CV thành công.');
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleCreateJobDescription = async () => {
+    if (jdTitle.trim().length < 3 || companyName.trim().length < 2 || !location.trim() || jdRawText.trim().length < 50) {
+      toast.error('Vui lòng nhập đầy đủ thông tin JD (nội dung tối thiểu 50 ký tự).');
       return;
     }
 
-    const success = useCVOptimization();
-    if (!success) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'cv_limit_reached' });
+    setIsCreatingJd(true);
+    clearMatchState();
+
+    try {
+      const createdJobDescription = await cvMatchService.createJobDescription({
+        title: jdTitle.trim(),
+        companyName: companyName.trim(),
+        location: location.trim(),
+        rawText: jdRawText.trim(),
+      });
+
+      setJobDescription(createdJobDescription);
+      toast.success('Tạo JD thành công.');
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsCreatingJd(false);
+    }
+  };
+
+  const handleStartMatch = async () => {
+    if (!selectedResume?.resumeId || !jobDescription) {
+      toast.error('Vui lòng chọn 1 CV và tạo JD trước khi so khớp.');
       return;
     }
 
-    setStep('analyzing');
-    setAnalyzingProgress(0);
-    eventTracker.track('jd_analyze_start');
-    
-    // Simulate progressive analysis
-    const steps = [
-      { progress: 20, text: 'Đang phân tích JD...' },
-      { progress: 40, text: 'Đang chấm điểm ATS...' },
-      { progress: 60, text: 'So khớp kỹ năng...' },
-      { progress: 80, text: 'Tìm từ khóa thiếu...' },
-      { progress: 100, text: 'Hoàn tất phân tích!' },
-    ];
+    setIsStartingMatch(true);
+    clearMatchState();
 
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < steps.length) {
-        setAnalyzingProgress(steps[currentStep].progress);
-        setAnalyzingStep(steps[currentStep].text);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        const score = Math.floor(Math.random() * 30) + 65;
-        setMatchScore(score);
-        setStep('results');
-        
-        addCVVersion({
-          name: 'CV ' + new Date().toLocaleDateString('vi-VN'),
-          score,
-          content: cvText
-        });
-        
-        toast.success('Phân tích hoàn tất!');
-        eventTracker.track('jd_analyze_complete', { score });
-        eventTracker.track('jd_analyze', { score }); // For dashboard completion tracking
+    try {
+      const matchResponse = await cvMatchService.startSingleMatch(selectedResume.resumeId, jobDescription.id);
+      const matchSession = getSessionFromStartResponse(matchResponse);
+
+      if (!matchSession?.sessionId) {
+        toast.error('Không nhận được phiên so khớp từ hệ thống.');
+        return;
       }
-    }, 600);
-  };
 
-  const handleExportPDF = () => {
-    if (!isPremium) {
-      setShowUpgradeModal(true);
-      eventTracker.track('upgrade_modal_shown', { trigger: 'pdf_export' });
-      return;
+      activeSessionIdRef.current = matchSession.sessionId;
+      setCurrentSessionId(matchSession.sessionId);
+      setSessionDetail(matchSession);
+
+      if (isFinalMatchStatus(matchSession.status)) {
+        if (getNormalizedStatus(matchSession.status) === 'completed') {
+          setLastNotifiedStatus(getNormalizedStatus(matchSession.status));
+          notifyFinalStatus(getNormalizedStatus(matchSession.status));
+        }
+        setCurrentSessionId(null);
+        return;
+      }
+
+      const initialDetail = await cvMatchService.getMatchSessionDetail(matchSession.sessionId);
+      setSessionDetail(initialDetail);
+
+      if (isFinalMatchStatus(initialDetail.status)) {
+        setCurrentSessionId(null);
+        const status = getNormalizedStatus(initialDetail.status);
+        setLastNotifiedStatus(status);
+        notifyFinalStatus(status);
+        return;
+      }
+
+      startPolling();
+      toast.info('Đang phân tích mức độ phù hợp...');
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsStartingMatch(false);
     }
-    toast.success('Đang xuất PDF...');
-    eventTracker.track('pdf_export_click');
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       <AppPageHeader
-        title="CV & So khớp JD"
-        subtitle="Tối ưu CV của bạn để phù hợp với mô tả công việc"
+        title="CV + JD Matching"
+        subtitle="Upload CV, tạo JD và so khớp để nhận điểm phù hợp cùng gợi ý cải thiện."
         icon={FileText}
         iconGradient="from-blue-500 to-cyan-500"
         actions={
-          <Button variant="outline" className="hover-lift" onClick={() => navigate('/cv-history')}>
-            <History className="mr-2" size={16} />
-            Lịch sử
+          <Button variant="outline" onClick={() => navigate('/match-history')}>
+            <History className="w-4 h-4 mr-2" />
+            Xem lịch sử
           </Button>
         }
       />
 
-      {!isPremium && (
-        <Card className="glass-card p-4 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/20">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-            <div className="flex-1">
-              <p className="text-sm text-blue-900">
-                <strong>Gói miễn phí:</strong> {state.user?.cvOptimizationsDaily || 0}/3 lần tối ưu hôm nay
-              </p>
-            </div>
-            {!canUse && (
-              <Button size="sm" onClick={() => navigate('/goi-dich-vu')}>
-                Nâng cấp
-              </Button>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Chọn CV</Label>
+            {selectedResume && (
+              <Badge className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                <CheckCircle2 className="mr-1" size={14} />
+                Đã upload
+              </Badge>
             )}
           </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Danh sách CV từ hệ thống</p>
+              <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
+                Tải lại
+              </Button>
+            </div>
+
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {isLoadingResumes && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có CV nào.</p>}
+              {resumes.map((item) => (
+                <label
+                  key={item.resumeId}
+                  className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="selected-resume-single"
+                    checked={selectedResumeId === item.resumeId}
+                    onChange={() => {
+                      setSelectedResumeId(item.resumeId);
+                      clearMatchState();
+                    }}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{item.originalFileName}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Input value={cvTitle} onChange={(event) => setCvTitle(event.target.value)} placeholder="Tiêu đề CV (tùy chọn)" />
+          <Input type="file" onChange={onFileChange} />
+          <p className="text-xs text-gray-500">Hỗ trợ: .pdf, .docx, .jpg, .jpeg, .png | Tối đa 10MB</p>
+
+          {selectedResume && (
+            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
+              {selectedResume.title} ({selectedResume.originalFileName})
+            </div>
+          )}
+
+          <Button onClick={handleUploadResume} disabled={!selectedFile || isUploadingResume || isPolling}>
+            <Upload className="mr-2" size={16} />
+            {isUploadingResume ? 'Đang upload và phân tích CV...' : 'Upload CV'}
+          </Button>
+        </Card>
+
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Job Description</Label>
+            {jobDescription && (
+              <Badge className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                <CheckCircle2 className="mr-1" size={14} />
+                Đã tạo JD
+              </Badge>
+            )}
+          </div>
+
+          <Input
+            value={jdTitle}
+            onChange={(event) => {
+              setJdTitle(event.target.value);
+              resetJobDescription();
+            }}
+            placeholder="Ví dụ: Senior Backend Engineer"
+          />
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input
+              value={companyName}
+              onChange={(event) => {
+                setCompanyName(event.target.value);
+                resetJobDescription();
+              }}
+              placeholder="Công ty"
+            />
+            <Input
+              value={location}
+              onChange={(event) => {
+                setLocation(event.target.value);
+                resetJobDescription();
+              }}
+              placeholder="Địa điểm"
+            />
+          </div>
+
+          <Textarea
+            value={jdRawText}
+            onChange={(event) => {
+              setJdRawText(event.target.value);
+              resetJobDescription();
+            }}
+            wrap="soft"
+            className="min-h-[180px] max-h-[420px] resize-y overflow-y-auto overflow-x-hidden break-words"
+            placeholder="Nội dung JD (tối thiểu 50 ký tự)..."
+          />
+
+          {jobDescription && (
+            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
+              {jobDescription.title} - {jobDescription.companyName}
+            </div>
+          )}
+
+          <Button onClick={handleCreateJobDescription} disabled={isCreatingJd || isPolling}>
+            <BriefcaseBusiness className="mr-2" size={16} />
+            {isCreatingJd ? 'Đang tạo JD...' : 'Tạo JD'}
+          </Button>
+        </Card>
+      </div>
+
+      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between dark:bg-slate-900/50 border dark:border-slate-800">
+        <div>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">So khớp CV và JD</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Chọn một CV và tạo JD để bắt đầu so khớp</p>
+        </div>
+        <Button onClick={handleStartMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
+          <Link2 className="mr-2" size={16} />
+          {isStartingMatch || isPolling ? 'Đang so khớp...' : 'So khớp'}
+        </Button>
+      </Card>
+
+      {(isPolling || (sessionDetail && !isFinalMatchStatus(sessionDetail.status))) && (
+        <Card className="p-4 flex items-center gap-2">
+          <Sparkles size={16} className="text-blue-600 dark:text-blue-400" />
+          <span className="text-sm">Đang phân tích mức độ phù hợp...</span>
+          <Badge variant="outline">{sessionDetail?.status ?? 'Processing'}</Badge>
         </Card>
       )}
 
-      {step === 'upload' && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="glass-card hover-lift p-6">
-            <Label className="flex items-center gap-2 mb-3">
-              <FileText size={18} />
-              <span className="font-semibold">CV của bạn</span>
-            </Label>
-            <Textarea
-              value={cvText}
-              onChange={(e) => setCvText(e.target.value)}
-              placeholder="Dán nội dung CV của bạn vào đây..."
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <div className="mt-4">
-              <Button variant="outline" className="w-full">
-                <Upload className="mr-2" size={16} />
-                Hoặc tải file PDF/DOCX
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="glass-card hover-lift p-6">
-            <Label className="flex items-center gap-2 mb-3">
-              <Sparkles size={18} />
-              <span className="font-semibold">Job Description</span>
-            </Label>
-            <Textarea
-              value={jdText}
-              onChange={(e) => setJdText(e.target.value)}
-              placeholder="Dán mô tả công việc (JD) vào đây..."
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <div className="mt-4 text-sm text-gray-600">
-              <p>💡 Tip: Copy toàn bộ nội dung JD để được phân tích chính xác nhất</p>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {step === 'analyzing' && (
-        <Card className="p-12">
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
-              <Sparkles className="text-white" size={40} />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-2">Đang phân tích CV...</h3>
-              <p className="text-gray-600">AI đang so khớp CV với JD và tìm các điểm cần cải thiện</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <Progress value={analyzingProgress} className="h-2" />
-            </div>
-            <div className="text-sm text-gray-500">
-              <p>{analyzingStep}</p>
-            </div>
+      {getNormalizedStatus(sessionDetail?.status) === 'failed' && sessionDetail && (
+        <Card className="p-4 flex items-start gap-2 border-red-300">
+          <AlertCircle size={16} className="text-red-500 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-700 dark:text-red-400">Phiên so khớp thất bại</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{sessionDetail.errorMessage ?? 'Vui lòng thử lại.'}</p>
           </div>
         </Card>
       )}
 
-      {step === 'results' && (
-        <div className="space-y-6">
-          {/* Match Score */}
-          <Card className="p-8">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-4">Điểm so khớp tổng thể</h3>
-              <div className="relative inline-block">
-                <div className="w-40 h-40 rounded-full border-8 border-gray-200 flex items-center justify-center relative">
-                  <div 
-                    className="absolute inset-0 rounded-full border-8 border-blue-600"
-                    style={{
-                      clipPath: `polygon(50% 50%, 50% 0%, ${matchScore >= 50 ? '100%' : '50%'} 0%, 100% ${matchScore >= 75 ? '100%' : matchScore >= 50 ? ((matchScore - 50) / 25) * 100 + '%' : '0%'}, ${matchScore >= 75 ? '0%' : '100%'} 100%, 0% 100%, 0% ${matchScore >= 25 ? (1 - (matchScore - 25) / 25) * 100 + '%' : '100%'}, ${matchScore < 25 ? '50%' : '0%'} ${matchScore < 25 ? (1 - matchScore / 25) * 100 + '%' : '0%'})`
-                    }}
-                  ></div>
-                  <div className="text-4xl font-bold z-10">{matchScore}%</div>
-                </div>
-              </div>
-              <p className="mt-4 text-gray-600">
-                {matchScore >= 80 ? 'Xuất sắc! CV của bạn rất phù hợp với JD' :
-                 matchScore >= 70 ? 'Tốt! Một vài điểm cần cải thiện' :
-                 'CV cần được tối ưu thêm'}
+      {['completed', 'partially_completed'].includes(getNormalizedStatus(sessionDetail?.status)) && primaryMatch && (
+        <div className="space-y-4">
+          <Card className="p-6">
+            <p className="text-sm text-gray-500">Điểm tổng</p>
+            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">{totalScore.toFixed(2)}%</p>
+            <p className="mt-2 text-sm text-gray-700">{primaryMatch.summaryText || 'Không có tóm tắt.'}</p>
+            {selectedResume && (
+              <p className="mt-3 text-xs text-gray-500">
+                CV: {selectedResume.title} ({selectedResume.originalFileName})
               </p>
-            </div>
+            )}
           </Card>
 
-          {/* Skills Radar Chart */}
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Phân tích kỹ năng</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={skillsData}>
-                  <PolarGrid key="polar-grid" />
-                  <PolarAngleAxis key="polar-angle-axis" dataKey="skill" />
-                  <PolarRadiusAxis key="polar-radius-axis" angle={90} domain={[0, 100]} />
-                  <Radar 
-                    key="current-skill"
-                    name="Của bạn" 
-                    dataKey="current" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.5}
-                  />
-                  <Radar 
-                    key="required-skill"
-                    name="Yêu cầu" 
-                    dataKey="required" 
-                    stroke="#8b5cf6" 
-                    fill="#8b5cf6" 
-                    fillOpacity={0.3}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Trạng thái session</p>
+              <p className="text-lg font-semibold">{sessionDetail?.status ?? 'Unknown'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume ID</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume Version</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeVersionId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Target count</p>
+              <p className="text-2xl font-semibold">{sessionDetail?.targetCount ?? 0}</p>
+            </Card>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Hoàn thành</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{sessionDetail?.completedCount ?? 0}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Thất bại</p>
+              <p className="text-2xl font-semibold text-red-600 dark:text-red-400">{sessionDetail?.failedCount ?? 0}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm cao nhất</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm trung bình</p>
+              <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{(sessionDetail?.averageScore ?? 0).toFixed(2)}%</p>
+            </Card>
+          </div>
+
+          {scoreBreakdown.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {scoreBreakdown.map((item) => (
+                <Card key={item.label} className="p-4">
+                  <p className="text-xs text-gray-500">{item.label}</p>
+                  <p className="text-2xl font-semibold">{item.value.toFixed(0)}%</p>
+                </Card>
+              ))}
             </div>
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                <span className="text-sm">CV của bạn</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                <span className="text-sm">Yêu cầu JD</span>
-              </div>
-            </div>
+          )}
+
+          <Card className="p-6 space-y-3">
+            <p className="font-semibold">Điểm mạnh</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+              {strengths.length === 0 && <li>Không có dữ liệu</li>}
+              {strengths.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+
+            <p className="font-semibold pt-2">Điểm yếu</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+              {weaknesses.length === 0 && <li>Không có dữ liệu</li>}
+              {weaknesses.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </Card>
 
-          {/* Missing Keywords */}
-          <Card className="p-6">
-            <h3 className="font-bold mb-4">Từ khóa thiếu trong CV</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Các từ khóa này xuất hiện trong JD nhưng không có trong CV của bạn
-            </p>
+          <Card className="p-6 space-y-3">
+            <p className="font-semibold">Kỹ năng phù hợp</p>
             <div className="flex flex-wrap gap-2">
-              {missingKeywords.map(keyword => (
-                <Badge key={keyword} variant="outline" className="text-sm">
-                  {keyword}
+              {matchedSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
+              {matchedSkills.map((skill) => (
+                <Badge key={skill} className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                  {skill}
                 </Badge>
               ))}
             </div>
-          </Card>
 
-          {/* Suggestions */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="text-yellow-600" size={20} />
-              <h3 className="font-bold">Gợi ý cải thiện</h3>
-            </div>
-            <div className="space-y-4">
-              {suggestions.map((item, index) => (
-                <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{item.section}</h4>
-                      <p className="text-sm text-gray-600 mb-2">{item.issue}</p>
-                      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded border border-blue-200">
-                        <CheckCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={16} />
-                        <p className="text-sm text-blue-900">{item.suggestion}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <p className="font-semibold pt-2">Kỹ năng còn thiếu</p>
+            <div className="flex flex-wrap gap-2">
+              {missingSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
+              {missingSkills.map((skill) => (
+                <Badge key={skill} className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300">
+                  {skill}
+                </Badge>
               ))}
             </div>
+
+            <p className="font-semibold pt-2">Gợi ý cải thiện</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+              {suggestions.length === 0 && <li>Không có dữ liệu</li>}
+              {suggestions.map((suggestion) => (
+                <li key={suggestion}>{suggestion}</li>
+              ))}
+            </ul>
           </Card>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Button onClick={() => navigate('/phong-van-setup')}>
-              <Sparkles className="mr-2" size={16} />
-              Luyện phỏng vấn ngay
-            </Button>
-            <Button variant="outline" onClick={() => setStep('upload')}>
-              Phân tích CV khác
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/cv-history')}>
-              <History className="mr-2" size={16} />
-              Xem lịch sử
-            </Button>
-            {isPremium && (
-              <Button variant="outline" onClick={handleExportPDF}>
-                <Download className="mr-2" size={16} />
-                Xuất PDF
-              </Button>
-            )}
-          </div>
         </div>
       )}
-
-      {step === 'upload' && (
-        <div className="flex justify-center">
-          <LoadingButton size="lg" onClick={handleAnalyze} disabled={!cvText || !jdText}>
-            <Sparkles className="mr-2" size={20} />
-            Phân tích ngay
-          </LoadingButton>
-        </div>
-      )}
-
-      {/* Upgrade Modal */}
-      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
     </div>
   );
 };
+
+
+
+
+

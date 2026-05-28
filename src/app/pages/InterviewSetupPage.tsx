@@ -100,7 +100,7 @@ export const InterviewSetupPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const session = await createInterview({
+      const createInterviewPayload = {
         position: position.trim(),
         level: level as InterviewLevel,
         interviewType: interviewType as InterviewType,
@@ -109,7 +109,11 @@ export const InterviewSetupPage: React.FC = () => {
         mode: mode,
         interviewerMode: interviewerMode as InterviewerMode,
         aiModel: selectedModel,
-      });
+      };
+
+      console.log('[InterviewSetup] createInterview payload:', createInterviewPayload);
+
+      const session = await createInterview(createInterviewPayload);
 
       if (mode === 'voice') {
         navigate(`/phong-van-pre-call`, {
@@ -145,21 +149,21 @@ export const InterviewSetupPage: React.FC = () => {
       />
 
       <Tabs defaultValue="text" value={mode} onValueChange={(v) => setMode(v as 'text' | 'voice')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-auto p-1 bg-blue-50/50 mb-2">
-          <TabsTrigger value="text" className="flex items-center justify-center gap-2 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+        <TabsList className="grid w-full grid-cols-2 h-auto p-1 bg-blue-50 dark:bg-blue-900/30 mb-2">
+          <TabsTrigger value="text" className="flex items-center justify-center gap-2 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 dark:text-blue-400 data-[state=active]:shadow-sm">
             <MessageSquare size={18} /> 
             <span className="font-semibold text-base">Phỏng vấn Text</span>
           </TabsTrigger>
-          <TabsTrigger value="voice" className="flex items-center justify-center gap-2 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+          <TabsTrigger value="voice" className="flex items-center justify-center gap-2 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 dark:text-blue-400 data-[state=active]:shadow-sm">
             <Mic size={18} /> 
             <span className="font-semibold text-base">Phỏng vấn Voice</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <Card className="glass-card p-4 border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-fuchsia-50/50">
+      <Card className="glass-card p-4 border-blue-200 dark:border-blue-800/80 bg-gradient-to-r from-blue-50/90 to-fuchsia-50/50">
         <div className="flex items-start gap-3">
-          <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+          <AlertCircle className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={20} />
           <div className="flex-1">
             {quotaLoading ? (
               <p className="text-sm text-blue-900">Đang kiểm tra quota phỏng vấn...</p>
@@ -200,7 +204,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Position */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <User size={18} className="text-blue-600" />
+              <User size={18} className="text-blue-600 dark:text-blue-400" />
               Vị trí ứng tuyển
             </Label>
             <Input
@@ -213,7 +217,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Level */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Target size={18} className="text-blue-600" />
+              <Target size={18} className="text-blue-600 dark:text-blue-400" />
               Cấp độ kinh nghiệm
             </Label>
             <Select value={level} onValueChange={(value) => setLevel(value as InterviewLevel)}>
@@ -233,7 +237,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Interview Type */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Target size={18} className="text-blue-600" />
+              <Target size={18} className="text-blue-600 dark:text-blue-400" />
               Loại phỏng vấn
             </Label>
             <Select value={interviewType} onValueChange={(value) => setInterviewType(value as InterviewType)}>
@@ -253,7 +257,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Goal */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Sparkles size={18} className="text-blue-600" />
+              <Sparkles size={18} className="text-blue-600 dark:text-blue-400" />
               Mục tiêu (không bắt buộc)
             </Label>
             <Textarea
@@ -267,7 +271,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Duration */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Clock size={18} className="text-blue-600" />
+              <Clock size={18} className="text-blue-600 dark:text-blue-400" />
               Thời lượng (phút)
             </Label>
             <Input
@@ -283,7 +287,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* AI Model Selection - BEFORE Interviewer Mode */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Sparkles size={18} className="text-blue-600" />
+              <Sparkles size={18} className="text-blue-600 dark:text-blue-400" />
               Model AI
             </Label>
             <p className="text-sm text-gray-600 mb-3">
@@ -300,7 +304,7 @@ export const InterviewSetupPage: React.FC = () => {
           {/* Interviewer Mode */}
           <div>
             <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-              <Target size={18} className="text-blue-600" />
+              <Target size={18} className="text-blue-600 dark:text-blue-400" />
               Phong cách interviewer
             </Label>
             <Select
@@ -325,7 +329,7 @@ export const InterviewSetupPage: React.FC = () => {
               {/* Voice Selection */}
               <div>
                 <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-                  <Volume2 size={18} className="text-blue-600" />
+                  <Volume2 size={18} className="text-blue-600 dark:text-blue-400" />
                   Giọng nói AI (Voice)
                 </Label>
                 <Select value={voice} onValueChange={setVoice}>
@@ -348,7 +352,7 @@ export const InterviewSetupPage: React.FC = () => {
               {/* Language Selection */}
               <div>
                 <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-                  <Languages size={18} className="text-blue-600" />
+                  <Languages size={18} className="text-blue-600 dark:text-blue-400" />
                   Ngôn ngữ phỏng vấn
                 </Label>
                 <Select value={language} onValueChange={setLanguage}>
@@ -366,7 +370,7 @@ export const InterviewSetupPage: React.FC = () => {
               <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50/50">
                 <div className="space-y-0.5">
                   <Label className="text-base font-semibold flex items-center gap-2">
-                    <FileText size={18} className="text-blue-600" />
+                    <FileText size={18} className="text-blue-600 dark:text-blue-400" />
                     Hiển thị text transcript realtime
                   </Label>
                   <p className="text-sm text-gray-500">
@@ -381,7 +385,7 @@ export const InterviewSetupPage: React.FC = () => {
             </>
           )}
           {submitError && (
-            <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+            <div className="p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-sm text-red-700 dark:text-red-400">
               {submitError}
             </div>
           )}

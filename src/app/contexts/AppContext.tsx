@@ -1,14 +1,18 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { eventTracker } from '../utils/eventTracker';
 import { getSubscriptionLimits } from '../utils/subscriptionLimits';
 import { apiClient } from '../../lib/api/apiClient';
+import { ApiError } from '../../lib/api/apiError';
 import * as authService from '../../services/authService';
+import { notificationService } from '../../services/notificationService';
 import type { AuthResponse } from '../../lib/api/apiTypes';
 import {
   loadAuthFromStorage,
   saveAuthFromResponse,
   updateEmailVerified,
 } from '../../lib/auth/tokenStorage';
+import { getRoleFromToken } from '../../lib/auth/jwtDecode';
+import type { SystemRole } from '../../lib/auth/jwtDecode';
 
 export type UserRole = 'visitor' | 'free' | 'trial' | 'premium' | 'expired' | 'cancelled' | 'suspended';
 export type SubscriptionPlan = 'free' | 'monthly' | 'quarterly' | 'yearly';
@@ -19,6 +23,8 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  /** System role decoded from JWT: 'user' | 'support' | 'admin' */
+  systemRole: SystemRole;
   subscriptionPlan: SubscriptionPlan;
   trialEndsAt?: Date;
   subscriptionEndsAt?: Date;
@@ -53,6 +59,7 @@ export interface AppState {
   // App state
   theme: 'light' | 'dark';
   cookiesAccepted: boolean;
+  unreadCount: number;
   notifications: Notification[];
   cvVersions: CVVersion[];
   interviewReports: InterviewReport[];
@@ -83,6 +90,8 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   read: boolean;
   createdAt: Date;
+  actionUrl?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface AppContextType {
@@ -101,6 +110,7 @@ interface AppContextType {
   cancelSubscription: () => void;
   downgradePlan: (newPlan: SubscriptionPlan) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
+  syncNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   addCVVersion: (version: Omit<CVVersion, 'id' | 'createdAt'>) => void;
@@ -118,11 +128,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const STORAGE_KEY = 'interviet_app_state';
 
 function buildUserFromAuthResponse(response: AuthResponse): User {
+  // Decode JWT to extract system role (user/support/admin)
+  const systemRole = getRoleFromToken(response.accessToken);
+
   return {
     id: response.userId,
     email: response.email,
     name: response.fullName || response.email.split('@')[0],
     role: response.status as UserRole,
+    systemRole,
     subscriptionPlan: 'free',
     cvOptimizations: 0,
     cvOptimizationsDaily: 0,
@@ -157,6 +171,30 @@ function applyAuthResponseToState(
   };
 }
 
+function mapBackendNotificationType(type?: string): Notification['type'] {
+  const normalized = (type || '').toLowerCase();
+
+  if (normalized.includes('success') || normalized.includes('completed') || normalized.includes('ready')) {
+    return 'success';
+  }
+
+  if (normalized.includes('warning') || normalized.includes('expired') || normalized.includes('limit')) {
+    return 'warning';
+  }
+
+  if (normalized.includes('error') || normalized.includes('failed')) {
+    return 'error';
+  }
+
+  return 'info';
+}
+
+function mergeNotifications(existing: Notification[], incoming: Notification[]): Notification[] {
+  // Do not merge local and incoming notifications. Treat backend as source of truth
+  // and replace the local list with the incoming list (sorted newest first).
+  return [...(incoming || [])].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+}
+
 const defaultState: AppState = {
   // Auth state
   isAuthenticated: false,
@@ -172,6 +210,7 @@ const defaultState: AppState = {
   // App state
   theme: 'light',
   cookiesAccepted: false,
+  unreadCount: 0,
   notifications: [],
   cvVersions: [],
   interviewReports: [],
@@ -196,6 +235,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ...n,
           createdAt: new Date(n.createdAt)
         }));
+        parsed.unreadCount = parsed.notifications.filter((n: any) => !n.read).length;
       }
       if (parsed.cvVersions) {
         parsed.cvVersions = parsed.cvVersions.map((v: any) => ({
@@ -213,11 +253,135 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return defaultState;
   });
+  const notificationPollTimerRef = useRef<number | null>(null);
+
+  const setNotificationsInState = (notifications: Notification[]) => {
+    setState(prev => ({
+      ...prev,
+      notifications,
+      // compute unread count
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      unreadCount: notifications.filter(n => !n.read).length,
+    }));
+  };
 
   // Persist state to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Apply theme to DOM
+  useEffect(() => {
+    if (state.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [state.theme]);
+
+
+  useEffect(() => {
+    if (!state.isAuthenticated || !state.accessToken) {
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+        notificationPollTimerRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncNotificationSnapshot = async () => {
+      try {
+        const [listResponse, unreadResponse] = await Promise.all([
+          notificationService.listNotifications({ page: 1, pageSize: 50 }),
+          notificationService.getUnreadCount(),
+        ]);
+        if (cancelled) return;
+
+        const backendNotifications: Notification[] = (listResponse.items || []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          type: mapBackendNotificationType(item.type || item.priority),
+          read: Boolean(item.isRead),
+          createdAt: new Date(item.createdAt),
+          actionUrl: item.actionUrl ?? undefined,
+          metadata: item.data ?? undefined,
+        }));
+
+        setNotificationsInState(mergeNotifications(state.notifications, backendNotifications));
+        setState((prev) => ({
+          ...prev,
+          unreadCount: unreadResponse.unreadCount ?? backendNotifications.filter((notification) => !notification.read).length,
+        }));
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError) return;
+      }
+    };
+
+    const pollUnreadCount = async () => {
+      try {
+        const unreadResponse = await notificationService.getUnreadCount();
+        if (cancelled) return;
+        setState((prev) => ({ ...prev, unreadCount: unreadResponse.unreadCount ?? 0 }));
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          if (notificationPollTimerRef.current) {
+            window.clearInterval(notificationPollTimerRef.current);
+            notificationPollTimerRef.current = null;
+          }
+          apiClient.clearAuthToken();
+          setState((prev) => ({
+            ...prev,
+            isAuthenticated: false,
+            accessToken: null,
+            refreshToken: null,
+            accessTokenExpiry: null,
+            refreshTokenExpiry: null,
+            user: null,
+            unreadCount: 0,
+            notifications: [],
+          }));
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    const schedulePolling = () => {
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+      }
+      const intervalMs = document.visibilityState === 'hidden' ? 120000 : 45000;
+      notificationPollTimerRef.current = window.setInterval(() => {
+        void pollUnreadCount();
+      }, intervalMs);
+    };
+
+    void syncNotificationSnapshot();
+    void pollUnreadCount();
+    schedulePolling();
+
+    const handleVisibilityChange = () => {
+      schedulePolling();
+      if (document.visibilityState === 'visible') {
+        void pollUnreadCount();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (notificationPollTimerRef.current) {
+        window.clearInterval(notificationPollTimerRef.current);
+        notificationPollTimerRef.current = null;
+      }
+    };
+  }, [state.isAuthenticated, state.accessToken]);
 
   // Restore auth from token storage on mount
   useEffect(() => {
@@ -239,21 +403,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         user:
           stored.authUser && !prev.user
             ? {
-                id: stored.authUser.userId,
-                email: stored.authUser.email,
-                name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
-                role: stored.authUser.status as UserRole,
-                subscriptionPlan: 'free',
-                cvOptimizations: 0,
-                cvOptimizationsDaily: 0,
-                interviewsUsed: 0,
-                interviewsDaily: 0,
-                mentorSessionsUsed: 0,
-                mentorSessionsMonthly: 0,
-                createdAt: new Date(),
-                verified: stored.authUser.emailVerified,
-                hasUsedTrial: false,
-              }
+              id: stored.authUser.userId,
+              email: stored.authUser.email,
+              name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
+              role: stored.authUser.status as UserRole,
+              systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'user'),
+              subscriptionPlan: 'free',
+              cvOptimizations: 0,
+              cvOptimizationsDaily: 0,
+              interviewsUsed: 0,
+              interviewsDaily: 0,
+              mentorSessionsUsed: 0,
+              mentorSessionsMonthly: 0,
+              createdAt: new Date(),
+              verified: stored.authUser.emailVerified,
+              hasUsedTrial: false,
+            }
             : prev.user,
       }));
     } else {
@@ -281,7 +446,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       const loginPath = '/dang-nhap';
       if (!window.location.pathname.startsWith(loginPath) &&
-          !window.location.pathname.startsWith('/login')) {
+        !window.location.pathname.startsWith('/login')) {
         const returnUrl = encodeURIComponent(
           window.location.pathname + window.location.search
         );
@@ -467,8 +632,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const upgradeToPremium = (plan: SubscriptionPlan, paymentMethod: PaymentMethod) => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'premium',
         subscriptionPlan: plan,
         paymentMethod: paymentMethod,
@@ -507,8 +672,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const cancelSubscription = () => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'cancelled'
       } : null
     }));
@@ -517,11 +682,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const downgradePlan = (newPlan: SubscriptionPlan) => {
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         role: 'free',
         subscriptionPlan: newPlan,
-        subscriptionEndsAt: null
+        subscriptionEndsAt: undefined
       } : null
     }));
   };
@@ -532,25 +697,55 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date(),
     };
-    setState(prev => ({
-      ...prev,
-      notifications: [newNotification, ...prev.notifications]
-    }));
+    setState(prev => {
+      const newNotifications = [newNotification, ...prev.notifications];
+      return {
+        ...prev,
+        notifications: newNotifications,
+        unreadCount: newNotifications.filter(n => !n.read).length,
+      };
+    });
   };
 
+  const syncNotifications = async () => {
+    if (!state.isAuthenticated || !state.accessToken) return;
+    try {
+      const response = await notificationService.listNotifications({ page: 1, pageSize: 50 });
+      const backendNotifications: Notification[] = (response.items || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: mapBackendNotificationType(item.type || item.priority),
+        read: Boolean(item.isRead),
+        createdAt: new Date(item.createdAt),
+        actionUrl: item.actionUrl ?? undefined,
+        metadata: item.data ?? undefined,
+      }));
+
+      setNotificationsInState(backendNotifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+    } catch (err) {
+      // ignore sync errors
+    }
+  };
+
+
+
   const markNotificationRead = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      )
-    }));
+    setState(prev => {
+      const newNotifications = prev.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+      return {
+        ...prev,
+        notifications: newNotifications,
+        unreadCount: newNotifications.filter(n => !n.read).length,
+      };
+    });
   };
 
   const markAllNotificationsRead = () => {
     setState(prev => ({
       ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true }))
+      notifications: prev.notifications.map(n => ({ ...n, read: true })),
+      unreadCount: 0,
     }));
   };
 
@@ -582,31 +777,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useCVOptimization = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Unlimited plans
     if (limits.cvOptimizationsDaily === 'unlimited') {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           cvOptimizations: prev.user.cvOptimizations + 1
         } : null
       }));
       eventTracker.track('cv_optimize', { role: state.user.role, plan: state.user.subscriptionPlan });
       return true;
     }
-    
+
     // Check if user has reached daily limit
     if (state.user.cvOptimizationsDaily >= limits.cvOptimizationsDaily) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         cvOptimizations: prev.user.cvOptimizations + 1,
         cvOptimizationsDaily: prev.user.cvOptimizationsDaily + 1
       } : null
@@ -617,31 +812,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useInterview = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Unlimited plans
     if (limits.interviewsDaily === 'unlimited') {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           interviewsUsed: prev.user.interviewsUsed + 1
         } : null
       }));
       eventTracker.track('interview_start', { role: state.user.role, plan: state.user.subscriptionPlan });
       return true;
     }
-    
+
     // Check if user has reached daily limit
     if (state.user.interviewsDaily >= limits.interviewsDaily) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         interviewsUsed: prev.user.interviewsUsed + 1,
         interviewsDaily: prev.user.interviewsDaily + 1
       } : null
@@ -652,18 +847,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const useMentorSession = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     // Check if user has reached monthly limit
     if (state.user.mentorSessionsMonthly >= limits.mentorSessionsMonthly) {
       return false;
     }
-    
+
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         mentorSessionsUsed: prev.user.mentorSessionsUsed + 1,
         mentorSessionsMonthly: prev.user.mentorSessionsMonthly + 1
       } : null
@@ -674,9 +869,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const canUseMentorSession = (): boolean => {
     if (!state.user) return false;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
-    
+
     return state.user.mentorSessionsMonthly < limits.mentorSessionsMonthly;
   };
 
@@ -695,8 +890,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isCVResetNeeded || isInterviewResetNeeded || isMentorResetNeeded) {
       setState(prev => ({
         ...prev,
-        user: prev.user ? { 
-          ...prev.user, 
+        user: prev.user ? {
+          ...prev.user,
           cvOptimizationsDaily: isCVResetNeeded ? 0 : prev.user.cvOptimizationsDaily,
           interviewsDaily: isInterviewResetNeeded ? 0 : prev.user.interviewsDaily,
           mentorSessionsMonthly: isMentorResetNeeded ? 0 : prev.user.mentorSessionsMonthly,
@@ -710,30 +905,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const watchAdForCredit = () => {
     if (!state.user) return;
-    
+
     // Only free users can watch ads for credits
     if (state.user.role !== 'free') return;
-    
+
     const limits = getSubscriptionLimits(state.user.subscriptionPlan);
     if (limits.cvOptimizationsDaily === 'unlimited') return;
-    
+
     // Add 1 more CV optimization to their quota
     // Note: cvOptimizationsDaily is the count of optimizations used today
     // We decrease the counter by 1 to give them 1 more optimization attempt
     setState(prev => ({
       ...prev,
-      user: prev.user ? { 
-        ...prev.user, 
+      user: prev.user ? {
+        ...prev.user,
         // Decrease the daily count by 1 to give them 1 more optimization attempt
         cvOptimizationsDaily: Math.max(0, prev.user.cvOptimizationsDaily - 1)
       } : null
     }));
-    
-    eventTracker.track('ad_watched_for_credit', { 
+
+    eventTracker.track('ad_watched_for_credit', {
       plan: state.user.subscriptionPlan,
-      previousCount: state.user.cvOptimizationsDaily 
+      previousCount: state.user.cvOptimizationsDaily
     });
-    
+
     // Add notification
     addNotification({
       title: 'Đã nhận thưởng!',
@@ -760,6 +955,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cancelSubscription,
       downgradePlan,
       addNotification,
+      syncNotifications,
       markNotificationRead,
       markAllNotificationsRead,
       addCVVersion,

@@ -5,6 +5,9 @@
  * Swagger: http://localhost:5000/swagger
  */
 
+// Re-export SystemRole for convenience
+export type { SystemRole } from '../auth/jwtDecode';
+
 // API Response Envelope (C# backend standard format)
 export type ApiEnvelope<T> = {
   success: boolean;

@@ -91,7 +91,7 @@ export const NetworkProfilePage: React.FC = () => {
                 <span className="font-bold text-lg">{profile.rating}</span>
                 <span className="text-gray-500">({profile.reviews} đánh giá)</span>
               </div>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
+              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
                 Sẵn sàng
               </Badge>
             </div>
@@ -133,7 +133,7 @@ export const NetworkProfilePage: React.FC = () => {
         <div className="space-y-3">
           {profile.achievements.map((achievement, idx) => (
             <div key={idx} className="flex items-start gap-3">
-              <Award className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <Award className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <p className="text-gray-700">{achievement}</p>
             </div>
           ))}

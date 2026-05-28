@@ -18,7 +18,7 @@ import { PlanComparisonTable } from '../components/plans/PlanComparisonTable';
 import { UpgradePlanCard } from '../components/plans/UpgradePlanCard';
 import * as subscriptionService from '../../services/subscriptionService';
 import * as plansService from '../../services/plansService';
-import type { CurrentSubscription, PlanResponse } from '../../lib/api/phase2Types';
+import type { CurrentSubscription, PlanResponse } from '../../lib/api/dashboardTypes';
 import { ApiError, createApiError } from '../../lib/api/apiError';
 import { formatLocalDateShort } from '../../utils/formatters';
 import { isDevBillingEnabled, DEV_PLAN_KEYS } from '../../config/devBilling';
@@ -149,7 +149,7 @@ export const CandidateSubscriptionPage: React.FC = () => {
       return;
     }
 
-    navigate('/thanh-toan', { state: { selectedPlan: targetKey } });
+    navigate('/thanh-toan', { state: { selectedPlan: targetKey, contextType: 'subscription' } });
   };
 
   const cvUsed = user?.cvOptimizationsDaily ?? 0;
@@ -261,7 +261,7 @@ export const CandidateSubscriptionPage: React.FC = () => {
         {isDevBillingEnabled && (
           <Card
             id="dev-billing-block"
-            className="p-6 border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/20"
+            className="p-6 border-dashed border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:bg-amber-950/20"
           >
             <h3 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
               Dev: Kích hoạt gói test

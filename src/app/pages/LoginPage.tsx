@@ -13,6 +13,8 @@ import { AuthFormCard } from '../components/design-system/AuthFormCard';
 import { FormField } from '../components/design-system/FormField';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { AUTH_PLACEHOLDERS } from '../constants/authPlaceholders';
+import { apiClient } from '../../lib/api/apiClient';
+import { getRoleFromToken } from '../../lib/auth/jwtDecode';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -57,7 +59,15 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password, getDeviceName());
       notifySuccess('Đăng nhập thành công!');
-      navigate(searchParams.get('returnUrl') || '/dashboard');
+      
+      const token = apiClient.getAccessToken();
+      const role = token ? getRoleFromToken(token) : 'user';
+      let defaultPath = '/dashboard';
+      if (role === 'admin') defaultPath = '/admin/dashboard';
+      else if (role === 'support') defaultPath = '/support/dashboard';
+      else if (role === 'mentor') defaultPath = '/mentor/dashboard';
+
+      navigate(searchParams.get('returnUrl') || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);
@@ -77,7 +87,15 @@ export const LoginPage: React.FC = () => {
     try {
       await googleLogin(credentialResponse.credential, getDeviceName());
       notifySuccess('Đăng nhập Google thành công!');
-      navigate(searchParams.get('returnUrl') || '/dashboard');
+      
+      const token = apiClient.getAccessToken();
+      const role = token ? getRoleFromToken(token) : 'user';
+      let defaultPath = '/dashboard';
+      if (role === 'admin') defaultPath = '/admin/dashboard';
+      else if (role === 'support') defaultPath = '/support/dashboard';
+      else if (role === 'mentor') defaultPath = '/mentor/dashboard';
+
+      navigate(searchParams.get('returnUrl') || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);
@@ -95,7 +113,7 @@ export const LoginPage: React.FC = () => {
       footer={
         <p className="text-center text-sm text-slate-600">
           Chưa có tài khoản?{' '}
-          <Link to="/dang-ky" className="font-semibold text-blue-600 hover:text-blue-700">
+          <Link to="/dang-ky" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Đăng ký miễn phí
           </Link>
         </p>
@@ -135,7 +153,7 @@ export const LoginPage: React.FC = () => {
             <input type="checkbox" className="rounded border-slate-300" />
             Ghi nhớ đăng nhập
           </label>
-          <Link to="/quen-mat-khau" className="font-medium text-blue-600 hover:text-blue-700">
+          <Link to="/quen-mat-khau" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-400">
             Quên mật khẩu?
           </Link>
         </FormField>
@@ -163,7 +181,7 @@ export const LoginPage: React.FC = () => {
         {GOOGLE_CLIENT_ID ? (
           <section className="flex flex-col items-center gap-3">
             {googleLoading && (
-              <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50/80 py-3 text-sm text-blue-800">
+              <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/30 py-3 text-sm text-blue-800 dark:text-blue-300">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Đang đăng nhập với Google...
               </span>

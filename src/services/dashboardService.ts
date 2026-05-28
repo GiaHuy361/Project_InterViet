@@ -6,7 +6,9 @@ import type {
   QuotaSnapshotResponse,
   DashboardActivityParams,
   DashboardUsageParams,
-} from '../lib/api/phase2Types';
+  RecentResumesListResponse,
+  RecentJobDescriptionsResponse,
+} from '../lib/api/dashboardTypes';
 
 export async function getSummary(): Promise<DashboardSummaryResponse> {
   return apiClient.get<DashboardSummaryResponse>('/dashboard/summary');
@@ -38,4 +40,20 @@ export async function getUsage(
 
 export async function getQuota(): Promise<QuotaSnapshotResponse> {
   return apiClient.get<QuotaSnapshotResponse>('/dashboard/quota');
+}
+
+export async function getRecentResumes(): Promise<RecentResumesListResponse> {
+  return apiClient.get<RecentResumesListResponse>('/resumes');
+}
+
+export async function getRecentJobDescriptions(
+  params?: { page?: number; pageSize?: number }
+): Promise<RecentJobDescriptionsResponse> {
+  const search = new URLSearchParams();
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.pageSize != null) search.set('pageSize', String(params.pageSize));
+  const qs = search.toString();
+  return apiClient.get<RecentJobDescriptionsResponse>(
+    `/job-descriptions${qs ? `?${qs}` : ''}`
+  );
 }

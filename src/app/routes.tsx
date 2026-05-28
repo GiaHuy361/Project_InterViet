@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Outlet } from 'react-router';
 
 // Layouts
 import { RootLayout } from './layouts/RootLayout';
@@ -9,6 +9,7 @@ import { AppLayout } from './layouts/AppLayout';
 // Route guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicOnlyRoute } from './components/auth/PublicOnlyRoute';
+import { RoleGuard } from './components/auth/RoleGuard';
 
 // Import all pages from index
 import * as Pages from './pages';
@@ -37,6 +38,8 @@ export const router = createBrowserRouter([
           { path: 'chinh-sach-bao-mat', Component: Pages.PrivacyPage },
           { path: 'he-thong', Component: Pages.StatusPage },
           { path: 'bao-tri', Component: Pages.MaintenancePage },
+          { path: 'forbidden', Component: Pages.AccessDeniedPage },
+          { path: 'shared-reports/:token', Component: Pages.SharedReportPage },
         ],
       },
       {
@@ -93,34 +96,111 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
         children: [
-          { path: 'onboarding', Component: Pages.OnboardingPage },
-          { path: 'dashboard', Component: Pages.DashboardPage },
-          { path: 'cv-matching', Component: Pages.CVMatchingPage },
-          { path: 'cv-history', Component: Pages.CVHistoryPage },
-          { path: 'multi-jd-matching', Component: Pages.MultiJDMatchingPage },
-          { path: 'network', Component: Pages.NetworkPage },
-          { path: 'network/:id', Component: Pages.NetworkProfilePage },
-          { path: 'phong-van-setup', Component: Pages.InterviewSetupPage },
-          { path: 'phong-van-pre-call', Component: Pages.InterviewPreCallPage },
-          { path: 'phong-van-live/:id', Component: Pages.InterviewLivePage },
-          { path: 'phong-van-voice-live/:id', Component: Pages.InterviewVoiceLivePage },
-          { path: 'phong-van-report/:id', Component: Pages.InterviewReportPage },
-          { path: 'phong-van-chi-tiet/:id', Component: Pages.InterviewDetailPage },
-          { path: 'phong-van-thong-ke', Component: Pages.InterviewStatsPage },
-          { path: 'bao-cao', Component: Pages.ReportsPage },
-          { path: 'thong-bao', Component: Pages.NotificationsPage },
-          { path: 'tro-giup', Component: Pages.HelpCenterPage },
-          { path: 'cai-dat', Component: Pages.ProfilePage },
-          { path: 'goi-dich-vu', Component: Pages.CandidateSubscriptionPage },
-          { path: 'thanh-toan', Component: Pages.BillingPage },
-          { path: 'hoa-don', Component: Pages.InvoicesPage },
-          { path: 'email', Component: Pages.EmailCenterPage },
-          { path: 'hoat-dong', Component: Pages.ActivityLogPage },
-          { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
-          { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
+          // ─── Shared routes (all authenticated roles) ────────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['user', 'admin', 'mentor', 'support']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'thong-bao', Component: Pages.NotificationsPage },
+              { path: 'tro-giup', Component: Pages.HelpCenterPage },
+              { path: 'cai-dat', Component: Pages.SettingsPage },
+              { path: 'ho-so', Component: Pages.ProfilePage },
+              { path: 'goi-dich-vu', Component: Pages.CandidateSubscriptionPage },
+              { path: 'thanh-toan', Component: Pages.BillingPage },
+              { path: 'checkout/mock/:sessionId', Component: Pages.CheckoutMockPage },
+              { path: 'payment/success', Component: Pages.PaymentSuccessPage },
+              { path: 'payment/cancel', Component: Pages.PaymentCancelPage },
+              { path: 'hoa-don', Component: Pages.InvoicesPage },
+              { path: 'email', Component: Pages.EmailCenterPage },
+              { path: 'hoat-dong', Component: Pages.ActivityLogPage },
+              { path: 'het-han', Component: Pages.SubscriptionExpiredPage },
+              { path: 'huy-goi', Component: Pages.CancelSubscriptionPage },
+              { path: 'system/data', Component: Pages.DataManagementPage },
+            ]
+          },
+          
+          // ─── Candidate routes (user only) ────────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['user']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'onboarding', Component: Pages.OnboardingPage },
+              { path: 'dashboard', Component: Pages.DashboardPage },
+              { path: 'cv-matching', Component: Pages.CVMatchingPage },
+              { path: 'match-history', Component: Pages.MatchHistoryPage },
+              { path: 'cv-history', Component: Pages.CVHistoryPage },
+              { path: 'jd-history', Component: Pages.JDHistoryPage },
+              { path: 'multi-jd-matching', Component: Pages.MultiJDMatchingPage },
+              { path: 'matches/:sessionId', Component: Pages.MatchDetailPage },
+              { path: 'network', Component: Pages.MentorDirectoryPage },
+              { path: 'mentors', Component: Pages.MentorDirectoryPage },
+              { path: 'network/:id', Component: Pages.MentorDetailPage },
+              { path: 'mentor-bookings', Component: Pages.MentorBookingsPage },
+              { path: 'mentor-bookings/:id', Component: Pages.MentorBookingsPage },
+              { path: 'phong-van-setup', Component: Pages.InterviewSetupPage },
+              { path: 'phong-van-pre-call', Component: Pages.InterviewPreCallPage },
+              { path: 'phong-van-live/:id', Component: Pages.InterviewLivePage },
+              { path: 'phong-van-voice-live/:id', Component: Pages.InterviewVoiceLivePage },
+              { path: 'phong-van-report/:id', Component: Pages.InterviewReportPage },
+              { path: 'phong-van-chi-tiet/:id', Component: Pages.InterviewDetailPage },
+              { path: 'phong-van-thong-ke', Component: Pages.InterviewStatsPage },
+              { path: 'bao-cao', Component: Pages.ReportsPage },
+            ]
+          },
 
-          // System management
-          { path: 'system/data', Component: Pages.DataManagementPage },
+          // ─── Admin routes (admin only) ────────────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['admin']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'admin/dashboard', Component: Pages.AdminDashboardPage },
+              { path: 'admin/cms', Component: Pages.AdminCMSPage },
+              { path: 'admin/mentor-bookings', Component: Pages.AdminMentorBookingsPage },
+              { path: 'admin/users', Component: Pages.AdminUsersPage },
+              { path: 'admin/billing', Component: Pages.AdminBillingPage },
+              { path: 'admin/audit-logs', Component: Pages.AdminAuditLogsPage },
+              { path: 'admin/health', Component: Pages.AdminSystemHealthPage },
+              { path: 'admin/json-samples', Component: Pages.AdminJsonSamplesPage },
+            ]
+          },
+
+          // ─── Support routes (support only) ─────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['support']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'support/dashboard', Component: Pages.SupportDashboardPage },
+              { path: 'support/tickets', Component: Pages.SupportTicketsPage },
+              { path: 'support/contact-requests', Component: Pages.SupportContactRequestsPage },
+            ]
+          },
+
+          // ─── Mentor routes (mentor only) ───────────────
+          {
+            element: (
+              <RoleGuard allowedRoles={['mentor']}>
+                <Outlet />
+              </RoleGuard>
+            ),
+            children: [
+              { path: 'mentor/dashboard', Component: Pages.MentorDashboardPage },
+              { path: 'mentor/bookings', Component: Pages.MentorWorkspaceBookingsPage },
+              { path: 'mentor/availability', Component: Pages.MentorAvailabilityPage },
+              { path: 'mentor/profile', Component: Pages.MentorProfilePage },
+            ]
+          }
         ],
       },
       {

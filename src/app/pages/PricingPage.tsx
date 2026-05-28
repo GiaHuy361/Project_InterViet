@@ -108,9 +108,9 @@ export const PricingPage: React.FC = () => {
                   const borderClass = isCurrent
                     ? 'ring-2 ring-primary'
                     : isQuarterly
-                      ? 'border-2 border-purple-200'
+                      ? 'border-2 border-purple-200 dark:border-purple-800'
                       : isYearly
-                        ? 'border-2 border-green-200'
+                        ? 'border-2 border-green-200 dark:border-green-800'
                         : '';
 
                   return (
@@ -158,7 +158,7 @@ export const PricingPage: React.FC = () => {
                       <ul className="space-y-2 flex-1 text-sm mb-4 border-t pt-4">
                         {plan.features.slice(0, 8).map((text, i) => (
                           <li key={i} className="flex gap-2">
-                            <Check className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                            <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
                             <span className="text-xs leading-relaxed">{text}</span>
                           </li>
                         ))}

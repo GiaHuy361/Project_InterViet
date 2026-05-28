@@ -13,7 +13,7 @@ export function Toaster() {
       closeButton
       duration={4500}
       gap={12}
-      offset={{ top: 20, right: 20 }}
+      offset={{ top: 100, right: 24 }}
       visibleToasts={5}
       className="interviet-toaster"
       toastOptions={{

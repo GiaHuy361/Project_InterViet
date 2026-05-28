@@ -117,12 +117,12 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all text-left bg-white"
+        className="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700 transition-all text-left bg-white dark:bg-slate-900"
       >
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold">{selected.label}</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{selected.label}</span>
               {selected.premium && !isPremium ? (
                 <Badge variant="secondary" className="text-xs">
                   <Lock size={10} className="mr-1" />
@@ -138,7 +138,7 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
                 </Badge>
               )}
             </div>
-            <div className="text-sm text-gray-600">{selected.description}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">{selected.description}</div>
           </div>
           <ChevronDown 
             size={20} 
@@ -155,11 +155,11 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-full bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden"
+            className="absolute z-50 mt-2 w-full bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden"
           >
             {/* Free Models Section */}
             <div className="p-2">
-              <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">
+              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
                 Miễn phí
               </div>
               {freeModels.map(model => (
@@ -168,14 +168,14 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
                   onClick={() => handleModelClick(model)}
                   className={`w-full p-3 rounded-md text-left transition-all ${
                     selectedModel === model.value
-                      ? 'bg-blue-50 border-2 border-blue-600'
-                      : 'hover:bg-gray-50 border-2 border-transparent'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-600 dark:border-blue-500'
+                      : 'hover:bg-gray-50 dark:hover:bg-slate-800/50 border-2 border-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-sm">{model.label}</div>
-                      <div className="text-xs text-gray-600">{model.description}</div>
+                      <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{model.label}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">{model.description}</div>
                     </div>
                     <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
                       Miễn phí
@@ -186,9 +186,9 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
             </div>
 
             {/* Premium Models Section */}
-            <div className="p-2 border-t">
-              <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase flex items-center gap-1">
-                <Sparkles size={12} className="text-blue-600" />
+            <div className="p-2 border-t dark:border-slate-800">
+              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                <Sparkles size={12} className="text-blue-600 dark:text-blue-400" />
                 Premium
               </div>
               {premiumModels.map(model => (
@@ -198,16 +198,16 @@ export const AIModelDropdown: React.FC<AIModelDropdownProps> = ({
                   disabled={!isPremium}
                   className={`w-full p-3 rounded-md text-left transition-all ${
                     selectedModel === model.value
-                      ? 'bg-blue-50 border-2 border-blue-600'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-600 dark:border-blue-500'
                       : !isPremium
                       ? 'opacity-60 cursor-not-allowed border-2 border-transparent'
-                      : 'hover:bg-gray-50 border-2 border-transparent'
+                      : 'hover:bg-gray-50 dark:hover:bg-slate-800/50 border-2 border-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-sm">{model.label}</div>
-                      <div className="text-xs text-gray-600">{model.description}</div>
+                      <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{model.label}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">{model.description}</div>
                     </div>
                     {!isPremium && (
                       <Badge variant="secondary" className="text-xs">

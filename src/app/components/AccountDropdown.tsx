@@ -138,7 +138,7 @@ export const AccountDropdown: React.FC = () => {
           <div className="py-1">
             <button
               type="button"
-              onClick={() => handleMenuItemClick('/cai-dat')}
+              onClick={() => handleMenuItemClick('/ho-so')}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
             >
               <UserCircle size={16} />
@@ -152,14 +152,16 @@ export const AccountDropdown: React.FC = () => {
               <Settings size={16} />
               Cài đặt
             </button>
-            <button
-              type="button"
-              onClick={() => handleMenuItemClick('/goi-dich-vu')}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <CreditCard size={16} />
-              Gói dịch vụ
-            </button>
+            {state.user?.systemRole !== 'admin' && state.user?.systemRole !== 'mentor' && (
+              <button
+                type="button"
+                onClick={() => handleMenuItemClick('/goi-dich-vu')}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <CreditCard size={16} />
+                Gói dịch vụ
+              </button>
+            )}
           </div>
 
           <div className="border-t border-slate-100 py-1">

@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Search,
 } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
 import {
   Command,
   CommandDialog,
@@ -28,6 +29,7 @@ interface CommandPaletteProps {
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChange }) => {
   const navigate = useNavigate();
+  const { state } = useApp();
 
   const commands = [
     {
@@ -44,7 +46,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
       items: [
         { label: 'Bảng điều khiển', icon: Home, action: () => navigate('/dashboard') },
         { label: 'Cài đặt', icon: Settings, action: () => navigate('/cai-dat') },
-        { label: 'Gói dịch vụ', icon: CreditCard, action: () => navigate('/goi-dich-vu') },
+        ...(state.user?.systemRole !== 'admin' && state.user?.systemRole !== 'mentor'
+          ? [{ label: 'Gói dịch vụ', icon: CreditCard, action: () => navigate('/goi-dich-vu') }]
+          : []),
         { label: 'Trung tâm trợ giúp', icon: HelpCircle, action: () => navigate('/ho-tro') },
       ],
     },

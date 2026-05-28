@@ -1,595 +1,789 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp } from '../contexts/AppContext';
-import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import {
-  Upload, FileText, Target, TrendingUp, TrendingDown,
-  Minus, CheckCircle, XCircle, AlertCircle, Bookmark,
-  BookmarkCheck, ExternalLink, Filter, Download, Briefcase, MapPin, DollarSign
-} from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { AlertCircle, CheckCircle2, FileText, Link2, Sparkles, Target, Upload, History } from 'lucide-react';
+import { toast } from 'sonner';
+import { ApiError } from '../../lib/api/apiError';
+import { useApp } from '../contexts/AppContext';
+import {
+  cvMatchService,
+  type JobDescriptionItem,
+  type MatchSessionDetail,
+  type MatchTarget,
+  type ResumeItem,
+  type StartMatchResponse,
+} from '../../services/cvMatchService';
+import { useAsyncPolling } from '../../hooks/useAsyncPolling';
+import {
+  type PollingSessionSnapshot,
+  clearPollingSessionSnapshot,
+  readPollingSessionSnapshot,
+  writePollingSessionSnapshot,
+} from '../../utils/pollingSessionStorage';
+import { safeParseJson } from '../../utils/safeParseJson';
 
-interface JobListing {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  salary: string;
-  matchScore: number;
-  matchLevel: 'high' | 'medium' | 'low';
-  requiredSkills: string[];
-  matchedSkills: string[];
-  missingSkills: string[];
-  posted: string;
-  saved: boolean;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png'];
+const MATCH_POLL_INTERVAL_MS = 5000;
+const RESUME_PARSE_POLL_INTERVAL_MS = 3000;
+const RESUME_PARSE_TIMEOUT_MS = 180000;
+const MULTI_JD_MATCH_POLLING_STORAGE_KEY = 'interviet.multi-jd-matching.polling-state';
+type MultiJDMatchPollingSnapshot = PollingSessionSnapshot<MatchSessionDetail> & {
+  cvTitle: string;
+  selectedResumeId: string | null;
+  matchTitle: string;
+  selectedJobDescriptionIds: string[];
+};
+
+function extractList(value?: string | null): string[] {
+  if (!value) return [];
+  const parsed = safeParseJson<unknown>(value, value);
+
+  if (Array.isArray(parsed)) return parsed.map(String);
+  if (typeof parsed === 'string') {
+    return parsed
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function getNormalizedStatus(status?: string | null): string {
+  return status?.trim().toLowerCase() ?? '';
+}
+
+function isFinalMatchStatus(status?: string | null): boolean {
+  return ['completed', 'partially_completed', 'failed', 'cancelled'].includes(getNormalizedStatus(status));
+}
+
+function isResumeParsed(status?: string | null): boolean {
+  return getNormalizedStatus(status) === 'parsed';
+}
+
+function isResumeParseFailed(status?: string | null): boolean {
+  return ['failed', 'cancelled'].includes(getNormalizedStatus(status));
+}
+
+function getSessionFromStartResponse(response: StartMatchResponse): MatchSessionDetail | null {
+  if ('items' in response) {
+    return response.items[0] ?? null;
+  }
+
+  return {
+    sessionId: response.sessionId,
+    sessionType: 'Multi',
+    status: response.status,
+    errorCode: null,
+    errorMessage: null,
+    result: null,
+    targets: null,
+  };
 }
 
 export const MultiJDMatchingPage: React.FC = () => {
-  const { state } = useApp();
   const navigate = useNavigate();
-  const [cvUploaded, setCvUploaded] = useState(false);
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'score' | 'date'>('score');
-  const [filterLevel, setFilterLevel] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [showJDModal, setShowJDModal] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
-  const isPremium = state.user?.role === 'premium' || state.user?.role === 'trial';
+  const hasRestoredPollingRef = useRef(false);
+  const { addNotification, syncNotifications } = useApp();
+  const [cvTitle, setCvTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [matchTitle, setMatchTitle] = useState('');
+  const [jobDescriptions, setJobDescriptions] = useState<JobDescriptionItem[]>([]);
+  const [selectedJobDescriptionIds, setSelectedJobDescriptionIds] = useState<string[]>([]);
 
-  // Mock JD data
-  const [jobs, setJobs] = useState<JobListing[]>([
-    {
-      id: '1',
-      title: 'Senior Frontend Developer',
-      company: 'VNG Corporation',
-      location: 'TP. Hồ Chí Minh',
-      salary: '30-45 triệu',
-      matchScore: 92,
-      matchLevel: 'high',
-      requiredSkills: ['React', 'TypeScript', 'Redux', 'Next.js', 'Tailwind CSS', 'Jest'],
-      matchedSkills: ['React', 'TypeScript', 'Redux', 'Tailwind CSS'],
-      missingSkills: ['Next.js', 'Jest'],
-      posted: '2 ngày trước',
-      saved: false
-    },
-    {
-      id: '2',
-      title: 'Full-stack Engineer',
-      company: 'Shopee',
-      location: 'TP. Hồ Chí Minh',
-      salary: '35-50 triệu',
-      matchScore: 87,
-      matchLevel: 'high',
-      requiredSkills: ['React', 'Node.js', 'MongoDB', 'Docker', 'AWS'],
-      matchedSkills: ['React', 'Node.js', 'MongoDB'],
-      missingSkills: ['Docker', 'AWS'],
-      posted: '5 ngày trước',
-      saved: false
-    },
-    {
-      id: '3',
-      title: 'React Developer',
-      company: 'Tiki',
-      location: 'Hà Nội',
-      salary: '25-35 triệu',
-      matchScore: 78,
-      matchLevel: 'medium',
-      requiredSkills: ['React', 'JavaScript', 'CSS', 'Git', 'Redux'],
-      matchedSkills: ['React', 'JavaScript', 'CSS', 'Git'],
-      missingSkills: ['Redux'],
-      posted: '1 tuần trước',
-      saved: false
-    },
-    {
-      id: '4',
-      title: 'Frontend Team Lead',
-      company: 'Grab',
-      location: 'Remote',
-      salary: '45-60 triệu',
-      matchScore: 72,
-      matchLevel: 'medium',
-      requiredSkills: ['React', 'TypeScript', 'Leadership', 'System Design', 'Mentoring', 'Agile'],
-      matchedSkills: ['React', 'TypeScript', 'Agile'],
-      missingSkills: ['Leadership', 'System Design', 'Mentoring'],
-      posted: '3 ngày trước',
-      saved: false
-    },
-    {
-      id: '5',
-      title: 'Junior Frontend Developer',
-      company: 'FPT Software',
-      location: 'Đà Nẵng',
-      salary: '12-18 triệu',
-      matchScore: 95,
-      matchLevel: 'high',
-      requiredSkills: ['HTML', 'CSS', 'JavaScript', 'React'],
-      matchedSkills: ['HTML', 'CSS', 'JavaScript', 'React'],
-      missingSkills: [],
-      posted: '4 ngày trước',
-      saved: false
-    },
-    {
-      id: '6',
-      title: 'Backend Developer (Node.js)',
-      company: 'Momo',
-      location: 'TP. Hồ Chí Minh',
-      salary: '28-40 triệu',
-      matchScore: 58,
-      matchLevel: 'low',
-      requiredSkills: ['Node.js', 'PostgreSQL', 'Microservices', 'Kafka', 'Redis'],
-      matchedSkills: ['Node.js'],
-      missingSkills: ['PostgreSQL', 'Microservices', 'Kafka', 'Redis'],
-      posted: '1 ngày trước',
-      saved: false
-    },
-    {
-      id: '7',
-      title: 'Frontend Engineer (Vue.js)',
-      company: 'Zalo',
-      location: 'Hà Nội',
-      salary: '30-42 triệu',
-      matchScore: 52,
-      matchLevel: 'low',
-      requiredSkills: ['Vue.js', 'Vuex', 'TypeScript', 'Webpack'],
-      matchedSkills: ['TypeScript'],
-      missingSkills: ['Vue.js', 'Vuex', 'Webpack'],
-      posted: '6 ngày trước',
-      saved: false
-    },
-    {
-      id: '8',
-      title: 'Mobile Developer (React Native)',
-      company: 'Sendo',
-      location: 'TP. Hồ Chí Minh',
-      salary: '22-32 triệu',
-      matchScore: 68,
-      matchLevel: 'medium',
-      requiredSkills: ['React Native', 'React', 'JavaScript', 'Mobile Development'],
-      matchedSkills: ['React', 'JavaScript'],
-      missingSkills: ['React Native', 'Mobile Development'],
-      posted: '2 tuần trước',
-      saved: false
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [sessionDetail, setSessionDetail] = useState<MatchSessionDetail | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [lastNotifiedStatus, setLastNotifiedStatus] = useState<string | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
+  const activeSessionIdRef = useRef<string | null>(null);
+  const selectedResumeIdRef = useRef<string | null>(null);
+
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+  const [isLoadingJds, setIsLoadingJds] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isStartingMatch, setIsStartingMatch] = useState(false);
+
+  const fetchMatchSession = useCallback(async () => {
+    if (!activeSessionIdRef.current) throw new Error('Missing session id');
+    return cvMatchService.getMatchSessionDetail(activeSessionIdRef.current);
+  }, []);
+
+  const setCurrentSessionId = useCallback((sessionId: string | null) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
+
+  const notifyFinalStatus = useCallback((status: string) => {
+    if (['failed', 'cancelled'].includes(status)) {
+      toast.error('Phiên so khớp thất bại. Vui lòng thử lại.');
+      return;
     }
+
+    addNotification({
+      title: 'Nhiều JD: Kết quả so khớp đã sẵn sàng',
+      message: 'Phiên so khớp nhiều JD đã hoàn tất. Mở lại trang Multi JD Matching để xem chi tiết.',
+      type: 'success',
+      read: false,
+      actionUrl: '/multi-jd-matching',
+      metadata: {
+        source: 'multi-jd-matching',
+        status,
+      },
+    });
+    toast.success('Phân tích đa JD hoàn tất.');
+    // Sync notifications from backend so badge/inbox reflect server-side notifications
+    void syncNotifications().catch(() => undefined);
+  }, [addNotification]);
+
+  const selectedResume = useMemo(
+    () => resumes.find((item) => item.resumeId === selectedResumeId) ?? null,
+    [resumes, selectedResumeId]
+  );
+
+  const { isPolling, startPolling, stopPolling } = useAsyncPolling<MatchSessionDetail>({
+    fetchFn: fetchMatchSession,
+    getStatusFn: (data) => data.status,
+    intervalMs: MATCH_POLL_INTERVAL_MS,
+    onSuccess: (data) => {
+      setSessionDetail(data);
+      setCurrentSessionId(null);
+
+      const status = getNormalizedStatus(data.status);
+      setLastNotifiedStatus(status);
+
+      clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
+
+      notifyFinalStatus(status);
+    },
+    onFailure: (error) => {
+      setCurrentSessionId(null);
+      clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
+
+      const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
+      toast.error(message);
+    },
+  });
+
+  const selectedJdCount = selectedJobDescriptionIds.length;
+  const canStartMatch = Boolean(selectedResume?.resumeId && selectedJdCount > 0);
+
+  const sortedTargets = useMemo(() => {
+    const targets = sessionDetail?.targets ?? [];
+    return [...targets].sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0));
+  }, [sessionDetail]);
+
+  const avgScore = useMemo(() => {
+    if (sortedTargets.length === 0) return 0;
+    const total = sortedTargets.reduce((sum, item) => sum + (item.totalScore ?? 0), 0);
+    return total / sortedTargets.length;
+  }, [sortedTargets]);
+
+  const totalTargets = sessionDetail?.targetCount ?? sortedTargets.length;
+  const completedTargets = sessionDetail?.completedCount ?? 0;
+  const failedTargets = sessionDetail?.failedCount ?? 0;
+
+  const handleApiError = (error: unknown) => {
+    if (error instanceof ApiError) {
+      if (error.status === 403 && error.code === 'Quota.Exceeded') {
+        toast.error('Bạn đã sử dụng hết lượt trong gói hiện tại. Vui lòng nâng cấp gói.');
+        return;
+      }
+
+      if (error.status === 503 || error.code === 'Service.Unavailable') {
+        toast.error('Dịch vụ AI/CV tạm thời không khả dụng. Vui lòng thử lại sau vài phút.');
+        return;
+      }
+
+      toast.error(error.message);
+      return;
+    }
+
+    if (error instanceof Error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.error('Có lỗi không xác định.');
+  };
+
+  const clearMatchState = () => {
+    stopPolling();
+    setSessionDetail(null);
+    setLastNotifiedStatus(null);
+    setCurrentSessionId(null);
+    clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
+  };
+  const loadResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
+    try {
+      const response = await cvMatchService.listResumes();
+      const items = response.items ?? [];
+      setResumes(items);
+      const currentSelectedResumeId = selectedResumeIdRef.current;
+      if (currentSelectedResumeId && !items.some((item) => item.resumeId === currentSelectedResumeId)) {
+        setSelectedResumeId(null);
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  }, []);
+
+  const loadJobDescriptions = useCallback(async () => {
+    setIsLoadingJds(true);
+    try {
+      const response = await cvMatchService.listJobDescriptions();
+      setJobDescriptions(response.items ?? []);
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsLoadingJds(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadResumes();
+    void loadJobDescriptions();
+  }, [loadResumes, loadJobDescriptions]);
+
+  useEffect(() => {
+    selectedResumeIdRef.current = selectedResumeId;
+  }, [selectedResumeId]);
+
+  useEffect(() => {
+    if (hasRestoredPollingRef.current) return;
+    hasRestoredPollingRef.current = true;
+
+    const restorePollingState = async () => {
+      const snapshot =
+        readPollingSessionSnapshot<MatchSessionDetail>(
+          MULTI_JD_MATCH_POLLING_STORAGE_KEY,
+        ) as MultiJDMatchPollingSnapshot | null;
+
+      if (!snapshot) {
+        setIsRestored(true);
+        return;
+      }
+
+      setCvTitle(snapshot.cvTitle ?? '');
+      setSelectedResumeId(snapshot.selectedResumeId ?? null);
+      setMatchTitle(snapshot.matchTitle ?? '');
+      setSelectedJobDescriptionIds(snapshot.selectedJobDescriptionIds ?? []);
+      setSessionDetail(snapshot.sessionDetail ?? null);
+      setLastNotifiedStatus(snapshot.lastNotifiedStatus ?? null);
+      setCurrentSessionId(snapshot.activeSessionId ?? null);
+
+      const savedStatus = getNormalizedStatus(snapshot.sessionDetail?.status);
+
+      if (snapshot.sessionDetail && isFinalMatchStatus(savedStatus)) {
+        if (snapshot.lastNotifiedStatus !== savedStatus) {
+          notifyFinalStatus(savedStatus);
+          setLastNotifiedStatus(savedStatus);
+        }
+
+        setCurrentSessionId(null);
+        setIsRestored(true);
+        return;
+      }
+
+      if (snapshot.activeSessionId) {
+        try {
+          activeSessionIdRef.current = snapshot.activeSessionId;
+
+          const refreshedDetail = await cvMatchService.getMatchSessionDetail(
+            snapshot.activeSessionId,
+          );
+
+          setSessionDetail(refreshedDetail);
+
+          const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+
+          if (isFinalMatchStatus(refreshedStatus)) {
+            setCurrentSessionId(null);
+
+            if (snapshot.lastNotifiedStatus !== refreshedStatus) {
+              notifyFinalStatus(refreshedStatus);
+              setLastNotifiedStatus(refreshedStatus);
+            }
+          } else {
+            startPolling();
+          }
+        } catch (error) {
+          handleApiError(error);
+        }
+      }
+
+      setIsRestored(true);
+    };
+
+    void restorePollingState();
+  }, [notifyFinalStatus, startPolling, setCurrentSessionId]);
+
+  useEffect(() => {
+    if (!isRestored) return;
+
+    writePollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY, {
+      activeSessionId,
+      sessionDetail,
+      lastNotifiedStatus,
+      cvTitle,
+      selectedResumeId,
+      matchTitle,
+      selectedJobDescriptionIds,
+    });
+  }, [
+    activeSessionId,
+    cvTitle,
+    isRestored,
+    lastNotifiedStatus,
+    matchTitle,
+    selectedJobDescriptionIds,
+    selectedResumeId,
+    sessionDetail,
   ]);
 
-  const handleUploadCV = () => {
-    setCvUploaded(true);
-  };
+  const refreshPollingState = useCallback(async () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
 
-  const toggleSaveJob = (jobId: string) => {
-    setJobs(jobs.map(job =>
-      job.id === jobId ? { ...job, saved: !job.saved } : job
-    ));
-  };
+    try {
+      const refreshedDetail = await cvMatchService.getMatchSessionDetail(sessionId);
+      setSessionDetail(refreshedDetail);
 
-  const handleViewFullJD = (job: JobListing) => {
-    setSelectedJob(job);
-    setShowJDModal(true);
-  };
-
-  const handleStartInterview = (job: JobListing) => {
-    // Store job info for interview setup
-    sessionStorage.setItem('interviewJobContext', JSON.stringify({
-      position: job.title,
-      company: job.company,
-    }));
-    navigate('/phong-van-setup');
-  };
-
-  const getMatchLevelColor = (level: string) => {
-    switch (level) {
-      case 'high': return 'bg-green-100 text-green-700';
-      case 'medium': return 'bg-yellow-100 text-yellow-700';
-      case 'low': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getMatchLevelLabel = (level: string) => {
-    switch (level) {
-      case 'high': return 'Rất phù hợp';
-      case 'medium': return 'Phù hợp';
-      case 'low': return 'Ít phù hợp';
-      default: return 'Chưa xác định';
-    }
-  };
-
-  const filteredAndSortedJobs = jobs
-    .filter(job => filterLevel === 'all' || job.matchLevel === filterLevel)
-    .sort((a, b) => {
-      if (sortBy === 'score') {
-        return b.matchScore - a.matchScore;
+      const refreshedStatus = getNormalizedStatus(refreshedDetail.status);
+      if (isFinalMatchStatus(refreshedStatus)) {
+        stopPolling();
+        setCurrentSessionId(null);
+        if (lastNotifiedStatus !== refreshedStatus) {
+          notifyFinalStatus(refreshedStatus);
+          setLastNotifiedStatus(refreshedStatus);
+        }
+      } else {
+        startPolling();
       }
-      return 0; // Date sorting would go here
-    });
+    } catch (error) {
+      handleApiError(error);
+    }
+  }, [isPolling, lastNotifiedStatus, notifyFinalStatus, startPolling, stopPolling]);
 
-  const matchStats = {
-    high: jobs.filter(j => j.matchLevel === 'high').length,
-    medium: jobs.filter(j => j.matchLevel === 'medium').length,
-    low: jobs.filter(j => j.matchLevel === 'low').length,
-    avgScore: Math.round(jobs.reduce((sum, j) => sum + j.matchScore, 0) / jobs.length)
+  useEffect(() => {
+    if (!isRestored) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!activeSessionIdRef.current) return;
+      if (isFinalMatchStatus(sessionDetail?.status)) return;
+
+      void refreshPollingState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRestored, refreshPollingState, sessionDetail?.status]);
+
+  const waitForResumeParsed = async (resumeId: string): Promise<ResumeItem> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt <= RESUME_PARSE_TIMEOUT_MS) {
+      const detail = await cvMatchService.getResumeDetail(resumeId);
+
+      if (isResumeParsed(detail.parseStatus)) {
+        return detail;
+      }
+
+      if (isResumeParseFailed(detail.parseStatus)) {
+        throw new Error('AI phân tích CV thất bại. Vui lòng thử lại với file khác.');
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, RESUME_PARSE_POLL_INTERVAL_MS));
+    }
+
+    throw new Error('Hết thời gian chờ AI phân tích CV. Vui lòng thử lại sau.');
   };
 
-  if (!cvUploaded) {
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      toast.error('Định dạng file không hợp lệ. Chỉ hỗ trợ PDF, DOCX, JPG, JPEG, PNG.');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File vượt quá 10MB.');
+      return;
+    }
+
+    setSelectedFile(file);
+    clearMatchState();
+  };
+
+  const toggleJobDescription = (id: string) => {
+    setSelectedJobDescriptionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const handleUploadResume = async () => {
+    if (!selectedFile) {
+      toast.error('Vui lòng chọn file CV.');
+      return;
+    }
+
+    setIsUploadingResume(true);
+    clearMatchState();
+
+    try {
+      const uploadedResume = await cvMatchService.uploadResume(selectedFile, cvTitle);
+      const parsedResume = isResumeParsed(uploadedResume.parseStatus)
+        ? uploadedResume
+        : await waitForResumeParsed(uploadedResume.resumeId);
+
+      setSelectedResumeId(parsedResume.resumeId);
+      await loadResumes();
+      toast.success('Upload và phân tích CV thành công.');
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleStartMultiMatch = async () => {
+    if (!selectedResume?.resumeId || selectedJobDescriptionIds.length === 0) {
+      toast.error('Vui lòng chọn 1 CV và chọn ít nhất 1 JD trước khi so khớp.');
+      return;
+    }
+
+    setIsStartingMatch(true);
+    clearMatchState();
+
+    try {
+      const response = await cvMatchService.startMultiMatch({
+        resumeId: selectedResume.resumeId,
+        jobDescriptionIds: selectedJobDescriptionIds,
+        title: matchTitle.trim() || `Multi JD Match - ${new Date().toLocaleString('vi-VN')}`,
+      });
+      const matchSession = getSessionFromStartResponse(response);
+
+      if (!matchSession?.sessionId) {
+        toast.error('Không nhận được phiên so khớp từ hệ thống.');
+        return;
+      }
+
+      activeSessionIdRef.current = matchSession.sessionId;
+      setCurrentSessionId(matchSession.sessionId);
+      setSessionDetail(matchSession);
+
+      if (isFinalMatchStatus(matchSession.status)) {
+        if (['completed', 'partially_completed'].includes(getNormalizedStatus(matchSession.status))) {
+          const status = getNormalizedStatus(matchSession.status);
+          setLastNotifiedStatus(status);
+          notifyFinalStatus(status);
+        }
+        setCurrentSessionId(null);
+        return;
+      }
+
+      const initialDetail = await cvMatchService.getMatchSessionDetail(matchSession.sessionId);
+      setSessionDetail(initialDetail);
+
+      if (isFinalMatchStatus(initialDetail.status)) {
+        setCurrentSessionId(null);
+        const status = getNormalizedStatus(initialDetail.status);
+        setLastNotifiedStatus(status);
+        notifyFinalStatus(status);
+        return;
+      }
+
+      startPolling();
+      toast.info('Đang phân tích mức độ phù hợp với nhiều JD...');
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsStartingMatch(false);
+    }
+  };
+
+  const renderTargetCard = (target: MatchTarget) => {
+    const matchedSkills = extractList(target.matchedSkillsJson);
+    const missingSkills = extractList(target.missingSkillsJson);
+    const strengths = extractList(target.strengthsJson);
+    const weaknesses = extractList(target.weaknessesJson);
+    const jd = jobDescriptions.find((item) => item.id === target.jobDescriptionId);
+
     return (
-      <div className="max-w-3xl mx-auto pb-12">
-        <AppPageHeader
-          title="So khớp đa công việc"
-          subtitle="Tải CV lên một lần, so khớp với hàng trăm công việc phù hợp"
-          icon={Target}
-          iconGradient="from-emerald-500 to-teal-600"
-        />
-
-        <Card className="glass-card rounded-2xl p-12 text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Upload className="w-10 h-10 text-white" />
+      <Card key={target.targetId} className="p-5 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">{target.jobTitle || jd?.title || 'Không rõ tiêu đề JD'}</p>
+            <p className="text-sm text-gray-500">{target.companyName || jd?.companyName || 'Không rõ công ty'}</p>
           </div>
-          <h2 className="text-2xl font-bold mb-2">Tải CV của bạn lên</h2>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            Hệ thống sẽ phân tích CV và tự động so khớp với hàng trăm JD từ các công ty hàng đầu
-          </p>
+          <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">{(target.totalScore ?? 0).toFixed(2)}%</Badge>
+        </div>
 
-          <div className="space-y-3 mb-6">
-            <Button 
-              className="w-full max-w-xs"
-              onClick={handleUploadCV}
-            >
-              <Upload className="mr-2" size={16} />
-              Tải CV lên (PDF, DOC, DOCX)
-            </Button>
-            <p className="text-xs text-gray-500">
-              File tối đa 5MB • Hỗ trợ PDF, Word
-            </p>
+        {target.summaryText && <p className="text-sm text-gray-700">{target.summaryText}</p>}
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Kỹ năng phù hợp</p>
+          <div className="flex flex-wrap gap-2">
+            {matchedSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
+            {matchedSkills.map((skill) => (
+              <Badge key={skill} className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                {skill}
+              </Badge>
+            ))}
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-8 h-8 text-blue-600 mb-2" />
-              <h4 className="font-semibold text-sm mb-1">So khớp tự động</h4>
-              <p className="text-xs text-gray-600">AI phân tích và tính điểm match với từng JD</p>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <Target className="w-8 h-8 text-purple-600 mb-2" />
-              <h4 className="font-semibold text-sm mb-1">Gợi ý cải thiện</h4>
-              <p className="text-xs text-gray-600">Nhận insights để tăng điểm matching</p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <Bookmark className="w-8 h-8 text-green-600 mb-2" />
-              <h4 className="font-semibold text-sm mb-1">Lưu công việc</h4>
-              <p className="text-xs text-gray-600">Đánh dấu và theo dõi công việc yêu thích</p>
-            </div>
+          <p className="text-sm font-medium pt-1">Kỹ năng còn thiếu</p>
+          <div className="flex flex-wrap gap-2">
+            {missingSkills.length === 0 && <p className="text-sm text-gray-500">Không có dữ liệu</p>}
+            {missingSkills.map((skill) => (
+              <Badge key={skill} className="bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300">
+                {skill}
+              </Badge>
+            ))}
           </div>
-        </Card>
-      </div>
+
+          <p className="text-sm font-medium pt-1">Điểm mạnh</p>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            {strengths.length === 0 && <li>Không có dữ liệu</li>}
+            {strengths.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+
+          <p className="text-sm font-medium pt-1">Điểm yếu</p>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            {weaknesses.length === 0 && <li>Không có dữ liệu</li>}
+            {weaknesses.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </Card>
     );
-  }
+  };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12">
       <AppPageHeader
-        title="Kết quả so khớp"
-        subtitle={`CV của bạn đã được so khớp với ${jobs.length} công việc`}
+        title="So khớp đa JD"
+        subtitle="Upload CV một lần, chọn nhiều JD và chạy matching đồng thời."
         icon={Target}
         iconGradient="from-emerald-500 to-teal-600"
         actions={
-          <div className="flex gap-2">
-          {isPremium && (
-            <Button variant="outline">
-              <Download className="mr-2" size={16} />
-              Xuất báo cáo
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => setCvUploaded(false)}>
-            <Upload className="mr-2" size={16} />
-            Tải CV khác
+          <Button variant="outline" onClick={() => navigate('/match-history')}>
+            <History className="w-4 h-4 mr-2" />
+            Xem lịch sử
           </Button>
-        </div>
         }
       />
 
-      {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card className="glass-card hover-lift p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-1">{matchStats.avgScore}%</div>
-            <div className="text-sm text-gray-600">Điểm TB</div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Chọn CV</Label>
+            {selectedResume && (
+              <Badge className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                <CheckCircle2 className="mr-1" size={14} />
+                Đã chọn
+              </Badge>
+            )}
           </div>
-        </Card>
-        <Card className="glass-card hover-lift p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600 mb-1">{matchStats.high}</div>
-            <div className="text-sm text-gray-600">Rất phù hợp</div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Danh sách CV từ hệ thống</p>
+              <Button variant="outline" size="sm" onClick={loadResumes} disabled={isLoadingResumes || isPolling}>
+                Tải lại
+              </Button>
+            </div>
+            <div className="max-h-44 overflow-y-auto space-y-2 pr-1">
+              {isLoadingResumes && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách CV...</p>}
+              {!isLoadingResumes && resumes.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có CV nào.</p>}
+              {resumes.map((item) => (
+                <label
+                  key={item.resumeId}
+                  className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="selected-resume-multi"
+                    checked={selectedResumeId === item.resumeId}
+                    onChange={() => {
+                      setSelectedResumeId(item.resumeId);
+                      clearMatchState();
+                    }}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title || item.originalFileName}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{item.originalFileName}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
+
+          <Label>Upload CV mới (tùy chọn)</Label>
+          <Input value={cvTitle} onChange={(event) => setCvTitle(event.target.value)} placeholder="Tiêu đề CV (tùy chọn)" />
+          <Input type="file" onChange={onFileChange} />
+          <p className="text-xs text-gray-500">Hỗ trợ: .pdf, .docx, .jpg, .jpeg, .png | Tối đa 10MB</p>
+
+          {selectedResume && (
+            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
+              {selectedResume.title} ({selectedResume.originalFileName})
+            </div>
+          )}
+
+          <Button onClick={handleUploadResume} disabled={!selectedFile || isUploadingResume || isPolling}>
+            <Upload className="mr-2" size={16} />
+            {isUploadingResume ? 'Đang upload và phân tích CV...' : 'Upload CV'}
+          </Button>
         </Card>
-        <Card className="glass-card hover-lift p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-600 mb-1">{matchStats.medium}</div>
-            <div className="text-sm text-gray-600">Phù hợp</div>
+
+        <Card className="p-6 space-y-4 dark:bg-slate-900/50 border dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <Label>Chọn Job Description</Label>
+            <Button variant="outline" size="sm" onClick={loadJobDescriptions} disabled={isLoadingJds || isPolling}>
+              Tải lại danh sách
+            </Button>
           </div>
-        </Card>
-        <Card className="glass-card hover-lift p-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-600 mb-1">{matchStats.low}</div>
-            <div className="text-sm text-gray-600">Ít phù hợp</div>
+
+          <Input
+            value={matchTitle}
+            onChange={(event) => setMatchTitle(event.target.value)}
+            placeholder="Tiêu đề phiên matching (tùy chọn)"
+          />
+
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Đã chọn <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedJdCount}</span> JD
+          </p>
+
+          <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+            {isLoadingJds && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách JD...</p>}
+            {!isLoadingJds && jobDescriptions.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Không có JD nào trong hệ thống.</p>
+            )}
+
+            {jobDescriptions.map((jd) => (
+              <label key={jd.id} className="flex items-start gap-3 rounded-md border dark:border-slate-700 p-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedJobDescriptionIds.includes(jd.id)}
+                  onChange={() => toggleJobDescription(jd.id)}
+                  className="mt-1"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{jd.title}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {jd.companyName} • {jd.location}
+                  </p>
+                </div>
+              </label>
+            ))}
           </div>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-500" />
-            <span className="text-sm font-medium">Lọc:</span>
-          </div>
-          <select
-            value={filterLevel}
-            onChange={(e) => setFilterLevel(e.target.value as any)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Tất cả ({jobs.length})</option>
-            <option value="high">Rất phù hợp ({matchStats.high})</option>
-            <option value="medium">Phù hợp ({matchStats.medium})</option>
-            <option value="low">Ít phù hợp ({matchStats.low})</option>
-          </select>
-
-          <div className="flex items-center gap-2 ml-4">
-            <span className="text-sm font-medium">Sắp xếp:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="score">Điểm cao nhất</option>
-              <option value="date">Mới nhất</option>
-            </select>
-          </div>
+      <Card className="p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between dark:bg-slate-900/50 border dark:border-slate-800">
+        <div>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">Bắt đầu so khớp đa JD</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Cần chọn đúng 1 CV và chọn ít nhất 1 JD trước khi gọi API matching.</p>
         </div>
+        <Button onClick={handleStartMultiMatch} disabled={!canStartMatch || isStartingMatch || isPolling}>
+          <Link2 className="mr-2" size={16} />
+          {isStartingMatch || isPolling ? 'Đang so khớp...' : 'So khớp nhiều JD'}
+        </Button>
       </Card>
 
-      {/* Job Listings */}
-      <div className="space-y-4">
-        {filteredAndSortedJobs.map(job => (
-          <Card key={job.id} className="p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-start gap-6">
-              {/* Match Score */}
-              <div className="text-center flex-shrink-0">
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center ${
-                  job.matchScore >= 80 ? 'border-green-500' :
-                  job.matchScore >= 60 ? 'border-yellow-500' : 'border-red-500'
-                }`}>
-                  <div>
-                    <div className="text-2xl font-bold">{job.matchScore}</div>
-                    <div className="text-xs text-gray-500">điểm</div>
-                  </div>
-                </div>
-                <Badge className={`mt-2 ${getMatchLevelColor(job.matchLevel)}`}>
-                  {getMatchLevelLabel(job.matchLevel)}
-                </Badge>
-              </div>
-
-              {/* Job Info */}
-              <div className="flex-1">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-xl font-bold mb-1">{job.title}</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <span className="font-semibold">{job.company}</span>
-                      <span>•</span>
-                      <span>{job.location}</span>
-                      <span>•</span>
-                      <span className="text-green-600 font-semibold">{job.salary}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{job.posted}</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSaveJob(job.id)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    {job.saved ? (
-                      <BookmarkCheck className="w-5 h-5 text-blue-600 fill-blue-600" />
-                    ) : (
-                      <Bookmark className="w-5 h-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Skills Match */}
-                <div className="space-y-3">
-                  {/* Matched Skills */}
-                  {job.matchedSkills.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-semibold text-green-700">
-                          Kỹ năng phù hợp ({job.matchedSkills.length})
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {job.matchedSkills.map((skill, idx) => (
-                          <span 
-                            key={idx}
-                            className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-200"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Missing Skills */}
-                  {job.missingSkills.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle className="w-4 h-4 text-orange-600" />
-                        <span className="text-sm font-semibold text-orange-700">
-                          Kỹ năng cần bổ sung ({job.missingSkills.length})
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {job.missingSkills.map((skill, idx) => (
-                          <span 
-                            key={idx}
-                            className="px-3 py-1 bg-orange-50 text-orange-700 text-xs rounded-full border border-orange-200"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 mt-4 pt-4 border-t">
-                  <Button size="sm" onClick={() => navigate(`/cv-matching?jd=${job.id}`)}>
-                    Tối ưu CV cho JD này
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleViewFullJD(job)}>
-                    <ExternalLink className="mr-2" size={14} />
-                    Xem JD đầy đủ
-                  </Button>
-                  {isPremium && (
-                    <Button variant="outline" size="sm" onClick={() => handleStartInterview(job)}>
-                      Luyện phỏng vấn
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {filteredAndSortedJobs.length === 0 && (
-        <Card className="p-12 text-center">
-          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold mb-2">Không có kết quả</h3>
-          <p className="text-gray-600">Thử điều chỉnh bộ lọc để xem thêm công việc</p>
+      {(isPolling || (sessionDetail && !isFinalMatchStatus(sessionDetail.status))) && (
+        <Card className="p-4 flex items-center gap-2">
+          <Sparkles size={16} className="text-blue-600 dark:text-blue-400" />
+          <span className="text-sm">Đang phân tích mức độ phù hợp...</span>
+          <Badge variant="outline">{sessionDetail?.status ?? 'Processing'}</Badge>
         </Card>
       )}
 
-      {/* Job Description Modal */}
-      <Dialog open={showJDModal} onOpenChange={setShowJDModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">{selectedJob?.title}</DialogTitle>
-          </DialogHeader>
+      {getNormalizedStatus(sessionDetail?.status) === 'failed' && sessionDetail && (
+        <Card className="p-4 flex items-start gap-2 border-red-300">
+          <AlertCircle size={16} className="text-red-500 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-700 dark:text-red-400">Phiên so khớp thất bại</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{sessionDetail.errorMessage ?? 'Vui lòng thử lại.'}</p>
+          </div>
+        </Card>
+      )}
 
-          <div className="flex flex-wrap gap-3 mt-2">
-            <span className="flex items-center gap-1 text-sm text-gray-600">
-              <Briefcase size={14} />
-              {selectedJob?.company}
-            </span>
-            <span className="flex items-center gap-1 text-sm text-gray-600">
-              <MapPin size={14} />
-              {selectedJob?.location}
-            </span>
-            <span className="flex items-center gap-1 text-sm text-gray-600">
-              <DollarSign size={14} />
-              {selectedJob?.salary}
-            </span>
-            <Badge className={selectedJob ? getMatchLevelColor(selectedJob.matchLevel) : ''}>
-              Match: {selectedJob?.matchScore}%
-            </Badge>
+      {['completed', 'partially_completed'].includes(getNormalizedStatus(sessionDetail?.status)) && (
+        <div className="space-y-4">
+          <div className="grid sm:grid-cols-3 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Số JD đã so khớp</p>
+              <p className="text-2xl font-semibold">{totalTargets}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm trung bình</p>
+              <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{avgScore.toFixed(2)}%</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Điểm cao nhất</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{(sessionDetail?.bestScore ?? 0).toFixed(2)}%</p>
+            </Card>
           </div>
 
-          <div className="mt-4 space-y-6">
-            {/* Match Summary */}
-            <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg">
-              <h4 className="font-semibold mb-3">📊 Phân tích so khớp</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600 mb-2">Kỹ năng phù hợp:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedJob?.matchedSkills.map((skill, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                {selectedJob && selectedJob.missingSkills.length > 0 && (
-                  <div>
-                    <p className="text-gray-600 mb-2">Kỹ năng cần bổ sung:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedJob.missingSkills.map((skill, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Full Job Description */}
-            <div>
-              <h4 className="font-semibold mb-3">📋 Mô tả công việc</h4>
-              <div className="space-y-4 text-sm leading-relaxed">
-                <div>
-                  <h5 className="font-semibold mb-2">Trách nhiệm chính:</h5>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    <li>Phát triển và duy trì ứng dụng web sử dụng {selectedJob?.requiredSkills[0]}</li>
-                    <li>Làm việc cùng team để thiết kế và implement các tính năng mới</li>
-                    <li>Tối ưu hiệu suất và trải nghiệm người dùng</li>
-                    <li>Code review và mentoring junior developers</li>
-                    <li>Tham gia vào các quyết định kỹ thuật quan trọng</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h5 className="font-semibold mb-2">Yêu cầu:</h5>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {selectedJob?.requiredSkills.map((skill, idx) => (
-                      <li key={idx}>
-                        Có kinh nghiệm với <strong>{skill}</strong>
-                      </li>
-                    ))}
-                    <li>Khả năng làm việc nhóm tốt</li>
-                    <li>Tiếng Anh giao tiếp cơ bản</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h5 className="font-semibold mb-2">Quyền lợi:</h5>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    <li>Mức lương cạnh tranh: {selectedJob?.salary}</li>
-                    <li>Thưởng hiệu suất hàng quý</li>
-                    <li>Bảo hiểm đầy đủ theo luật</li>
-                    <li>Môi trường làm việc chuyên nghiệp, năng động</li>
-                    <li>Cơ hội phát triển và thăng tiến</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume ID</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Resume Version</p>
+              <p className="text-sm font-medium break-all">{sessionDetail?.resumeVersionId ?? 'N/A'}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Hoàn thành</p>
+              <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">{completedTargets}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-gray-500">Thất bại</p>
+              <p className="text-2xl font-semibold text-red-600 dark:text-red-400">{failedTargets}</p>
+            </Card>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <Button onClick={() => {
-              setShowJDModal(false);
-              navigate(`/cv-matching?jd=${selectedJob?.id}`);
-            }}>
-              Tối ưu CV cho JD này
-            </Button>
-            {isPremium && (
-              <Button variant="outline" onClick={() => {
-                setShowJDModal(false);
-                handleStartInterview(selectedJob!);
-              }}>
-                Luyện phỏng vấn
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowJDModal(false)}>
-              Đóng
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          <Card className="p-4">
+            <p className="text-xs text-gray-500">Trạng thái session</p>
+            <p className="text-lg font-semibold">{sessionDetail?.status ?? 'Unknown'}</p>
+          </Card>
+
+          {sortedTargets.length === 0 && (
+            <Card className="p-6 text-sm text-gray-600">Không có target nào trong kết quả session.</Card>
+          )}
+
+          <div className="grid lg:grid-cols-2 gap-4">{sortedTargets.map(renderTargetCard)}</div>
+        </div>
+      )}
+
+      {selectedResume && (
+        <Card className="p-4 text-xs text-gray-500 flex items-center gap-2">
+          <FileText size={14} />
+          CV hiện tại: {selectedResume.title} ({selectedResume.originalFileName})
+        </Card>
+      )}
     </div>
   );
 };
+
+
+
+

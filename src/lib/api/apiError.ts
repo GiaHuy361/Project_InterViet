@@ -21,8 +21,8 @@ export class ApiError extends Error {
     this.requestId = error.requestId;
 
     // Maintain proper stack trace (only available in V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ApiError);
+    if (typeof (Error as any).captureStackTrace === 'function') {
+      (Error as any).captureStackTrace(this, ApiError);
     }
   }
 
@@ -86,6 +86,15 @@ export class ApiError extends Error {
   public isServerError(): boolean {
     return this.status >= 500;
   }
+  /**
+   * Check if error is a feature gate error (503 with feature disabled)
+   */
+  public isFeatureGateError(): boolean {
+    return this.status === 503 && (
+      this.code === 'Admin.Disabled' ||
+      this.code === 'Support.Disabled'
+    );
+  }
 }
 
 /**
@@ -117,6 +126,10 @@ function getMessageForErrorCode(code: string): string | null {
     'RefreshToken.Invalid': 'Phiên đăng nhập không hợp lệ.',
     'RefreshToken.Revoked': 'Phiên đăng nhập đã bị thu hồi.',
     'RefreshToken.Expired': 'Phiên đăng nhập đã hết hạn.',
+
+    // Feature gate errors (503)
+    'Admin.Disabled': 'Tính năng quản trị tạm thời không khả dụng.',
+    'Support.Disabled': 'Tính năng hỗ trợ tạm thời không khả dụng.',
 
     // Network errors
     'NETWORK_ERROR': 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend.',

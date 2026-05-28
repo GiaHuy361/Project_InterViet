@@ -23,6 +23,8 @@ import {
   AlertCircle,
   Settings,
 } from 'lucide-react';
+import { getPublicFaqs, getPublicBlogs, submitContactRequest } from '../../services/publicContentService';
+import type { FaqItem, BlogPost } from '../../lib/api/publicTypes';
 
 function GlassFeatureCard({
   children,
@@ -105,29 +107,39 @@ export const SolutionsPage: React.FC = () => {
 
 export const BlogPage: React.FC = () => {
   const navigate = useNavigate();
-  const posts = [
-    { id: 1, title: '10 mẹo viết CV thu hút nhà tuyển dụng', date: '2026-02-20', category: 'CV Tips' },
-    { id: 2, title: 'Cách trả lời câu hỏi "Tại sao bạn muốn làm việc ở đây?"', date: '2026-02-18', category: 'Phỏng vấn' },
-    { id: 3, title: 'Xu hướng tuyển dụng IT 2026', date: '2026-02-15', category: 'Thị trường' },
-  ];
+  const [posts, setPosts] = React.useState<BlogPost[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    getPublicBlogs().then(setPosts).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div>
       <PublicPageHero title="Blog" subtitle="Kiến thức và xu hướng nghề nghiệp" />
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-6">
-          <Stagger className="grid gap-8 md:grid-cols-3">
-            {posts.map((post) => (
-              <StaggerItem key={post.id}>
-                <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400 }}>
-                  <Card className="glass-card hover-lift cursor-pointer rounded-2xl p-6" onClick={() => navigate(`/blog/${post.id}`)}>
-                    <Badge className="mb-4">{post.category}</Badge>
-                    <h3 className="mb-2 text-xl font-bold">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground">{new Date(post.date).toLocaleDateString('vi-VN')}</p>
-                  </Card>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          {loading ? (
+            <div className="text-center py-10">Đang tải bài viết...</div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+              <p className="text-gray-500 text-lg">Không tìm thấy bài viết nào trong danh mục này.</p>
+            </div>
+          ) : (
+            <Stagger className="grid gap-8 md:grid-cols-3">
+              {posts.map((post) => (
+                <StaggerItem key={post.id}>
+                  <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400 }}>
+                    <Card className="glass-card hover-lift cursor-pointer rounded-2xl p-6" onClick={() => navigate(`/blog/${post.slug}`)}>
+                      {post.category && <Badge className="mb-4">{post.category}</Badge>}
+                      <h3 className="mb-2 text-xl font-bold">{post.title}</h3>
+                      <p className="text-sm text-muted-foreground">{new Date(post.publishedAt).toLocaleDateString('vi-VN')}</p>
+                    </Card>
+                  </motion.div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          )}
         </div>
       </section>
     </div>
@@ -153,24 +165,35 @@ export const BlogPostPage: React.FC = () => {
 };
 
 export const FAQPage: React.FC = () => {
-  const faqs = [
-    { q: 'INTER-VIET là gì?', a: 'INTER-VIET là nền tảng AI giúp bạn tối ưu CV và luyện phỏng vấn.' },
-    { q: 'Gói miễn phí có những gì?', a: 'Gói miễn phí bao gồm 3 lần/tài khoản tối ưu CV và 1 phiên/tài khoản phỏng vấn AI.' },
-    { q: 'Làm sao để nâng cấp gói?', a: 'Bạn có thể nâng cấp bất cứ lúc nào từ trang Gói dịch vụ.' },
-  ];
+  const [faqs, setFaqs] = React.useState<FaqItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    getPublicFaqs().then(setFaqs).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div>
       <PublicPageHero title="Câu hỏi thường gặp" subtitle="Tìm câu trả lời cho các thắc mắc của bạn" />
       <section className="py-20">
         <div className="mx-auto max-w-4xl space-y-4 px-6">
-          {faqs.map((faq, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-              <Card className="glass-card rounded-2xl p-6">
-                <h3 className="mb-2 font-bold">{faq.q}</h3>
-                <p className="text-slate-600 dark:text-slate-400">{faq.a}</p>
-              </Card>
-            </motion.div>
-          ))}
+          {loading ? (
+            <div className="text-center py-10 text-slate-500">Đang tải câu hỏi...</div>
+          ) : faqs.length > 0 ? (
+            faqs.map((faq, i) => (
+              <motion.div key={faq.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+                <Card className="glass-card rounded-2xl p-6">
+                  <h3 className="mb-2 font-bold">{faq.question}</h3>
+                  <p className="text-slate-600 dark:text-slate-400">{faq.answer}</p>
+                </Card>
+              </motion.div>
+            ))
+          ) : (
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+              <p className="text-gray-500 mb-4">Trung tâm trợ giúp đang cập nhật câu hỏi, vui lòng liên hệ trực tiếp với chúng tôi qua nút hỗ trợ dưới đây.</p>
+              <Button onClick={() => window.location.href = '/lien-he'}>Liên hệ Hỗ trợ</Button>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -199,10 +222,34 @@ export const AboutPage: React.FC = () => (
 export const ContactPage: React.FC = () => {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [category, setCategory] = React.useState('Chung');
   const [message, setMessage] = React.useState('');
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [validationErrors, setValidationErrors] = React.useState<Record<string, string[]>>({});
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.');
+    setIsSubmitting(true);
+    setValidationErrors({});
+    try {
+      await submitContactRequest({ name, email, phone, category, subject: 'Liên hệ từ website', message });
+      alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.');
+      setName('');
+      setEmail('');
+      setPhone('');
+      setCategory('Chung');
+      setMessage('');
+    } catch (err: any) {
+      if (err.code === 'Validation.Failed' && err.details) {
+        // Validation Error từ backend 400 Bad Request
+        setValidationErrors(err.details);
+      } else {
+        alert(err.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return (
     <div>
@@ -215,17 +262,36 @@ export const ContactPage: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="name">Họ tên</Label>
-                  <Input id="name" className="input-premium mt-1" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input id="name" className={`input-premium mt-1 ${validationErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={name} onChange={(e) => setName(e.target.value)} required />
+                  {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name.join(', ')}</p>}
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" className="input-premium mt-1" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input id="email" type="email" className={`input-premium mt-1 ${validationErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email.join(', ')}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="phone">Số điện thoại</Label>
+                  <Input id="phone" type="tel" className={`input-premium mt-1 ${validationErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  {validationErrors.phone && <p className="text-red-500 text-xs mt-1">{validationErrors.phone.join(', ')}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="category">Chủ đề cần tư vấn</Label>
+                  <select id="category" className={`input-premium mt-1 w-full ${validationErrors.category ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={category} onChange={(e) => setCategory(e.target.value)} required>
+                    <option value="Chung">Tư vấn chung</option>
+                    <option value="Billing">Thanh toán & Gói cước</option>
+                    <option value="Technical">Hỗ trợ kỹ thuật</option>
+                  </select>
+                  {validationErrors.category && <p className="text-red-500 text-xs mt-1">{validationErrors.category.join(', ')}</p>}
                 </div>
                 <div>
                   <Label htmlFor="message">Tin nhắn</Label>
-                  <Textarea id="message" className="input-premium mt-1" value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
+                  <Textarea id="message" className={`input-premium mt-1 ${validationErrors.message ? 'border-red-500 focus-visible:ring-red-500' : ''}`} value={message} onChange={(e) => setMessage(e.target.value)} rows={6} required />
+                  {validationErrors.message && <p className="text-red-500 text-xs mt-1">{validationErrors.message.join(', ')}</p>}
                 </div>
-                <Button type="submit" className="btn-glow h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600">Gửi tin nhắn</Button>
+                <Button type="submit" disabled={isSubmitting} className="btn-glow h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600">
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi tin nhắn'}
+                </Button>
               </form>
             </Card>
             <div className="space-y-6">
@@ -235,7 +301,7 @@ export const ContactPage: React.FC = () => {
                 { icon: MapPin, title: 'Địa chỉ', value: '123 Nguyễn Huệ, Q.1, TP.HCM' },
               ].map((c) => (
                 <Card key={c.title} className="glass-card hover-lift rounded-2xl p-6">
-                  <c.icon className="mb-3 h-8 w-8 text-violet-600" />
+                  <c.icon className="mb-3 h-8 w-8 text-violet-600 dark:text-violet-400" />
                   <h3 className="mb-2 font-bold">{c.title}</h3>
                   <p className="text-slate-600">{c.value}</p>
                 </Card>
@@ -261,7 +327,7 @@ export const SupportPage: React.FC = () => (
           ].map((item) => (
             <StaggerItem key={item.title}>
               <GlassFeatureCard>
-                <item.icon className="mb-4 h-12 w-12 text-violet-600" />
+                <item.icon className="mb-4 h-12 w-12 text-violet-600 dark:text-violet-400" />
                 <h3 className="mb-3 text-xl font-bold">{item.title}</h3>
                 <p className="mb-4 text-slate-600">{item.desc}</p>
                 <Button variant="outline" className="rounded-xl">{item.btn}</Button>
@@ -355,11 +421,11 @@ export const StatusPage: React.FC = () => {
               <Card className="glass-card rounded-2xl p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-50 dark:bg-emerald-900/300 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                     <h3 className="font-bold">{service.name}</h3>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-emerald-500/10 text-emerald-700">Hoạt động</Badge>
+                    <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">Hoạt động</Badge>
                     <p className="mt-1 text-sm text-slate-500">{service.uptime}% uptime</p>
                   </div>
                 </div>
@@ -386,16 +452,70 @@ export const NotFoundPage: React.FC = () => {
   );
 };
 
-export const MaintenancePage: React.FC = () => (
-  <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
-    <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
-      <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600" style={{ animationDuration: '3s' }} />
-      <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
-      <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
-      <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>
-    </Card>
-  </div>
-);
+export const MaintenancePage: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Read feature gate context from query params (set by apiClient on 503 Feature Gate)
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const featureParam = searchParams.get('feature'); // 'admin' | 'support' | null
+  const codeParam = searchParams.get('code'); // 'Admin.Disabled' | 'Support.Disabled' | null
+
+  const isFeatureGate = !!featureParam;
+
+  // Feature-specific labels
+  const featureLabels: Record<string, { title: string; description: string; icon: typeof Settings }> = {
+    admin: {
+      title: 'Tính năng Quản trị tạm ngưng',
+      description: 'Tính năng quản trị hệ thống hiện đang bị tắt bởi quản trị viên. Vui lòng liên hệ quản trị viên để biết thêm thông tin.',
+      icon: Shield,
+    },
+    support: {
+      title: 'Tính năng Hỗ trợ tạm ngưng',
+      description: 'Tính năng hỗ trợ khách hàng hiện đang bị tắt bởi quản trị viên. Vui lòng liên hệ quản trị viên để biết thêm thông tin.',
+      icon: AlertCircle,
+    },
+  };
+
+  const featureInfo = featureParam ? featureLabels[featureParam] : null;
+
+  if (isFeatureGate && featureInfo) {
+    const FeatureIcon = featureInfo.icon;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-6">
+        <Card className="glass-card max-w-lg rounded-2xl p-12 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/40">
+            <FeatureIcon className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="mb-4 text-3xl font-bold text-gray-900">{featureInfo.title}</h1>
+          <p className="mb-3 text-slate-600">{featureInfo.description}</p>
+          <p className="mb-6 text-sm text-slate-400">
+            Trạng thái này chỉ thay đổi khi quản trị viên cập nhật cấu hình hệ thống. Không cần tải lại trang liên tục.
+          </p>
+          {codeParam && (
+            <p className="mb-6 rounded-lg bg-gray-50 px-3 py-2 text-xs font-mono text-gray-400">
+              Mã lỗi: {codeParam}
+            </p>
+          )}
+          <Button className="rounded-xl" onClick={() => navigate('/dashboard')}>
+            Quay lại Dashboard
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // General maintenance (non-feature-gate 503)
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50 p-6">
+      <Card className="glass-card max-w-md rounded-2xl p-12 text-center">
+        <Settings className="mx-auto mb-4 h-20 w-20 animate-spin text-violet-600 dark:text-violet-400" style={{ animationDuration: '3s' }} />
+        <h1 className="mb-4 text-3xl font-bold">Đang bảo trì</h1>
+        <p className="mb-4 text-slate-600">Chúng tôi đang nâng cấp hệ thống để mang đến trải nghiệm tốt hơn.</p>
+        <p className="text-sm text-slate-500">Dự kiến hoàn thành: 2 giờ nữa</p>
+      </Card>
+    </div>
+  );
+};
 
 export const AccountLockedPage: React.FC = () => {
   const navigate = useNavigate();
@@ -405,6 +525,20 @@ export const AccountLockedPage: React.FC = () => {
       <h1 className="mb-2 text-3xl font-bold">Tài khoản bị khóa</h1>
       <p className="mb-6 text-slate-600">Tài khoản của bạn đã bị khóa do vi phạm điều khoản sử dụng. Vui lòng liên hệ bộ phận hỗ trợ.</p>
       <Button className="rounded-xl" onClick={() => navigate('/lien-he')}>Liên hệ hỗ trợ</Button>
+    </Card>
+  );
+};
+
+export const AccessDeniedPage: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <Card className="glass-card w-full max-w-md rounded-2xl p-8 text-center">
+      <Shield className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+      <h1 className="mb-2 text-3xl font-bold">Không có quyền truy cập</h1>
+      <p className="mb-6 text-slate-600">
+        Tài khoản của bạn không có đủ quyền để truy cập khu vực này.
+      </p>
+      <Button className="rounded-xl" onClick={() => navigate('/dashboard')}>Về dashboard</Button>
     </Card>
   );
 };

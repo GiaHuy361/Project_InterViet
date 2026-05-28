@@ -6,7 +6,7 @@ import { CheckCircle, Crown, Sparkles } from 'lucide-react';
 import { CANDIDATE_PLANS } from '../../config/pricing';
 import { getPlanQuota } from '../../../utils/planDisplay';
 import type { PlanKey } from '../../../utils/planDisplay';
-import type { QuotaCounter } from '../../../lib/api/phase2Types';
+import type { QuotaCounter } from '../../../lib/api/dashboardTypes';
 import { getFeatureLabel, isUnlimitedLimit } from '../../../utils/quotaLabels';
 import { GradientProgress } from './GradientProgress';
 import { cn } from '../ui/utils';

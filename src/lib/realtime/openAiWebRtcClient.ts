@@ -17,6 +17,7 @@ export class OpenAiWebRtcClient {
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
   private callbacks: OpenAiWebRtcClientCallbacks = {};
+  public isMuted: boolean = false;
 
   constructor(callbacks: OpenAiWebRtcClientCallbacks) {
     this.callbacks = callbacks;
@@ -90,6 +91,10 @@ export class OpenAiWebRtcClient {
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
 
+      if (!offer.sdp) {
+        throw new Error('Failed to create SDP offer.');
+      }
+
       // 6. POST SDP offer to connectUrl
       const headers: Record<string, string> = {
         'Content-Type': 'application/sdp',
@@ -99,32 +104,124 @@ export class OpenAiWebRtcClient {
         headers['Authorization'] = `Bearer ${clientSecret}`;
       }
 
-      const response = await fetch(connectUrl, {
-        method: 'POST',
-        body: offer.sdp,
-        headers,
-      });
+      let responseText: string | null = null;
+      let remoteSdp: string | null = null;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to establish WebRTC connection with server: ${response.status} ${errorText}`);
-      }
-
-      // 7. Parse SDP answer defensively
-      const responseText = await response.text();
-      let remoteSdp = responseText;
-      try {
-        const json = JSON.parse(responseText);
-        if (json.sdp) {
-          remoteSdp = json.sdp;
-        } else if (json.answer) {
-          remoteSdp = json.answer;
+      if (connectUrl.startsWith('ws://') || connectUrl.startsWith('wss://')) {
+        // For WebSocket endpoints, open a WS, send offer, wait for answer message
+        let wsUrl = connectUrl;
+        // append client secret as query param when provided
+        if (clientSecret) {
+          const sep = wsUrl.includes('?') ? '&' : '?';
+          wsUrl = `${wsUrl}${sep}client_secret=${encodeURIComponent(clientSecret)}`;
         }
-      } catch {
-        // Response is raw text SDP
+
+        responseText = await new Promise<string>((resolve, reject) => {
+          const ws = new WebSocket(wsUrl);
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('WebSocket timed out waiting for SDP answer'));
+          }, 20000);
+
+          ws.onopen = () => {
+            console.log('[OpenAiWebRtcClient] WebSocket connected for SDP exchange');
+            // Send offer as JSON payload
+            try {
+              ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+            } catch (e) {
+              // fallback: send raw SDP if available
+              if (offer.sdp) {
+                ws.send(offer.sdp);
+              } else {
+                ws.close();
+                reject(new Error('SDP offer is empty; cannot send to WebSocket endpoint'));
+              }
+            }
+          };
+
+          ws.onmessage = (ev) => {
+            clearTimeout(timeout);
+            console.log('[OpenAiWebRtcClient] Received SDP answer from server');
+            const data = typeof ev.data === 'string' ? ev.data : null;
+            if (!data) {
+              ws.close();
+              reject(new Error('No SDP answer received from WebSocket'));
+              return;
+            }
+            // Try to parse JSON, else use raw SDP
+            try {
+              const json = JSON.parse(data);
+              if (json.sdp) {
+                resolve(json.sdp);
+              } else if (json.answer) {
+                resolve(json.answer);
+              } else if (json.type === 'answer' && json.sdp) {
+                resolve(json.sdp);
+              } else {
+                // unknown JSON shape, resolve with raw text
+                resolve(data);
+              }
+            } catch {
+              // raw SDP text
+              resolve(data);
+            }
+            ws.close();
+          };
+
+          ws.onerror = (err) => {
+            clearTimeout(timeout);
+            console.error('[OpenAiWebRtcClient] WebSocket error during SDP exchange:', err);
+            reject(new Error('WebSocket error while exchanging SDP'));
+          };
+
+          ws.onclose = (ev) => {
+            try {
+              const code = (ev && typeof ev.code === 'number') ? ev.code : 'unknown';
+              const reason = (ev && typeof ev.reason === 'string') ? ev.reason : '';
+              console.log('[OpenAiWebRtcClient] WebSocket closed after SDP exchange', { code, reason });
+            } catch (e) {
+              console.log('[OpenAiWebRtcClient] WebSocket closed after SDP exchange');
+            }
+            // nothing
+          };
+        });
+
+        remoteSdp = responseText;
+      } else {
+        // HTTP(S) endpoint - use fetch
+        const response = await fetch(connectUrl, {
+          method: 'POST',
+          body: offer.sdp,
+          headers,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to establish WebRTC connection with server: ${response.status} ${errorText}`);
+        }
+
+        responseText = await response.text();
+
+        try {
+          const json = JSON.parse(responseText);
+          if (json.sdp) {
+            remoteSdp = json.sdp;
+          } else if (json.answer) {
+            remoteSdp = json.answer;
+          } else {
+            remoteSdp = responseText;
+          }
+        } catch {
+          // Response is raw text SDP
+          remoteSdp = responseText;
+        }
       }
 
       // 8. Set Remote Description
+      if (!remoteSdp) {
+        throw new Error('No remote SDP received from server');
+      }
+
       await this.pc.setRemoteDescription({
         type: 'answer',
         sdp: remoteSdp,
@@ -233,6 +330,29 @@ export class OpenAiWebRtcClient {
       type: 'response.create'
     };
     this.dc.send(JSON.stringify(responseEvent));
+  }
+
+  public setMuted(muted: boolean): void {
+    this.isMuted = muted;
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach(track => {
+        track.enabled = !muted;
+      });
+    }
+  }
+
+  public endTurn(): void {
+    if (!this.dc || this.dc.readyState !== 'open') return;
+    
+    // Request response generation to interrupt VAD and force turn complete
+    const responseEvent = {
+      type: 'response.create'
+    };
+    try {
+      this.dc.send(JSON.stringify(responseEvent));
+    } catch (err) {
+      console.error('Error sending response.create:', err);
+    }
   }
 
   public disconnect(): void {

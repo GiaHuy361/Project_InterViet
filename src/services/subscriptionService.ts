@@ -3,7 +3,7 @@ import { ApiError } from '../lib/api/apiError';
 import type {
   CurrentSubscription,
   DevActivatePlanRequest,
-} from '../lib/api/phase2Types';
+} from '../lib/api/dashboardTypes';
 
 export async function getCurrentSubscription(): Promise<CurrentSubscription | null> {
   try {

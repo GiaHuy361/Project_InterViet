@@ -4,7 +4,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { AlertCircle, Crown } from 'lucide-react';
-import type { QuotaCounter } from '../../../lib/api/phase2Types';
+import type { QuotaCounter } from '../../../lib/api/dashboardTypes';
 import {
   formatQuotaUsed,
   getFeatureLabel,

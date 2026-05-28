@@ -24,7 +24,7 @@ import type {
   ProfileEducation,
   ProfileWorkExperience,
   ProfileExternalLink,
-} from '../../lib/api/phase2Types';
+} from '../../lib/api/dashboardTypes';
 import { ApiError, createApiError } from '../../lib/api/apiError';
 import {
   buildEducationPayload,

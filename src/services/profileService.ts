@@ -15,7 +15,7 @@ import type {
   ProfileEducation,
   ProfileWorkExperience,
   ProfileExternalLink,
-} from '../lib/api/phase2Types';
+} from '../lib/api/dashboardTypes';
 
 export async function getProfile(): Promise<ProfileResponse> {
   const data = await apiClient.get<ProfileResponse>('/profile');
