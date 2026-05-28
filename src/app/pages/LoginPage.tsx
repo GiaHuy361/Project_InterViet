@@ -61,13 +61,21 @@ export const LoginPage: React.FC = () => {
       notifySuccess('Đăng nhập thành công!');
       
       const token = apiClient.getAccessToken();
-      const role = token ? getRoleFromToken(token) : 'user';
+      const role = token ? getRoleFromToken(token) : 'candidate';
       let defaultPath = '/dashboard';
       if (role === 'admin') defaultPath = '/admin/dashboard';
       else if (role === 'support') defaultPath = '/support/dashboard';
       else if (role === 'mentor') defaultPath = '/mentor/dashboard';
 
-      navigate(searchParams.get('returnUrl') || defaultPath);
+      let returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        if (role === 'admin' && !returnUrl.startsWith('/admin/')) returnUrl = null;
+        if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
+        if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
+        if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
+      }
+
+      navigate(returnUrl || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);
@@ -89,13 +97,21 @@ export const LoginPage: React.FC = () => {
       notifySuccess('Đăng nhập Google thành công!');
       
       const token = apiClient.getAccessToken();
-      const role = token ? getRoleFromToken(token) : 'user';
+      const role = token ? getRoleFromToken(token) : 'candidate';
       let defaultPath = '/dashboard';
       if (role === 'admin') defaultPath = '/admin/dashboard';
       else if (role === 'support') defaultPath = '/support/dashboard';
       else if (role === 'mentor') defaultPath = '/mentor/dashboard';
 
-      navigate(searchParams.get('returnUrl') || defaultPath);
+      let returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        if (role === 'admin' && !returnUrl.startsWith('/admin/')) returnUrl = null;
+        if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
+        if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
+        if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
+      }
+
+      navigate(returnUrl || defaultPath);
     } catch (err) {
       const msg = getLoginErrorMessage(err);
       setFormError(msg);

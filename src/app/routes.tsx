@@ -99,7 +99,7 @@ export const router = createBrowserRouter([
           // ─── Shared routes (all authenticated roles) ────────────────
           {
             element: (
-              <RoleGuard allowedRoles={['user', 'admin', 'mentor', 'support']}>
+              <RoleGuard allowedRoles={['candidate', 'admin', 'mentor', 'support']}>
                 <Outlet />
               </RoleGuard>
             ),
@@ -125,7 +125,7 @@ export const router = createBrowserRouter([
           // ─── Candidate routes (user only) ────────────────
           {
             element: (
-              <RoleGuard allowedRoles={['user']}>
+              <RoleGuard allowedRoles={['candidate']}>
                 <Outlet />
               </RoleGuard>
             ),
@@ -170,6 +170,7 @@ export const router = createBrowserRouter([
               { path: 'admin/audit-logs', Component: Pages.AdminAuditLogsPage },
               { path: 'admin/health', Component: Pages.AdminSystemHealthPage },
               { path: 'admin/json-samples', Component: Pages.AdminJsonSamplesPage },
+              { path: 'admin/specialties', Component: Pages.AdminSpecialtiesPage },
             ]
           },
 

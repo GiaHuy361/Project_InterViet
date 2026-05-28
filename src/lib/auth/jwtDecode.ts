@@ -10,11 +10,11 @@
 
 /**
  * System roles matching backend C# roles.
- * - 'user' (Candidate): default role for registered users
+ * - 'candidate' (Candidate): default role for registered users
  * - 'support' (Support Staff): customer support role
  * - 'admin' (Administrator): full system access
  */
-export type SystemRole = 'user' | 'support' | 'admin' | 'mentor';
+export type SystemRole = 'candidate' | 'support' | 'admin' | 'mentor';
 
 /** Standard JWT payload fields + custom claims */
 export interface JwtPayload {
@@ -55,7 +55,7 @@ const ROLE_CLAIM_NAMES = [
 /**
  * Valid system roles set for fast lookup
  */
-const VALID_ROLES = new Set<string>(['user', 'support', 'admin', 'mentor']);
+const VALID_ROLES = new Set<string>(['candidate', 'support', 'admin', 'mentor']);
 
 /**
  * Decode base64url string to UTF-8 string.
@@ -123,18 +123,18 @@ export function decodeJwtPayload(token: string): JwtPayload | null {
  * 3. ASP.NET default role claim URI
  *
  * @param token - The full JWT string
- * @returns The system role, defaults to 'user' if not found or invalid
+ * @returns The system role, defaults to 'candidate' if not found or invalid
  *
  * @example
  * ```ts
  * const role = getRoleFromToken(accessToken);
- * // 'user' | 'support' | 'admin'
+ * // 'candidate' | 'support' | 'admin'
  * ```
  */
 export function getRoleFromToken(token: string): SystemRole {
   const payload = decodeJwtPayload(token);
   if (!payload) {
-    return 'user';
+    return 'candidate';
   }
 
   // Check each known claim name for a role value
@@ -142,6 +142,7 @@ export function getRoleFromToken(token: string): SystemRole {
     const value = payload[claimName];
     if (typeof value === 'string') {
       const normalized = value.toLowerCase().trim();
+      if (normalized === 'user') return 'candidate';
       if (VALID_ROLES.has(normalized)) {
         return normalized as SystemRole;
       }
@@ -159,8 +160,8 @@ export function getRoleFromToken(token: string): SystemRole {
     }
   }
 
-  // Default to 'user' (candidate) if no role claim found
-  return 'user';
+  // Default to 'candidate' (candidate) if no role claim found
+  return 'candidate';
 }
 
 /**

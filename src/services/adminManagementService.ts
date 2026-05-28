@@ -40,6 +40,7 @@ export interface AdminUserDetailResponse {
     bio?: string | null;
     yearsOfExperience?: string | number | null;
     skills?: string[];
+    specialties?: { id: string; code: string; name: string; description?: string }[];
   } | null;
   currentSubscription?: {
     subscriptionId: string;

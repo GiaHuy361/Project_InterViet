@@ -160,6 +160,9 @@ export interface SupportWorkspaceTicket {
   status: string;
   description: string;
   assignedTo: string | null;
+  assignedToId: string | null;
+  assignedToName: string | null;
+  assignedToAvatarUrl: string | null;
   createdAt: string;
   closedAt: string | null;
   lastMessageAt: string | null;
@@ -218,6 +221,7 @@ export interface MentorProfile {
   expertise: string[];
   industries: string[];
   languages: string[];
+  specialties?: import('../../services/mentorSpecialtyService').MentorSpecialtyDto[];
 }
 
 export interface UpdateMentorProfileRequest {

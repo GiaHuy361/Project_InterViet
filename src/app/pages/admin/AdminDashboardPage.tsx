@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Clock,
   BarChart3,
+  LayoutDashboard
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../../components/ui/button';
@@ -121,7 +122,7 @@ export const AdminDashboardPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex items-center gap-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-purple-200">
-          <Shield className="h-6 w-6 text-white" />
+          <LayoutDashboard className="h-6 w-6 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Admin Dashboard</h1>
@@ -206,15 +207,15 @@ export const AdminDashboardPage: React.FC = () => {
               style={{
                 background: supportTicketPercentages.length
                   ? `conic-gradient(${supportTicketPercentages
-                      .map((item, index) => {
-                        const start = supportTicketPercentages
-                          .slice(0, index)
-                          .reduce((accumulator, current) => accumulator + current.value, 0);
-                        const startPercent = (start / supportTotal) * 100;
-                        const endPercent = ((start + item.value) / supportTotal) * 100;
-                        return `${item.color} ${startPercent}% ${endPercent}%`;
-                      })
-                      .join(', ')})`
+                    .map((item, index) => {
+                      const start = supportTicketPercentages
+                        .slice(0, index)
+                        .reduce((accumulator, current) => accumulator + current.value, 0);
+                      const startPercent = (start / supportTotal) * 100;
+                      const endPercent = ((start + item.value) / supportTotal) * 100;
+                      return `${item.color} ${startPercent}% ${endPercent}%`;
+                    })
+                    .join(', ')})`
                   : 'conic-gradient(#e5e7eb 0% 100%)',
               }}
             >
@@ -303,23 +304,23 @@ export const AdminDashboardPage: React.FC = () => {
               return true;
             })
             .map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="group flex items-start gap-4 rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-5 shadow-sm transition-all duration-300 hover:border-violet-200 dark:border-violet-800 hover:shadow-md hover:-translate-y-0.5"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 transition-colors group-hover:bg-violet-100 dark:bg-violet-900/40">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-slate-100 group-hover:text-violet-700 dark:text-violet-400">{link.label}</p>
-                  <p className="mt-0.5 text-sm text-gray-500 dark:text-slate-400">{link.description}</p>
-                </div>
-              </Link>
-            );
-          })}
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className="group flex items-start gap-4 rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-5 shadow-sm transition-all duration-300 hover:border-violet-200 dark:border-violet-800 hover:shadow-md hover:-translate-y-0.5"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 transition-colors group-hover:bg-violet-100 dark:bg-violet-900/40">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 group-hover:text-violet-700 dark:text-violet-400">{link.label}</p>
+                    <p className="mt-0.5 text-sm text-gray-500 dark:text-slate-400">{link.description}</p>
+                  </div>
+                </Link>
+              );
+            })}
         </div>
       </div>
 
@@ -332,7 +333,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <p className="font-medium text-gray-600 dark:text-slate-400">Chưa có widget audit logs</p>
           <p className="mt-1 text-sm text-gray-400">
-              Sẽ hiển thị các hoạt động hệ thống quan trọng như đăng nhập, thay đổi cấu hình, v.v.  Đang trong quá trình phát triển.
+            Sẽ hiển thị các hoạt động hệ thống quan trọng như đăng nhập, thay đổi cấu hình, v.v.  Đang trong quá trình phát triển.
           </p>
           <div className="mt-4">
             <Button variant="outline" disabled>

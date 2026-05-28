@@ -66,7 +66,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
           </Button>
 
           {/* Only show Feedback to user or admin */}
-          {(state.user?.systemRole === 'user' || state.user?.systemRole === 'admin') && (
+          {(state.user?.systemRole === 'candidate' || state.user?.systemRole === 'admin') && (
             <Button
               variant="ghost"
               size="sm"
@@ -78,7 +78,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
           )}
 
           {/* Only show Candidate's Bookings button to candidate (user) */}
-          {(state.user?.systemRole === 'user') && (
+          {(state.user?.systemRole === 'candidate') && (
             <Button
               variant="outline"
               size="sm"
@@ -100,7 +100,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
                 state.user.systemRole === 'admin' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800' :
                 state.user.systemRole === 'support' ? 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800' :
                 state.user.systemRole === 'mentor' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' :
-                state.user.systemRole === 'user' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' :
+                state.user.systemRole === 'candidate' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' :
                 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -108,7 +108,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenFeedback }) => {
                 state.user.systemRole === 'admin' ? 'Quản trị viên' :
                 state.user.systemRole === 'support' ? 'Hỗ trợ' :
                 state.user.systemRole === 'mentor' ? 'Mentor' :
-                state.user.systemRole === 'user' ? 'Thành viên' :
+                state.user.systemRole === 'candidate' ? 'Thành viên' :
                 state.user.systemRole
               }
             </Badge>

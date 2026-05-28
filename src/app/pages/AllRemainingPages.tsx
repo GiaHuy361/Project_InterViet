@@ -532,13 +532,27 @@ export const AccountLockedPage: React.FC = () => {
 export const AccessDeniedPage: React.FC = () => {
   const navigate = useNavigate();
   return (
-    <Card className="glass-card w-full max-w-md rounded-2xl p-8 text-center">
-      <Shield className="mx-auto mb-4 h-16 w-16 text-amber-500" />
-      <h1 className="mb-2 text-3xl font-bold">Không có quyền truy cập</h1>
-      <p className="mb-6 text-slate-600">
-        Tài khoản của bạn không có đủ quyền để truy cập khu vực này.
-      </p>
-      <Button className="rounded-xl" onClick={() => navigate('/dashboard')}>Về dashboard</Button>
-    </Card>
+    <div className="flex min-h-[70vh] items-center justify-center p-6 bg-transparent">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="w-full max-w-md">
+        <Card className="glass-card rounded-3xl p-10 text-center shadow-2xl border border-red-100 dark:border-red-900/30 relative overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-red-500 to-orange-400"></div>
+          <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 ring-8 ring-red-50/50 dark:ring-red-900/10">
+            <Shield className="h-12 w-12 text-red-500 dark:text-red-400" />
+          </div>
+          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">Truy cập bị từ chối</h1>
+          <p className="mb-8 text-slate-500 dark:text-slate-400 text-sm leading-relaxed px-2">
+            Rất tiếc, bạn không có đủ quyền hạn để xem trang này. Vui lòng kiểm tra lại đường dẫn hoặc liên hệ quản trị viên.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white dark:bg-cyan-600 dark:hover:bg-cyan-500 h-12 shadow-lg shadow-gray-200 dark:shadow-none transition-all font-medium" onClick={() => navigate('/dashboard')}>
+              Về Dashboard
+            </Button>
+            <Button variant="ghost" className="rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white h-12 font-medium" onClick={() => navigate(-1)}>
+              Quay lại trang trước
+            </Button>
+          </div>
+        </Card>
+      </motion.div>
+    </div>
   );
 };

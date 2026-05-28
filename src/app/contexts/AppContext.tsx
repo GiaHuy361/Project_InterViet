@@ -23,7 +23,7 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  /** System role decoded from JWT: 'user' | 'support' | 'admin' */
+  /** System role decoded from JWT: 'candidate' | 'support' | 'admin' */
   systemRole: SystemRole;
   subscriptionPlan: SubscriptionPlan;
   trialEndsAt?: Date;
@@ -223,6 +223,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const parsed = JSON.parse(stored);
       // Convert date strings back to Date objects
       if (parsed.user) {
+        if (parsed.user.systemRole === 'user') parsed.user.systemRole = 'candidate';
         if (parsed.user.trialEndsAt) parsed.user.trialEndsAt = new Date(parsed.user.trialEndsAt);
         if (parsed.user.subscriptionEndsAt) parsed.user.subscriptionEndsAt = new Date(parsed.user.subscriptionEndsAt);
         if (parsed.user.createdAt) parsed.user.createdAt = new Date(parsed.user.createdAt);
@@ -407,7 +408,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               email: stored.authUser.email,
               name: stored.authUser.fullName || stored.authUser.email.split('@')[0],
               role: stored.authUser.status as UserRole,
-              systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'user'),
+              systemRole: stored.authUser.systemRole || (accessToken ? getRoleFromToken(accessToken) : 'candidate'),
               subscriptionPlan: 'free',
               cvOptimizations: 0,
               cvOptimizationsDaily: 0,
