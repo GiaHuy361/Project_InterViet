@@ -9,6 +9,7 @@ namespace Interviet.Domain.Billing;
 public class BillingCheckoutSession : AuditableEntity
 {
     public Guid UserId { get; set; }
+    public long OrderCode { get; set; }
     public Guid? PlanId { get; set; }
     public string? PlanKey { get; set; }
     public string Provider { get; set; } = string.Empty;

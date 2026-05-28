@@ -11,4 +11,8 @@ public interface IBillingSuccessService
         string? methodType = null,
         string? externalTxId = null,
         CancellationToken ct = default);
+
+    Task<Result<SimulateSuccessResponse>> ProcessPayosWebhookAsync(
+        PayOS.Models.Webhooks.Webhook webhook,
+        CancellationToken ct = default);
 }

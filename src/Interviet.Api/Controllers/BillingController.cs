@@ -10,6 +10,7 @@ using Interviet.Application.Billing.Queries.GetCheckoutSession;
 using Interviet.Application.Billing.Queries.GetMyInvoices;
 using Interviet.Application.Billing.Queries.GetMyPayments;
 using Interviet.Application.Billing.Queries.GetPaymentInstructions;
+using Interviet.Application.Billing.Queries.GetPaymentById;
 using Interviet.Application.Billing.Commands.SubmitBankTransfer;
 using Interviet.Application.Billing.Queries.GetAttempts;
 using Interviet.Application.Common.Interfaces;
@@ -23,11 +24,16 @@ public class BillingController : ApiControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly IBillingSuccessService _billingSuccessService;
 
-    public BillingController(IMediator mediator, ICurrentUserService currentUser)
+    public BillingController(
+        IMediator mediator,
+        ICurrentUserService currentUser,
+        IBillingSuccessService billingSuccessService)
     {
-        _mediator    = mediator;
-        _currentUser = currentUser;
+        _mediator              = mediator;
+        _currentUser           = currentUser;
+        _billingSuccessService = billingSuccessService;
     }
 
     // ── Providers ─────────────────────────────────────────────────────────────
@@ -52,12 +58,13 @@ public class BillingController : ApiControllerBase
 
     // ── Checkout ──────────────────────────────────────────────────────────────
 
-    /// <summary>Creates a mock checkout session for the specified plan and provider.</summary>
+    /// <summary>Creates a checkout session for the specified plan and provider.</summary>
     [HttpPost("checkout")]
     public async Task<IActionResult> CreateCheckout([FromBody] CheckoutRequest request)
     {
         return FromResult(await _mediator.Send(new CreateCheckoutSessionCommand(
             UserId    : _currentUser.UserId,
+            PlanId    : request.PlanId,
             PlanKey   : request.PlanKey,
             Provider  : request.Provider,
             ReturnUrl : request.ReturnUrl,
@@ -147,5 +154,26 @@ public class BillingController : ApiControllerBase
     {
         return FromResult(await _mediator.Send(
             new GetMyPaymentsQuery(_currentUser.UserId, page, pageSize)));
+    }
+
+    /// <summary>Gets a single payment transaction by ID (must be owned by the caller).</summary>
+    [HttpGet("payments/{id:guid}")]
+    public async Task<IActionResult> GetPayment(Guid id)
+    {
+        return FromResult(await _mediator.Send(
+            new GetPaymentByIdQuery(_currentUser.UserId, id)));
+    }
+
+    /// <summary>Webhook receiver for PayOS payment updates.</summary>
+    [AllowAnonymous]
+    [HttpPost("payos/webhook")]
+    public async Task<IActionResult> PayosWebhook([FromBody] PayOS.Models.Webhooks.Webhook webhook)
+    {
+        var result = await _billingSuccessService.ProcessPayosWebhookAsync(webhook);
+        if (result.IsFailure)
+        {
+            return FromResult(result);
+        }
+        return Ok(new { success = true });
     }
 }

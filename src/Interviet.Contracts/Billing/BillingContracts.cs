@@ -63,6 +63,7 @@ public sealed class PaymentTransactionResponse
 
 public sealed class CheckoutRequest
 {
+    public Guid? PlanId { get; init; }
     public string PlanKey { get; init; } = string.Empty;
     public string Provider { get; init; } = string.Empty;
     public string? ReturnUrl { get; init; }
@@ -72,9 +73,11 @@ public sealed class CheckoutRequest
 public sealed class CheckoutResponse
 {
     public Guid CheckoutSessionId { get; init; }
+    public Guid PaymentId { get; init; }
     public string CheckoutUrl { get; init; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public DateTime ExpiresAt { get; init; }
+    public DateTime ExpiredAt { get; init; }
     public string Provider { get; init; } = string.Empty;
     public string PlanKey { get; init; } = string.Empty;
     public decimal Amount { get; init; }

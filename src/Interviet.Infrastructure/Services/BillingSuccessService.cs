@@ -7,6 +7,10 @@ using Interviet.Contracts.Billing;
 using Interviet.Contracts.Notifications;
 using Interviet.Domain.Billing;
 using Interviet.Shared.Results;
+using PayOS;
+using PayOS.Models.Webhooks;
+using Microsoft.AspNetCore.SignalR;
+using Interviet.Infrastructure.Hubs;
 
 namespace Interviet.Infrastructure.Services;
 
@@ -18,6 +22,8 @@ public sealed class BillingSuccessService : IBillingSuccessService
     private readonly IEmailService _emailService;
     private readonly INotificationService _notificationService;
     private readonly ILogger<BillingSuccessService> _logger;
+    private readonly PayOSClient _payOSClient;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
     public BillingSuccessService(
         IAppDbContext db,
@@ -25,7 +31,9 @@ public sealed class BillingSuccessService : IBillingSuccessService
         IOptions<MentorNetworkOptions> mentorOptions,
         IEmailService emailService,
         INotificationService notificationService,
-        ILogger<BillingSuccessService> logger)
+        ILogger<BillingSuccessService> logger,
+        PayOSClient payOSClient,
+        IHubContext<NotificationHub> hubContext)
     {
         _db                  = db;
         _billing             = billing.Value;
@@ -33,6 +41,8 @@ public sealed class BillingSuccessService : IBillingSuccessService
         _emailService        = emailService;
         _notificationService = notificationService;
         _logger              = logger;
+        _payOSClient         = payOSClient;
+        _hubContext          = hubContext;
     }
 
     public async Task<Result<SimulateSuccessResponse>> ProcessPaymentSuccessAsync(
@@ -98,7 +108,107 @@ public sealed class BillingSuccessService : IBillingSuccessService
             return Error.Conflict("CheckoutSession.Expired", "This checkout session has expired.");
         }
 
+        return await CompletePaymentAsync(session, methodType ?? "bank_transfer", externalTxId, ct);
+    }
+
+    public async Task<Result<SimulateSuccessResponse>> ProcessPayosWebhookAsync(
+        Webhook webhook,
+        CancellationToken ct = default)
+    {
+        // 1. Verify webhook signature
+        WebhookData webhookData;
+        try
+        {
+            webhookData = await _payOSClient.Webhooks.VerifyAsync(webhook);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify PayOS webhook signature. Signature: {Signature}", webhook.Signature);
+            return Error.Validation("Billing.WebhookSignatureInvalid", "Webhook signature verification failed.");
+        }
+
+        // 2. Load session by unique OrderCode
+        var session = await _db.BillingCheckoutSessions
+            .FirstOrDefaultAsync(s => s.OrderCode == webhookData.OrderCode, ct);
+
+        if (session is null)
+        {
+            _logger.LogWarning("PayOS Webhook: Checkout session with OrderCode {OrderCode} not found in database.", webhookData.OrderCode);
+            return Error.NotFound("CheckoutSession.NotFound", $"Checkout session with OrderCode {webhookData.OrderCode} not found.");
+        }
+
+        // 3. Idempotency check: already succeeded
+        if (session.Status == CheckoutSessionStatus.Succeeded)
+        {
+            _logger.LogInformation("PayOS Webhook: Checkout session {CheckoutSessionId} with OrderCode {OrderCode} is already succeeded. Returning 200 (idempotent).", session.Id, session.OrderCode);
+            
+            var existingTx = await _db.PaymentTransactions
+                .FirstOrDefaultAsync(t => t.CheckoutSessionId == session.Id, ct);
+            var existingInv = await _db.Invoices
+                .FirstOrDefaultAsync(i => i.CheckoutSessionId == session.Id, ct);
+
+            Guid existingSubId = Guid.Empty;
+            if (session.Purpose != "mentor_booking")
+            {
+                var existingSub = await _db.Subscriptions
+                    .FirstOrDefaultAsync(s => s.UserId == session.UserId
+                        && s.Status == SubscriptionStatus.Active, ct);
+                existingSubId = existingSub?.Id ?? Guid.Empty;
+            }
+
+            return new SimulateSuccessResponse
+            {
+                CheckoutSessionId    = session.Id,
+                PaymentTransactionId = existingTx?.Id ?? Guid.Empty,
+                InvoiceId            = existingInv?.Id ?? Guid.Empty,
+                InvoiceNumber        = existingInv?.InvoiceNumber ?? string.Empty,
+                IsIdempotent         = true,
+                EmailSent            = false,
+                SubscriptionId       = existingSubId
+            };
+        }
+
+        // 4. Verify payment status
+        if (!webhook.Success || webhook.Code != "00" || webhookData.Code != "00")
+        {
+            _logger.LogWarning("PayOS Webhook reported transaction failure. Success={Success}, Code={Code}, DataCode={DataCode}, OrderCode={OrderCode}", webhook.Success, webhook.Code, webhookData.Code, webhookData.OrderCode);
+            
+            session.Status = CheckoutSessionStatus.Failed;
+            session.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            
+            // Push SignalR payment.updated
+            try
+            {
+                await _hubContext.Clients.Group($"user:{session.UserId}").SendAsync("payment.updated", new
+                {
+                    paymentId = session.Id,
+                    orderCode = session.OrderCode,
+                    status = CheckoutSessionStatus.Failed,
+                    provider = session.Provider,
+                    subscriptionId = (Guid?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push SignalR failed payment event for user {UserId}", session.UserId);
+            }
+
+            return Error.Conflict("Billing.PaymentFailed", "Payment failed reported by PayOS.");
+        }
+
+        // 5. Complete payment and activate subscription
+        return await CompletePaymentAsync(session, "payos", webhookData.PaymentLinkId, ct);
+    }
+
+    private async Task<Result<SimulateSuccessResponse>> CompletePaymentAsync(
+        BillingCheckoutSession session,
+        string methodType,
+        string? externalTxId,
+        CancellationToken ct)
+    {
         var now = DateTime.UtcNow;
+        var userId = session.UserId;
 
         if (session.Purpose == "mentor_booking")
         {
@@ -125,7 +235,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 UserId              = userId,
                 CheckoutSessionId   = session.Id,
                 Provider            = session.Provider,
-                MethodType          = methodType ?? "bank_transfer",
+                MethodType          = methodType,
                 ExternalTransactionId = externalTxId,
                 Amount              = session.Amount,
                 CurrencyCode        = session.CurrencyCode,
@@ -177,6 +287,26 @@ public sealed class BillingSuccessService : IBillingSuccessService
             }
 
             await _db.SaveChangesAsync(ct);
+
+            // SignalR Payment Events
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _hubContext.Clients.Group($"user:{userId}").SendAsync("payment.updated", new
+                    {
+                        paymentId = session.Id,
+                        orderCode = session.OrderCode,
+                        status = session.Status,
+                        provider = session.Provider,
+                        subscriptionId = (Guid?)null
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to push SignalR mentor booking payment event for user {UserId}", userId);
+                }
+            });
 
             var bookingEmailSent = false;
             try
@@ -276,7 +406,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
         if (user is null)
             return Error.NotFound("User.NotFound", "User not found.");
 
-        // ── Transaction: update session, create payment, invoice, activate subscription ──
+        // Update session
         session.Status      = CheckoutSessionStatus.Succeeded;
         session.CompletedAt = now;
         session.UpdatedAt   = now;
@@ -290,7 +420,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
             PlanKey             = session.PlanKey,
             CheckoutSessionId   = session.Id,
             Provider            = session.Provider,
-            MethodType          = methodType ?? "bank_transfer",
+            MethodType          = methodType,
             ExternalTransactionId = externalTxId,
             Amount              = session.Amount,
             CurrencyCode        = session.CurrencyCode,
@@ -362,11 +492,11 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 Id             = Guid.NewGuid(),
                 SubscriptionId = existingActiveSub.Id,
                 UserId         = userId,
-                ChangeType     = "mock_payment_upgrade",
+                ChangeType     = "payment_upgrade",
                 FromPlanId     = fromPlanId,
                 ToPlanId       = plan.Id,
                 EffectiveAt    = now,
-                Reason         = $"Mock payment via {session.Provider} (invoice {invoiceNumber})",
+                Reason         = $"Payment via {session.Provider} (invoice {invoiceNumber})",
                 CreatedAt      = now
             });
         }
@@ -393,11 +523,11 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 Id             = Guid.NewGuid(),
                 SubscriptionId = newSub.Id,
                 UserId         = userId,
-                ChangeType     = "mock_payment_activate",
+                ChangeType     = "payment_activate",
                 FromPlanId     = null,
                 ToPlanId       = plan.Id,
                 EffectiveAt    = now,
-                Reason         = $"Mock payment via {session.Provider} (invoice {invoiceNumber})",
+                Reason         = $"Payment via {session.Provider} (invoice {invoiceNumber})",
                 CreatedAt      = now
             });
         }
@@ -406,7 +536,38 @@ public sealed class BillingSuccessService : IBillingSuccessService
 
         await _db.SaveChangesAsync(ct);
 
-        // ── Fire-and-forget email (do not rollback on email failure) ──────────
+        // SignalR Payment Events
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Push payment.updated
+                await _hubContext.Clients.Group($"user:{userId}").SendAsync("payment.updated", new
+                {
+                    paymentId = session.Id,
+                    orderCode = session.OrderCode,
+                    status = session.Status,
+                    provider = session.Provider,
+                    subscriptionId = subscriptionId
+                });
+
+                // Push subscription.activated
+                await _hubContext.Clients.Group($"user:{userId}").SendAsync("subscription.activated", new
+                {
+                    paymentId = session.Id,
+                    orderCode = session.OrderCode,
+                    status = session.Status,
+                    provider = session.Provider,
+                    subscriptionId = subscriptionId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push SignalR payment success events for user {UserId}", userId);
+            }
+        });
+
+        // Fire-and-forget email
         var emailSent = false;
         try
         {
@@ -452,7 +613,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 userId, invoiceNumber);
         }
 
-        // ── Fire-and-forget in-app notification ──────────────────────────────
+        // Fire-and-forget in-app notification
         _ = Task.Run(async () =>
         {
             try

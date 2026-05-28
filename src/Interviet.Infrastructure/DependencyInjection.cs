@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PayOS;
 using Microsoft.AspNetCore.Http;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Application.Common.Options;
@@ -51,6 +52,14 @@ public static class DependencyInjection
         services.Configure<MentorNetworkOptions>(configuration.GetSection(MentorNetworkOptions.SectionName));
         services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
         services.Configure<SupportOptions>(configuration.GetSection(SupportOptions.SectionName));
+        services.Configure<PayosConfigOptions>(configuration.GetSection(PayosConfigOptions.SectionName));
+        services.Configure<PaymentRedirectOptions>(configuration.GetSection(PaymentRedirectOptions.SectionName));
+
+        services.AddSingleton(sp =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayosConfigOptions>>().Value;
+            return new PayOSClient(opts.ClientId ?? "", opts.ApiKey ?? "", opts.ChecksumKey ?? "");
+        });
 
 
         // ── Email service ─────────────────────────────────────────────────
