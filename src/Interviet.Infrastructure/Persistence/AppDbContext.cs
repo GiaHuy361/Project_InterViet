@@ -153,6 +153,16 @@ public sealed class AppDbContext : DbContext, IAppDbContext
                     }
                 }
 
+                // RowVersion: SQL Server auto-generates it; PostgreSQL does not.
+                // Make it nullable/ignored for Postgres to avoid NOT NULL constraint violations.
+                var rowVersionProp = entityType.FindProperty("RowVersion");
+                if (rowVersionProp != null && rowVersionProp.ClrType == typeof(byte[]))
+                {
+                    rowVersionProp.SetValueGenerated(Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never);
+                    rowVersionProp.SetIsConcurrencyToken(false);
+                    rowVersionProp.SetIsNullable(true);
+                }
+
                 foreach (var index in entityType.GetIndexes())
                 {
                     var filter = index.GetFilter();
