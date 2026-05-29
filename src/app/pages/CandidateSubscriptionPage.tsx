@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useApp } from '../contexts/AppContext';
@@ -22,6 +22,8 @@ import type { CurrentSubscription, PlanResponse } from '../../lib/api/dashboardT
 import { ApiError, createApiError } from '../../lib/api/apiError';
 import { formatLocalDateShort } from '../../utils/formatters';
 import { isDevBillingEnabled, DEV_PLAN_KEYS } from '../../config/devBilling';
+import billingService from '../../services/billingService';
+import { createCheckoutWithRetry } from '../../services/checkoutRetry';
 import {
   mergePlansForDisplay,
   getUpgradePlans,
@@ -58,6 +60,14 @@ export const CandidateSubscriptionPage: React.FC = () => {
   const [devLoading, setDevLoading] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null); // planKey đang được checkout
+
+  /**
+   * Ref-based guard chặn concurrent checkout requests.
+   * Ư u tiên dùng ref thay vì state vì React state update bất đồng bộ
+   * có thể không ngăn được double-click nếu 2 click xảy ra trong cùng 1 frame.
+   */
+  const checkoutInProgressRef = useRef(false);
 
   const displayPlans = useMemo(() => mergePlansForDisplay(apiPlans), [apiPlans]);
   const currentPlanKey = useMemo(
@@ -139,8 +149,14 @@ export const CandidateSubscriptionPage: React.FC = () => {
     }
   };
 
-  const handleSelectPlan = (targetKey: PlanKey) => {
+  const handleSelectPlan = async (targetKey: PlanKey) => {
     if (targetKey === currentPlanKey) return;
+
+    // ─── Guard tuyệt đối chống double-click / concurrent calls ───
+    if (checkoutInProgressRef.current) {
+      console.warn('[CandidateSubscriptionPage] Checkout đang xử lý, bỏ qua click thứ hai.');
+      return;
+    }
 
     if (isDevBillingEnabled) {
       setDevPlanKey(targetKey);
@@ -149,7 +165,56 @@ export const CandidateSubscriptionPage: React.FC = () => {
       return;
     }
 
-    navigate('/thanh-toan', { state: { selectedPlan: targetKey, contextType: 'subscription' } });
+    // ─── Luồng PayOS: Gọi checkout API trực tiếp, tự động retry nếu collision ───
+    checkoutInProgressRef.current = true;
+    setCheckoutLoading(targetKey);
+    try {
+      const returnUrl = new URL(`${window.location.origin}/payment/success`);
+      returnUrl.searchParams.set('contextType', 'subscription');
+      const cancelUrl = new URL(`${window.location.origin}/payment/cancel`);
+      cancelUrl.searchParams.set('contextType', 'subscription');
+      cancelUrl.searchParams.set('selectedPlan', targetKey);
+
+      // createCheckoutWithRetry tự động retry (tối đa 3 lần) khi gặp OrderCode collision
+      const response = await createCheckoutWithRetry({
+        planKey: targetKey,
+        provider: 'payos',
+        returnUrl: returnUrl.toString(),
+        cancelUrl: cancelUrl.toString(),
+      });
+
+      // Lưu paymentId để trang Success có thể lấy
+      const paymentId = response.paymentId || response.checkoutSessionId;
+      if (paymentId) {
+        try {
+          sessionStorage.setItem('billing_pending_payment_id', paymentId);
+          sessionStorage.setItem('billing_pending_context_type', 'subscription');
+        } catch { /* ignore */ }
+      }
+
+      // Kiểm tra URL: nếu là PayOS external link → redirect thật
+      const isExternalPayOS = response.checkoutUrl.startsWith('https://pay.payos') ||
+        response.checkoutUrl.startsWith('http://pay.payos') ||
+        !response.checkoutUrl.includes(window.location.host);
+
+      if (isExternalPayOS) {
+        window.location.href = response.checkoutUrl;
+        // Không reset ref/state vì trang sẽ navigate ra ngoài
+      } else {
+        // Fallback sang trang mock checkout nội bộ
+        const checkoutPath = new URL(response.checkoutUrl, window.location.origin);
+        navigate(`${checkoutPath.pathname}${checkoutPath.search}`, {
+          state: { checkoutSession: response },
+        });
+      }
+    } catch (err) {
+      const apiErr = err instanceof Error
+        ? err
+        : new Error('Không thể tạo phiên thanh toán');
+      toast.error((apiErr as { message?: string }).message || 'Không thể tạo phiên thanh toán. Vui lòng thử lại.');
+      checkoutInProgressRef.current = false;
+      setCheckoutLoading(null);
+    }
   };
 
   const cvUsed = user?.cvOptimizationsDaily ?? 0;
@@ -300,7 +365,8 @@ export const CandidateSubscriptionPage: React.FC = () => {
                 key={plan.planKey}
                 plan={plan}
                 currentPlanKey={currentPlanKey}
-                onSelect={() => handleSelectPlan(plan.planKey)}
+                isLoading={checkoutLoading === plan.planKey}
+                onSelect={() => void handleSelectPlan(plan.planKey)}
               />
             ))}
           </div>

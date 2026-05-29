@@ -8,7 +8,9 @@ export interface BillingProviderRecord {
 }
 
 export interface BillingCheckoutRequest {
-  planKey: string;
+  /** Có thể truyền planId HOẶC planKey. Backend ưu tiên planId nếu có cả hai. */
+  planId?: string;
+  planKey?: string;
   provider: string;
   returnUrl: string;
   cancelUrl: string;
@@ -16,9 +18,12 @@ export interface BillingCheckoutRequest {
 
 export interface BillingCheckoutSessionResponse {
   checkoutSessionId: string;
+  /** paymentId == checkoutSessionId trong hệ thống hiện tại (Phase 18) */
+  paymentId?: string;
   checkoutUrl: string;
-  status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | string;
-  expiresAt: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'expired' | string;
+  expiresAt?: string;
+  expiredAt?: string;
   provider: string;
   planKey: string;
   contextType: 'subscription' | 'mentor_booking' | string;
@@ -26,6 +31,24 @@ export interface BillingCheckoutSessionResponse {
   currencyCode: string;
   paymentInstructionsUrl: string;
   bookingId?: string | null;
+}
+
+/**
+ * Trạng thái giao dịch trả về từ GET /billing/payments/{id}
+ * Dùng cho Polling fallback trên trang Success/Cancel.
+ */
+export interface PaymentStatusResponse {
+  id: string;
+  provider: string;
+  planKey: string;
+  checkoutSessionId: string;
+  purpose: 'subscription_plan' | 'mentor_booking' | string;
+  description: string;
+  amount: number;
+  currencyCode: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'expired';
+  paidAt: string | null;
+  failedAt: string | null;
 }
 
 export interface BillingPaymentInstructionsResponse {
@@ -192,6 +215,15 @@ export async function getPayments(): Promise<unknown[]> {
   return apiClient.get<unknown[]>('/billing/payments');
 }
 
+/**
+ * Lấy trạng thái giao dịch theo paymentId (hoặc checkoutSessionId).
+ * Dùng làm Polling Fallback khi SignalR không khả dụng.
+ * Phase 18 – GET /api/v1/billing/payments/{id}
+ */
+export async function getPaymentById(paymentId: string): Promise<PaymentStatusResponse> {
+  return apiClient.get<PaymentStatusResponse>(`/billing/payments/${encodeURIComponent(paymentId)}`);
+}
+
 export default {
   getBillingProviders,
   createBillingCheckoutSession,
@@ -203,4 +235,5 @@ export default {
   simulateBillingCheckoutCancelled,
   getInvoices,
   getPayments,
+  getPaymentById,
 };
