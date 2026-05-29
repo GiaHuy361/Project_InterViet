@@ -80,7 +80,7 @@ public sealed class BillingOptions
     public bool MockPaymentsEnabled { get; set; } = true;
 
     /// <summary>Minutes before a checkout session expires.</summary>
-    public int MockCheckoutTtlMinutes { get; set; } = 30;
+    public int MockCheckoutTtlMinutes { get; set; } = 15;
 
     /// <summary>Frontend base URL used to build checkoutUrl links.</summary>
     public string FrontendBaseUrl { get; set; } = "http://localhost:3000";
