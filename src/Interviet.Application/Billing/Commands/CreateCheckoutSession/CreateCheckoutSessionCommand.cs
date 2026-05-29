@@ -144,7 +144,8 @@ public sealed class CreateCheckoutSessionCommandHandler
                         }
                     },
                     ReturnUrl = returnUrl,
-                    CancelUrl = cancelUrl
+                    CancelUrl = cancelUrl,
+                    ExpiredAt = (int)new DateTimeOffset(expiresAt).ToUnixTimeSeconds()
                 };
 
                 try
