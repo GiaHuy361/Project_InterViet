@@ -181,6 +181,16 @@ public sealed class CreateCheckoutSessionCommandHandler
             }
             catch (DbUpdateException ex)
             {
+                var innerMessage = ex.InnerException?.Message ?? string.Empty;
+                var isOrderCodeCollision = innerMessage.Contains("OrderCode", StringComparison.OrdinalIgnoreCase) || 
+                                           innerMessage.Contains("IX_BillingCheckoutSessions_OrderCode", StringComparison.OrdinalIgnoreCase);
+
+                if (!isOrderCodeCollision)
+                {
+                    _logger.LogError(ex, "Database update error during checkout session creation: {Message}", ex.Message);
+                    return Error.Failure("Billing.DatabaseError", $"Failed to save checkout session: {innerMessage}");
+                }
+
                 _logger.LogWarning(ex, "OrderCode unique constraint collision detected for code {OrderCode}. Retrying (Attempt {Attempt}/{MaxRetries})...", orderCode, retry, maxRetries);
                 
                 if (retry == maxRetries)
