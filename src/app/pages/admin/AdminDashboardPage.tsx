@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   Clock,
   BarChart3,
-  LayoutDashboard
+  LayoutDashboard,
+  ChevronRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../../components/ui/button';
@@ -26,6 +27,17 @@ import { useApp } from '../../contexts/AppContext';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import adminService, { AdminDashboardSummaryResponse } from '../../../services/adminManagementService';
+import adminSystemService, { AdminAuditLogRecord } from '../../../services/adminSystemService';
+
+const actionLabelMap: Record<string, string> = {
+  'support.ticket_created': 'Tạo ticket',
+  'support.ticket_replied': 'Trả lời ticket',
+  'support.ticket_status_updated': 'Cập nhật trạng thái ticket',
+  'support.ticket_assigned': 'Gán ticket',
+  'admin.user_status_updated': 'Cập nhật trạng thái người dùng',
+  'admin.notification_broadcast': 'Phát thông báo',
+  'admin.dev_promote': 'Thăng quyền (dev tool)',
+};
 
 const quickLinks = [
   { label: 'Quản lý người dùng', path: '/admin/users', icon: Users, description: 'Xem, tìm kiếm và quản lý tài khoản' },
@@ -324,23 +336,88 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Placeholder: Recent Activity */}
+      {/* Recent Activity Widget */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">Hoạt động gần đây</h2>
-        <div className="rounded-2xl border border-gray-100 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 dark:bg-slate-950">
-            <Clock className="h-6 w-6 text-gray-400" />
-          </div>
-          <p className="font-medium text-gray-600 dark:text-slate-400">Chưa có widget audit logs</p>
-          <p className="mt-1 text-sm text-gray-400">
-            Sẽ hiển thị các hoạt động hệ thống quan trọng như đăng nhập, thay đổi cấu hình, v.v.  Đang trong quá trình phát triển.
-          </p>
-          <div className="mt-4">
-            <Button variant="outline" disabled>
-              Xem tất cả hoạt động
-            </Button>
-          </div>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">Hoạt động gần đây (Audit Logs)</h2>
+        <Card className="overflow-hidden">
+          <AuditLogsWidget />
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const AuditLogsWidget: React.FC = () => {
+  const [logs, setLogs] = useState<AdminAuditLogRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchLogs = async () => {
+      try {
+        const resp = await adminSystemService.listAdminAuditLogs({ page: 1, pageSize: 5 });
+        if (mounted) setLogs(resp.items || []);
+      } catch (e) {
+        console.error('Failed to load recent logs', e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchLogs();
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-sm text-gray-500 dark:text-slate-400 flex flex-col items-center">
+        <div className="animate-spin mb-3 h-8 w-8 rounded-full border-b-2 border-violet-600"></div>
+        Đang tải dữ liệu...
+      </div>
+    );
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 dark:bg-slate-950">
+          <Clock className="h-6 w-6 text-gray-400" />
         </div>
+        <p className="font-medium text-gray-600 dark:text-slate-400">Không có hoạt động nào</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+        {logs.map(log => {
+          const actionLabel = actionLabelMap[log.action] || log.action;
+          return (
+            <div key={log.id} className="flex items-start gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                <Activity className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{log.actorEmail}</p>
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{log.actorRole}</Badge>
+                </div>
+                <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
+                  Thực hiện: <span className="font-medium text-gray-800 dark:text-slate-200">{actionLabel}</span>
+                  {log.resource && ` trên đối tượng `}
+                  {log.resource && <span className="font-medium text-gray-800 dark:text-slate-200">{log.resource}</span>}
+                </p>
+                <p className="mt-1 text-xs text-gray-400">{new Date(log.createdAt).toLocaleString('vi-VN')}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="border-t border-gray-100 dark:border-slate-800 p-3 bg-gray-50 dark:bg-slate-950/50 text-center">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/audit-logs')} className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/30">
+          Xem toàn bộ Audit Logs <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ArrowLeft, CreditCard, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
 import { isDevBillingEnabled } from '../../config/devBilling';
 import billingService, { type BillingProviderRecord } from '../../services/billingService';
+import { createCheckoutWithRetry } from '../../services/checkoutRetry';
 import { useApp } from '../contexts/AppContext';
 import * as subscriptionService from '../../services/subscriptionService';
 import { createApiError } from '../../lib/api/apiError';
@@ -28,6 +29,12 @@ export const BillingPage: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState('vnpay');
   const [creatingSession, setCreatingSession] = useState(false);
   const [devLoading, setDevLoading] = useState(false);
+
+  /**
+   * Ref-based guard chặn double-click / concurrent requests.
+   * Ư u tiên ref vì state update bất đồng bộ có thể không kịp chặn click thứ hai.
+   */
+  const checkoutInProgressRef = useRef(false);
 
   const selectedPlan = locationState?.selectedPlan ?? 'monthly';
   const contextType = locationState?.contextType ?? 'subscription';
@@ -66,6 +73,12 @@ export const BillingPage: React.FC = () => {
   }, []);
 
   const startCheckout = async () => {
+    // Guard tuyệt đối chống double-click
+    if (checkoutInProgressRef.current) {
+      console.warn('[BillingPage] Checkout đang xử lý, bỏ qua.');
+      return;
+    }
+    checkoutInProgressRef.current = true;
     setCreatingSession(true);
     try {
       const successUrl = new URL(`${window.location.origin}/payment/success`);
@@ -83,13 +96,36 @@ export const BillingPage: React.FC = () => {
         cancelUrl.searchParams.set('bookingId', locationState.bookingId);
       }
 
-      const response = await billingService.createBillingCheckoutSession({
+      // createCheckoutWithRetry tự động retry (tối đa 3 lần) khi gặp OrderCode collision
+      const response = await createCheckoutWithRetry({
         planKey: selectedPlan,
         provider: selectedProvider,
         returnUrl: successUrl.toString(),
         cancelUrl: cancelUrl.toString(),
       });
 
+      const isPayOS = selectedProvider.toLowerCase() === 'payos';
+      const isExternalUrl = response.checkoutUrl.startsWith('https://pay.payos') ||
+        response.checkoutUrl.startsWith('http://pay.payos') ||
+        (isPayOS && !response.checkoutUrl.includes(window.location.host));
+
+      if (isExternalUrl) {
+        // ─── PayOS: Lưu paymentId vào sessionStorage rồi redirect sang cổng PayOS ───
+        const paymentId = response.paymentId || response.checkoutSessionId;
+        if (paymentId) {
+          try {
+            sessionStorage.setItem('billing_pending_payment_id', paymentId);
+            sessionStorage.setItem('billing_pending_context_type', contextType);
+          } catch {
+            // ignore storage failures
+          }
+        }
+        window.location.href = response.checkoutUrl;
+        // Không reset ref vì trang sẽ navigate ra ngoài
+        return;
+      }
+
+      // ─── Mock / luồng cũ: navigate sang trang checkout mock nội bộ ───
       const checkoutPath = new URL(response.checkoutUrl, window.location.origin);
       navigate(`${checkoutPath.pathname}${checkoutPath.search}${checkoutPath.hash}`, {
         replace: true,
@@ -97,6 +133,7 @@ export const BillingPage: React.FC = () => {
       });
     } catch (error) {
       toast.error(createApiError(error).getUserMessage());
+      checkoutInProgressRef.current = false;
     } finally {
       setCreatingSession(false);
     }
@@ -115,6 +152,8 @@ export const BillingPage: React.FC = () => {
     }
   };
 
+  const isPayOSProvider = selectedProvider.toLowerCase() === 'payos';
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
       <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate(-1)}>
@@ -126,8 +165,10 @@ export const BillingPage: React.FC = () => {
         title="Thanh toán trực tuyến"
         subtitle={
           contextType === 'mentor_booking'
-            ? 'Tạo phiên checkout dùng chung cho lịch hẹn mentor.'
-            : 'Tạo phiên checkout cho gói dịch vụ và mở trang thanh toán mock dùng chung.'
+            ? 'Chọn cổng thanh toán cho lịch hẹn mentor.'
+            : isPayOSProvider
+              ? 'Bạn sẽ được chuyển sang trang PayOS để hoàn tất thanh toán an toàn.'
+              : 'Tạo phiên checkout và mở trang thanh toán.'
         }
         icon={CreditCard}
         iconGradient="from-amber-500 to-orange-600"
@@ -177,9 +218,14 @@ export const BillingPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button className="btn-glow" onClick={() => void startCheckout()} disabled={creatingSession || loadingProviders}>
+          <Button
+            id="checkout-submit-btn"
+            className="btn-glow"
+            onClick={() => void startCheckout()}
+            disabled={creatingSession || loadingProviders}
+          >
             {creatingSession && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Tạo Checkout Session
+            {isPayOSProvider ? 'Thanh toán qua PayOS' : 'Tạo Checkout Session'}
           </Button>
           <Button variant="outline" onClick={() => navigate('/goi-dich-vu')}>
             Xem Gói dịch vụ
@@ -205,9 +251,11 @@ export const BillingPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <p className="font-semibold text-slate-900">Flow chính thức</p>
+            <p className="font-semibold text-slate-900">Thanh toán bảo mật qua {isPayOSProvider ? 'PayOS' : 'cổng thanh toán'}</p>
             <p className="text-sm text-slate-500">
-              POST /api/v1/billing/checkout trả về checkoutUrl và paymentInstructionsUrl, sau đó frontend mở trang mock checkout chung.
+              {isPayOSProvider
+                ? 'Toàn bộ thông tin thanh toán được xử lý bảo mật bởi PayOS. Frontend không lưu trữ thông tin tài khoản ngân hàng.'
+                : 'POST /api/v1/billing/checkout trả về checkoutUrl, sau đó frontend mở trang mock checkout chung.'}
             </p>
           </div>
         </div>

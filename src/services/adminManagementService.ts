@@ -31,6 +31,7 @@ export interface AdminUserSummary {
   emailVerified: boolean;
   createdAt: string;
   lastLoginAt?: string | null;
+  avatarUrl?: string;
 }
 
 export interface AdminUserDetailResponse {

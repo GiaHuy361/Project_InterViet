@@ -23,6 +23,7 @@ export { BillingPage } from './BillingPage';
 export { CheckoutMockPage } from './CheckoutMockPage';
 export { PaymentSuccessPage } from './PaymentSuccessPage';
 export { PaymentCancelPage } from './PaymentCancelPage';
+export { BecomeMentorPage } from './BecomeMentorPage';
 export { MentorDirectoryPage } from './MentorDirectoryPage';
 export { MentorDetailPage } from './MentorDetailPage';
 export { MentorBookingsPage } from './MentorBookingsPage';
