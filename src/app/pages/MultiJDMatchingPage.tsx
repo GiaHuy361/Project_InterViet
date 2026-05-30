@@ -5,9 +5,9 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
-import { AlertCircle, CheckCircle2, FileText, Link2, Sparkles, Target, Upload, History } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, CheckCircle2, FileText, Link2, Upload, History, Plus, X, Loader2, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '../components/ui/badge';
 import { ApiError } from '../../lib/api/apiError';
 import { useApp } from '../contexts/AppContext';
 import {
@@ -100,6 +100,7 @@ export const MultiJDMatchingPage: React.FC = () => {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [sessionDetail, setSessionDetail] = useState<MatchSessionDetail | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [lastNotifiedStatus, setLastNotifiedStatus] = useState<string | null>(null);
   const [isRestored, setIsRestored] = useState(false);
@@ -164,11 +165,8 @@ export const MultiJDMatchingPage: React.FC = () => {
       notifyFinalStatus(status);
     },
     onFailure: (error) => {
-      setCurrentSessionId(null);
-      clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
-
       const message = error instanceof Error ? error.message : 'Có lỗi khi polling kết quả.';
-      toast.error(message);
+      setMatchError(message);
     },
   });
 
@@ -217,6 +215,7 @@ export const MultiJDMatchingPage: React.FC = () => {
   const clearMatchState = () => {
     stopPolling();
     setSessionDetail(null);
+    setMatchError(null);
     setLastNotifiedStatus(null);
     setCurrentSessionId(null);
     clearPollingSessionSnapshot(MULTI_JD_MATCH_POLLING_STORAGE_KEY);
@@ -707,20 +706,19 @@ export const MultiJDMatchingPage: React.FC = () => {
         </Button>
       </Card>
 
-      {(isPolling || (sessionDetail && !isFinalMatchStatus(sessionDetail.status))) && (
-        <Card className="p-4 flex items-center gap-2">
-          <Sparkles size={16} className="text-blue-600 dark:text-blue-400" />
-          <span className="text-sm">Đang phân tích mức độ phù hợp...</span>
-          <Badge variant="outline">{sessionDetail?.status ?? 'Processing'}</Badge>
+      {(isPolling || (sessionDetail && !isFinalMatchStatus(sessionDetail.status) && !matchError)) && (
+        <Card className="p-4 flex items-center gap-3">
+          <Loader2 size={18} className="text-blue-600 dark:text-blue-400 animate-spin" />
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-400">Đang phân tích mức độ phù hợp...</span>
         </Card>
       )}
 
-      {getNormalizedStatus(sessionDetail?.status) === 'failed' && sessionDetail && (
+      {(getNormalizedStatus(sessionDetail?.status) === 'failed' || matchError) && sessionDetail && (
         <Card className="p-4 flex items-start gap-2 border-red-300">
           <AlertCircle size={16} className="text-red-500 mt-0.5" />
           <div>
-            <p className="font-medium text-red-700 dark:text-red-400">Phiên so khớp thất bại</p>
-            <p className="text-sm text-red-600 dark:text-red-400">{sessionDetail.errorMessage ?? 'Vui lòng thử lại.'}</p>
+            <p className="font-medium text-red-700 dark:text-red-400">Phiên so khớp thất bại hoặc có lỗi</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{matchError || sessionDetail.errorMessage || 'Vui lòng thử lại.'}</p>
           </div>
         </Card>
       )}

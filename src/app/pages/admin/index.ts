@@ -9,3 +9,4 @@ export { AdminJsonSamplesPage } from './AdminJsonSamplesPage';
 export { AdminCMSPage } from './AdminCMSPage';
 export { AdminMentorBookingsPage } from './AdminMentorBookingsPage';
 export { AdminSpecialtiesPage } from './AdminSpecialtiesPage';
+export { AdminMentorsPage } from './AdminMentorsPage';

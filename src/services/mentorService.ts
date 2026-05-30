@@ -154,8 +154,31 @@ export function simulateCompleteMentorBooking(bookingId: string): Promise<Mentor
   return apiClient.post<MentorBookingActionResponse>(`/mentor-bookings/${encodeURIComponent(bookingId)}/simulate-complete`, {});
 }
 
-export function submitMentorReview(bookingId: string, payload: MentorBookingReview): Promise<MentorBookingActionResponse> {
+export function submitMentorBookingReview(
+  bookingId: string,
+  payload: MentorBookingReview
+): Promise<MentorBookingActionResponse> {
   return apiClient.post<MentorBookingActionResponse>(`/mentor-bookings/${encodeURIComponent(bookingId)}/review`, payload);
+}
+
+export interface RegisterMentorPayload {
+  fullName: string;
+  headline: string;
+  bio: string;
+  yearsOfExperience: number;
+  expertise: string[];
+  industries: string[];
+  languages: string[];
+  specialtyIds: string[];
+}
+
+export interface RegisterMentorResponse {
+  message: string;
+  mentorProfileId: string;
+}
+
+export function registerMentor(payload: RegisterMentorPayload): Promise<RegisterMentorResponse> {
+  return apiClient.post<RegisterMentorResponse>('/mentors/register', payload);
 }
 
 export default {
@@ -165,5 +188,6 @@ export default {
   listMentorBookings,
   cancelMentorBooking,
   simulateCompleteMentorBooking,
-  submitMentorReview,
+  submitMentorBookingReview,
+  registerMentor,
 };

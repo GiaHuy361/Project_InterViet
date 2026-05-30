@@ -24,7 +24,8 @@ import {
   ChevronUp,
   UserCircle,
   Mail,
-  CalendarDays
+  CalendarDays,
+  UserCheck
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from './ui/utils';
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { label: 'CV Matching', icon: FileText, path: '/cv-matching' },
   { label: 'So khớp đa JD', icon: Target, path: '/multi-jd-matching', badge: 'MỚI' },
   { label: 'Kết nối', icon: Users, path: '/network', badge: 'MỚI' },
+  { label: 'Trở thành Mentor', icon: UserCircle, path: '/tro-thanh-mentor' },
   { label: 'Phỏng vấn', icon: Mic, path: '/phong-van-setup' },
   { label: 'Báo cáo', icon: BarChart3, path: '/bao-cao' },
   { label: 'Trợ giúp', icon: HelpCircle, path: '/tro-giup' },
@@ -62,6 +64,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Quản lý nội dung (CMS)', icon: FileText, path: '/admin/cms' },
   { label: 'Lịch Mentor', icon: Briefcase, path: '/admin/mentor-bookings' },
   { label: 'Quản lý người dùng', icon: Users, path: '/admin/users' },
+  { label: 'Kiểm duyệt Mentor', icon: UserCheck, path: '/admin/mentors' },
   { label: 'Quản lý chuyên môn', icon: Shield, path: '/admin/specialties' },
   { label: 'Billing & Hóa đơn', icon: CreditCard, path: '/admin/billing' },
   { label: 'Audit Logs', icon: Activity, path: '/admin/audit-logs' },

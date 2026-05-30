@@ -135,9 +135,9 @@ export const AdminAuditLogsPage: React.FC = () => {
             <Button variant="default" onClick={() => { setPage(1); void load(); }} className="w-full">Tìm</Button>
           </div>
         </div>
-        <div className="mt-3">
+        {/* <div className="mt-3">
           <Input placeholder="Resource ID" value={resourceId} onChange={(e) => setResourceId(e.target.value)} />
-        </div>
+        </div> */}
       </Card>
 
       <Card className="p-0">
@@ -175,7 +175,7 @@ export const AdminAuditLogsPage: React.FC = () => {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span>
-                            {`${l.resource} ${l.resourceId ? `(${l.resourceId.slice(0, 6)}...${l.resourceId.slice(-6)})` : ''}`}
+                            {`${l.resource}`}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
