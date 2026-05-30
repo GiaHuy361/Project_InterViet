@@ -7,52 +7,105 @@ services:
     dockerfilePath: Dockerfile
     healthCheckPath: /api/v1/health
     envVars:
+      # ── Core Environment ───────────────────────────────────────────────
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      
+      # ── Database Configuration ─────────────────────────────────────────
       - key: Database__Provider
         value: Postgres
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: interviet-db
           property: connectionString
-      - key: JwtSettings__Secret
-        generateValue: true
-      - key: JwtSettings__Issuer
-        value: IntervietApi
-      - key: JwtSettings__Audience
-        value: IntervietClient
-      - key: JwtSettings__ExpiryMinutes
-        value: 120
-      - key: Google__ClientId
+      
+      # ── JWT Configuration ──────────────────────────────────────────────
+      - key: Jwt__Issuer
+        value: https://interviet-backend-api.onrender.com
+      - key: Jwt__Audience
+        value: https://interviet-frontend.vercel.app
+      - key: Jwt__AccessTokenMinutes
+        value: "120"
+      - key: Jwt__SigningKey
+        value: 0VqA4/NFiyX2c82skRmnsWbSIm3v/QwAhCoA3at5Dn4=
+      
+      # ── Storage Configuration ──────────────────────────────────────────
+      - key: Storage__PublicBaseUrl
+        value: https://interviet-backend-api.onrender.com/uploads
+      
+      # ── Email Service Configuration (Resend) ───────────────────────────
+      - key: Email__Provider
+        value: Resend
+      - key: Email__Password
         sync: false
-      - key: Google__ClientSecret
-        sync: false
-      - key: Google__RedirectUri
-        value: https://interviet-backend-api.onrender.com/api/v1/auth/google/callback
+      - key: Email__FromAddress
+        value: onboarding@resend.dev
+      - key: Email__FromName
+        value: INTER-VIET
+      - key: Email__Host
+        value: smtp.gmail.com
+      - key: Email__Port
+        value: "587"
+      - key: Email__Username
+        value: top1latao@gmail.com
+      
+      # ── Frontend & CORS URLs ───────────────────────────────────────────
       - key: Frontend__BaseUrl
         value: https://interviet-frontend.vercel.app
-      - key: PayOS__ClientId
+      - key: Cors__AllowedOrigins__0
+        value: https://interviet-frontend.vercel.app
+      - key: Cors__AllowedOrigins__1
+        value: http://localhost:3000
+      
+      # ── Google OAuth Configuration ─────────────────────────────────────
+      - key: GoogleAuth__ClientId
+        value: 1087662079341-3oiqkgff033bovs35jj793l37qkikjtt.apps.googleusercontent.com
+      - key: GoogleAuth__ClientSecret
         sync: false
+      
+      # ── Billing & PayOS Configuration ──────────────────────────────────
+      - key: Billing__FrontendBaseUrl
+        value: https://interviet-frontend.vercel.app
+      - key: Billing__MockPaymentsEnabled
+        value: "false"
+      - key: PaymentRedirect__ReturnUrl
+        value: https://interviet-frontend.vercel.app/subscription/success
+      - key: PaymentRedirect__CancelUrl
+        value: https://interviet-frontend.vercel.app/subscription/cancel
+      - key: PayOS__Enabled
+        value: "true"
+      - key: PayOS__ClientId
+        value: d623311b-6548-40a1-a527-008a37b73bf1
       - key: PayOS__ApiKey
         sync: false
       - key: PayOS__ChecksumKey
         sync: false
       - key: PayOS__WebhookUrl
         value: https://interviet-backend-api.onrender.com/api/v1/billing/payos/webhook
-      - key: PayOS__Enabled
+      
+      # ── AI Services Configuration ──────────────────────────────────────
+      - key: AiServices__CvServiceEnabled
         value: "true"
-      - key: PaymentRedirect__ReturnUrl
-        value: https://interviet-frontend.vercel.app/subscription/success
-      - key: PaymentRedirect__CancelUrl
-        value: https://interviet-frontend.vercel.app/subscription/cancel
-      - key: Billing__MockPaymentsEnabled
-        value: "false"
+      - key: AiServices__MatchingEnabled
+        value: "true"
+      - key: AiServices__InterviewEnabled
+        value: "true"
+      - key: AiServices__InterviewRealtimeEnabled
+        value: "true"
       - key: AiServices__CvServiceBaseUrl
-        value: https://interviet-ai.onrender.com
+        value: https://interviet-cv-service.onrender.com
       - key: AiServices__InterviewBaseUrl
-        value: https://interviet-ai-interview.onrender.com
+        value: https://interviet-ai-service.onrender.com
+      - key: AiServices__InterviewRealtimeBaseUrl
+        value: https://interviet-ai-service.onrender.com
+      - key: AiServices__ApiKey
+        sync: false
+      
+      # ── Admin & System Defaults ────────────────────────────────────────
       - key: Admin__SeedAdminEmail
         value: admin@interviet.vn
+      - key: MentorNetwork__MockMeetingBaseUrl
+        value: http://localhost:3000/mentor-bookings
 
 databases:
   - name: interviet-db
