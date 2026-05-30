@@ -5,13 +5,13 @@ import { notificationService } from '../services/notificationService';
 export function useRealtimeNotifications(accessToken: string | null | undefined) {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(false);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackIntervalRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await notificationService.getUnreadCount();
-      if (response && response.data) {
-        setUnreadCount(response.data.unreadCount);
+      if (response && response.unreadCount !== undefined) {
+        setUnreadCount(response.unreadCount);
       }
     } catch (error) {
       console.error('Lỗi khi fetch số lượng thông báo chưa đọc (Fallback Polling):', error);

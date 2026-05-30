@@ -411,7 +411,7 @@ export const AdminMentorsPage: React.FC = () => {
                   <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Đánh giá (Rating)</p>
                   <div className="mt-1 flex items-center gap-1 text-lg font-semibold text-gray-900 dark:text-slate-100">
                     <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                    {selectedMentor?.ratingAverage > 0 ? selectedMentor.ratingAverage.toFixed(1) : 'N/A'}
+                    {(selectedMentor?.ratingAverage ?? 0) > 0 ? selectedMentor!.ratingAverage!.toFixed(1) : 'N/A'}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-slate-400">
                     {selectedMentor?.ratingCount || 0} lượt đánh giá
@@ -442,9 +442,9 @@ export const AdminMentorsPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-gray-700 dark:text-slate-300">Chuyên môn (Specialties):</span>
                       </div>
-                      {(mentorDetail?.profileSummary?.specialties?.length || 0) > 0 || (selectedMentor.specialties?.length || 0) > 0 ? (
+                      {(mentorDetail?.profileSummary?.specialties?.length || 0) > 0 || (selectedMentor?.specialties?.length || 0) > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {(mentorDetail?.profileSummary?.specialties || selectedMentor.specialties || []).map(spec => (
+                          {(mentorDetail?.profileSummary?.specialties || selectedMentor?.specialties || []).map(spec => (
                             <Badge key={spec.id} variant="secondary" className="bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-300">
                               {spec.name}
                             </Badge>
@@ -481,26 +481,26 @@ export const AdminMentorsPage: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Trạng thái phê duyệt (Verify)</p>
                       <Button
-                        variant={selectedMentor.isVerified ? "outline" : "default"}
+                        variant={selectedMentor?.isVerified ? "outline" : "default"}
                         size="sm"
                         onClick={() => {
-                          handleVerify(selectedMentor.id, !selectedMentor.isVerified);
+                          if (selectedMentor) handleVerify(selectedMentor.id, !selectedMentor.isVerified);
                         }}
-                        className={!selectedMentor.isVerified ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"}
+                        className={!selectedMentor?.isVerified ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"}
                       >
-                        {selectedMentor.isVerified ? 'Hủy phê duyệt' : 'Phê duyệt Mentor'}
+                        {selectedMentor?.isVerified ? 'Hủy phê duyệt' : 'Phê duyệt Mentor'}
                       </Button>
                     </div>
 
                     <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
                       <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2 mt-2">Trạng thái hoạt động (Active)</p>
                       <div className="flex gap-2">
-                        {selectedMentor.status === 'inactive' ?
+                        {selectedMentor?.status === 'inactive' ?
                           <Button
                             variant="default"
                             size="sm"
                             onClick={() => {
-                              handleStatusChange(selectedMentor.id, 'active');
+                              if (selectedMentor) handleStatusChange(selectedMentor.id, 'active');
                             }}
                           >
                             Mở khóa (Active)
@@ -510,7 +510,7 @@ export const AdminMentorsPage: React.FC = () => {
                             variant="destructive"
                             size="sm"
                             onClick={() => {
-                              handleStatusChange(selectedMentor.id, 'inactive');
+                              if (selectedMentor) handleStatusChange(selectedMentor.id, 'inactive');
                             }}
                           >
                             Tạm khóa (Inactive)

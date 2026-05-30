@@ -283,7 +283,7 @@ export const CheckoutMockPage: React.FC = () => {
             ? `Thanh toán cho ${primaryTitle.toLowerCase()} • ${providerLabel(session.provider)}`
             : 'Đang tải thông tin thanh toán...'
         }
-        icon={CreditCardIcon}
+        icon={Shield}
         iconGradient="from-cyan-500 to-blue-600"
         actions={
           <div className="flex flex-wrap gap-2">
@@ -535,7 +535,6 @@ export const CheckoutMockPage: React.FC = () => {
   );
 };
 
-const CreditCardIcon: React.FC<{ className?: string }> = ({ className }) => <Shield className={className} />;
 
 const InfoTile: React.FC<{ label: string; value: React.ReactNode; compact?: boolean }> = ({ label, value, compact }) => (
   <div className={`rounded-2xl border border-gray-100 bg-gray-50 ${compact ? 'p-3' : 'p-4'}`}>

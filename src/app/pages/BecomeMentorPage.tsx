@@ -15,7 +15,7 @@ export const BecomeMentorPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   // Form State
-  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [fullName, setFullName] = useState(user?.name || '');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState(0);
