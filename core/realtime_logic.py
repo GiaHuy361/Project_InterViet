@@ -35,13 +35,13 @@ REALTIME_TIER_MAPPING = {
 TEXT_TO_REALTIME_MAPPING = {
     # --- Dòng OpenAI nhỏ / rẻ ---
     "gpt-4o-mini": "gemini-2.5-flash-native-audio-preview-12-2025",
-    "gpt-3.5-turbo": "gpt-4o-mini-realtime-preview",
+    "gpt-3.5-turbo": "gpt-4o-mini-realtime-preview-2024-12-17",
     "gpt-4.1-mini": "gemini-2.5-flash-native-audio-preview-12-2025",
     "gpt-5-mini": "gemini-2.5-flash-native-audio-preview-12-2025",
-    "gpt-5.4-mini": "gpt-4o-mini-realtime-preview",
-    "o1-mini": "gpt-4o-mini-realtime-preview",
-    "o3-mini": "gpt-4o-mini-realtime-preview",
-    "o4-mini": "gpt-4o-mini-realtime-preview",
+    "gpt-5.4-mini": "gpt-4o-mini-realtime-preview-2024-12-17",
+    "o1-mini": "gpt-4o-mini-realtime-preview-2024-12-17",
+    "o3-mini": "gpt-4o-mini-realtime-preview-2024-12-17",
+    "o4-mini": "gpt-4o-mini-realtime-preview-2024-12-17",
     
     # --- Dòng OpenAI lớn / đắt ---
     "gpt-5": "gpt-realtime-mini",
@@ -132,29 +132,58 @@ async def create_openai_rt_session(model: str, instructions: str, voice: str, ap
     Theo GA API, ta không lấy Ephemeral Token qua JSON nữa.
     Chỉ lưu state nội bộ và cấp token để Frontend dùng làm chứng chỉ gửi SDP Offer.
     """
-    internal_proxy_token = str(uuid.uuid4())
+    # internal_proxy_token = str(uuid.uuid4())
     
-    # Ép chuẩn model về GA
-    openai_ga_model = "gpt-4o-mini-realtime-preview-2024-12-17" if "mini" in model.lower() else "gpt-4o-realtime-preview-2024-12-17"
+    # # Ép chuẩn model về GA
+    # #openai_ga_model = "gpt-4o-mini-realtime-preview-2024-12-17" if "mini" in model.lower() else "gpt-4o-realtime-preview-2024-12-17"
     
-    # Lưu vào bộ nhớ RAM chờ Frontend gửi SDP lên
-    from core.realtime_state import ACTIVE_PROXY_SESSIONS # Đảm bảo đã import
-    ACTIVE_PROXY_SESSIONS[internal_proxy_token] = {
-        "provider": "openai",
-        "model": openai_ga_model,
-        "instructions": instructions,
-        "voice": voice if voice != "default" else "alloy",
-        "api_key": api_key
+    # # Lưu vào bộ nhớ RAM chờ Frontend gửi SDP lên
+    # from core.realtime_state import ACTIVE_PROXY_SESSIONS # Đảm bảo đã import
+    # ACTIVE_PROXY_SESSIONS[internal_proxy_token] = {
+    #     "provider": "openai",
+    #     "model": model,
+    #     "instructions": instructions,
+    #     "voice": voice if voice != "default" else "alloy",
+    #     "api_key": api_key
+    # }
+    
+    # # Kích hoạt bộ đếm tự hủy sau 10 phút
+    # import asyncio
+    # asyncio.create_task(expire_proxy_token(internal_proxy_token, 600))
+    
+    # return {
+    #     "client_secret": {"value": internal_proxy_token},
+    #     "id": f"openai-webrtc-{uuid.uuid4().hex[:8]}"
+    # }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+        
+    # Payload siêu gọn gàng: Có sẵn Instructions ở đây luôn!
+    data = {
+        "session": {
+            "type": "realtime",
+            "model": model, 
+            "instructions": instructions,
+        }
     }
     
-    # Kích hoạt bộ đếm tự hủy sau 10 phút
-    import asyncio
-    asyncio.create_task(expire_proxy_token(internal_proxy_token, 600))
-    
-    return {
-        "client_secret": {"value": internal_proxy_token},
-        "id": f"openai-webrtc-{uuid.uuid4().hex[:8]}"
-    }
+    async with httpx.AsyncClient() as client:
+        # GỌI ĐÚNG ENDPOINT CHÍNH THỨC CỦA GA
+        response = await client.post(
+            "https://api.openai.com/v1/realtime/client_secrets",
+            headers=headers,
+            json=data,
+            timeout=10.0
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"OpenAI Client Secret Error: {response.text}")
+            raise Exception("SERVICE_UNAVAILABLE|Lỗi từ OpenAI Realtime API.")
+            
+        return response.json()
 
 async def create_gemini_proxy_session(
     model: str,

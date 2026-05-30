@@ -133,13 +133,16 @@ async def openai_webrtc_sdp(request: Request):
         
     api_key = session_data["api_key"]
     model = session_data["model"]
+    instructions = session_data.get("instructions", "")
+    voice = session_data.get("voice", "alloy")
     
     sdp_offer_bytes = await request.body()
     sdp_offer = sdp_offer_bytes.decode("utf-8")
     
     del ACTIVE_PROXY_SESSIONS[proxy_token]
     
-    openai_url = f"https://api.openai.com/v1/realtime?model={model}"
+    # 2. Gọi sang OpenAI bằng endpoint GA chuẩn (yêu cầu application/sdp)
+    openai_url = f"https://api.openai.com/v1/realtime"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/sdp" 
