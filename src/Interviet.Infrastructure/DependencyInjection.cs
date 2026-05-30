@@ -97,16 +97,26 @@ public static class DependencyInjection
 
 
         // ── Email service ─────────────────────────────────────────────────
+        services.AddHttpClient();
         services.AddTransient<IEmailService>(sp =>
         {
             var opts   = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<EmailOptions>>().Value;
             var isSmtp = opts.Provider.Equals("Smtp", StringComparison.OrdinalIgnoreCase);
+            var isResend = opts.Provider.Equals("Resend", StringComparison.OrdinalIgnoreCase);
 
             if (isSmtp)
             {
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SmtpEmailService>>();
                 return new SmtpEmailService(
                     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<EmailOptions>>(), logger);
+            }
+
+            if (isResend)
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ResendEmailService>>();
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                return new ResendEmailService(
+                    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<EmailOptions>>(), httpClientFactory, logger);
             }
 
             var stubLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LogOnlyEmailService>>();
