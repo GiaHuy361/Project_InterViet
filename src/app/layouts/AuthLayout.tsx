@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Outlet } from 'react-router';
 import { motion } from 'motion/react';
 import { MeshBackground } from '../components/design-system/MeshBackground';
@@ -7,6 +7,7 @@ import { PageTransition } from '../components/design-system/PageTransition';
 import { FadeInImmediate } from '../components/design-system/motion';
 import { FileText, Mic, Sparkles, Shield } from 'lucide-react';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import { getPublicStats } from '../../services/publicContentService';
 
 const highlights = [
   { icon: FileText, text: 'Tối ưu CV theo chuẩn ATS' },
@@ -15,6 +16,28 @@ const highlights = [
 ];
 
 export const AuthLayout: React.FC = () => {
+  const [stats, setStats] = useState([
+    { value: '10K+', label: 'Người dùng' },
+    { value: '50K+', label: 'CV tối ưu' },
+    { value: '4.9★', label: 'Đánh giá' },
+  ]);
+
+  useEffect(() => {
+    getPublicStats()
+      .then((data) => {
+        const formatK = (num: number) => {
+          if (num >= 1000) return `${(num / 1000).toFixed(1).replace('.0', '')}K+`;
+          return `${num}+`;
+        };
+        setStats([
+          { value: formatK(data.totalCandidates), label: 'Người dùng' },
+          { value: formatK(data.totalCVsProcessed), label: 'CV tối ưu' },
+          { value: `${data.averageRating.toFixed(1)}★`, label: 'Đánh giá' },
+        ]);
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <section className="relative min-h-screen overflow-hidden font-[family-name:var(--font-sans)]">
       <MeshBackground variant="auth" />
@@ -71,11 +94,7 @@ export const AuthLayout: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            {[
-              { value: '10K+', label: 'Người dùng' },
-              { value: '50K+', label: 'CV tối ưu' },
-              { value: '4.9★', label: 'Đánh giá' },
-            ].map((stat) => (
+            {stats.map((stat) => (
               <section
                 key={stat.label}
                 className="glass-card-dark rounded-xl px-4 py-3 text-center"
