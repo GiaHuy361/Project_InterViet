@@ -141,6 +141,7 @@ export const router = createBrowserRouter([
               { path: 'network', Component: Pages.MentorDirectoryPage },
               { path: 'mentors', Component: Pages.MentorDirectoryPage },
               { path: 'network/:id', Component: Pages.MentorDetailPage },
+              { path: 'tro-thanh-mentor', Component: Pages.BecomeMentorPage },
               { path: 'mentor-bookings', Component: Pages.MentorBookingsPage },
               { path: 'mentor-bookings/:id', Component: Pages.MentorBookingsPage },
               { path: 'phong-van-setup', Component: Pages.InterviewSetupPage },
@@ -171,6 +172,7 @@ export const router = createBrowserRouter([
               { path: 'admin/health', Component: Pages.AdminSystemHealthPage },
               { path: 'admin/json-samples', Component: Pages.AdminJsonSamplesPage },
               { path: 'admin/specialties', Component: Pages.AdminSpecialtiesPage },
+              { path: 'admin/mentors', Component: Pages.AdminMentorsPage },
             ]
           },
 

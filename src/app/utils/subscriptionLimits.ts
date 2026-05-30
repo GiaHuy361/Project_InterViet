@@ -111,7 +111,15 @@ export const canPerformAction = (
   }
 };
 
-export const getPlanPriceInfo = (plan: SubscriptionPlan) => {
+export interface PlanPriceInfo {
+  name: string;
+  priceMonthly: number;
+  totalPrice: number;
+  billingCycle: string;
+  savings: number;
+}
+
+export const getPlanPriceInfo = (plan: SubscriptionPlan): PlanPriceInfo => {
   switch (plan) {
     case 'free':
       return {

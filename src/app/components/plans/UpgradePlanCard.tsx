@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Check, X } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 import {
   formatPlanPrice,
   getPlanActionType,
@@ -15,7 +15,8 @@ export const UpgradePlanCard: React.FC<{
   plan: DisplayPlan;
   currentPlanKey: PlanKey;
   onSelect: () => void;
-}> = ({ plan, currentPlanKey, onSelect }) => {
+  isLoading?: boolean;
+}> = ({ plan, currentPlanKey, onSelect, isLoading = false }) => {
   const actionType = getPlanActionType(currentPlanKey, plan.planKey);
   const isCurrent = actionType === 'current';
   const isQuarterly = plan.planKey === 'quarterly';
@@ -61,10 +62,14 @@ export const UpgradePlanCard: React.FC<{
       <Button
         className={`w-full mb-4 ${!isCurrent && (actionType === 'upgrade' || actionType === 'select') ? 'btn-brand-gradient rounded-xl font-semibold' : ''}`}
         variant={isCurrent ? 'secondary' : actionType === 'upgrade' || actionType === 'select' ? 'default' : 'outline'}
-        disabled={isCurrent}
+        disabled={isCurrent || isLoading}
         onClick={onSelect}
       >
-        {getPlanCTAText(actionType, plan.planKey)}
+        {isLoading ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang xử lý...</>
+        ) : (
+          getPlanCTAText(actionType, plan.planKey)
+        )}
       </Button>
 
       <div className="space-y-2 flex-1 text-sm border-t pt-4">

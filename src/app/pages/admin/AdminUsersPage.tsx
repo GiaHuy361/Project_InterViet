@@ -29,6 +29,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 import adminService, { AdminUserDetailResponse, AdminUserSummary } from '../../../services/adminManagementService';
 import mentorSpecialtyService, { MentorSpecialtyDto } from '../../../services/mentorSpecialtyService';
 import { toast } from 'sonner';
@@ -59,9 +60,52 @@ const statusToneClass: Record<UserStatus, string> = {
 };
 
 const statusLabel: Record<UserStatus, string> = {
-  active: 'Active',
-  suspended: 'Suspended',
-  disabled: 'Disabled',
+  active: 'Hoạt động',
+  suspended: 'Đình chỉ',
+  disabled: 'Tạm khóa',
+};
+
+const getRoleBtnClass = (role: string, isSelected: boolean) => {
+  if (isSelected) {
+    switch (role) {
+      case 'admin': return 'bg-violet-600 hover:bg-violet-700 text-white border-transparent';
+      case 'support': return 'bg-cyan-600 hover:bg-cyan-700 text-white border-transparent';
+      case 'mentor': return 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent';
+      case 'candidate': return 'bg-blue-600 hover:bg-blue-700 text-white border-transparent';
+      default: return 'bg-slate-900 text-white hover:bg-slate-800';
+    }
+  }
+  switch (role) {
+    case 'admin': return 'text-violet-600 border-violet-200 hover:bg-violet-50 dark:text-violet-400 dark:border-violet-800 dark:hover:bg-violet-900/20 bg-white dark:bg-slate-950';
+    case 'support': return 'text-cyan-600 border-cyan-200 hover:bg-cyan-50 dark:text-cyan-400 dark:border-cyan-800 dark:hover:bg-cyan-900/20 bg-white dark:bg-slate-950';
+    case 'mentor': return 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20 bg-white dark:bg-slate-950';
+    case 'candidate': return 'text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20 bg-white dark:bg-slate-950';
+    default: return '';
+  }
+};
+
+const getStatusBtnClass = (status: string, isSelected: boolean) => {
+  if (isSelected) {
+    switch (status) {
+      case 'active': return 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent';
+      case 'suspended': return 'bg-amber-500 hover:bg-amber-600 text-white border-transparent';
+      case 'disabled': return 'bg-red-600 hover:bg-red-700 text-white border-transparent';
+      default: return 'bg-slate-900 text-white hover:bg-slate-800';
+    }
+  }
+  switch (status) {
+    case 'active': return 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20 bg-white dark:bg-slate-950';
+    case 'suspended': return 'text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/20 bg-white dark:bg-slate-950';
+    case 'disabled': return 'text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 bg-white dark:bg-slate-950';
+    default: return '';
+  }
+};
+
+const roleLabel: Record<string, string> = {
+  admin: 'Quản trị viên',
+  support: 'Hỗ trợ',
+  mentor: 'Mentor',
+  candidate: 'Ứng viên',
 };
 
 const formatCurrency = (value?: number) =>
@@ -200,7 +244,7 @@ export const AdminUsersPage: React.FC = () => {
     if (!detailUser?.userSummary.id) return;
     setSpecialtiesAssignOpen(true);
     try {
-      const { data } = await mentorSpecialtyService.getAdminSpecialties();
+      const data = await mentorSpecialtyService.getAdminSpecialties();
       setAvailableSpecialties(data || []);
       const existingIds = detailUser.profileSummary?.specialties?.map((s: any) => s.id) || [];
       setSelectedSpecialties(existingIds);
@@ -376,9 +420,18 @@ export const AdminUsersPage: React.FC = () => {
                 users.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-950">
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-slate-100">{user.fullName}</p>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{user.email}</p>
+                      <div className="flex items-center gap-3">
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex shrink-0 items-center justify-center font-bold text-gray-500">
+                            {user.fullName?.charAt(0) || 'U'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-slate-100">{user.fullName}</p>
+                          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{user.email}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -388,7 +441,7 @@ export const AdminUsersPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant="outline" className={`${statusBadgeClass[user.status as UserStatus] || 'bg-gray-100 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-800'}`}>
-                        {user.status}
+                        {user.status === 'active' ? <span className="text-emerald-600 dark:text-emerald-400">Đang hoạt động</span> : user.status === 'disabled' ? <span className="text-red-600 dark:text-red-400">Tạm khóa</span> : user.status === 'suspended' ? <span className="text-red-600 dark:text-red-400">Đình chỉ</span> : user.status}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-400">{user.emailVerified ? 'Đã xác minh' : 'Chưa xác minh'}</td>
@@ -420,7 +473,7 @@ export const AdminUsersPage: React.FC = () => {
       </Card>
 
       <Dialog open={detailOpen} onOpenChange={(open) => (open ? setDetailOpen(true) : closeDetail())}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chi tiết người dùng</DialogTitle>
             <DialogDescription>
@@ -452,21 +505,50 @@ export const AdminUsersPage: React.FC = () => {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Card className={`p-4 ${statusToneClass[detailUser.userSummary.status as UserStatus] || 'bg-white dark:bg-slate-900'}`}>
                   <p className="text-xs uppercase tracking-wide opacity-70">Tài khoản</p>
-                  <p className="mt-1 text-lg font-semibold">{detailUser.userSummary.fullName}</p>
-                  <p className="text-sm opacity-80">{detailUser.userSummary.email}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    {detailUser.userSummary.avatarUrl ? (
+                      <img src={detailUser.userSummary.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-white/20 shadow-sm shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex shrink-0 items-center justify-center font-bold text-current opacity-80">
+                        {detailUser.userSummary.fullName?.charAt(0) || 'U'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="text-lg font-semibold leading-tight truncate" title={detailUser.userSummary.fullName}>{detailUser.userSummary.fullName}</p>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-10050">
+                            <p>{detailUser.userSummary.fullName}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
                 </Card>
                 <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Role / Status</p>
-                  <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-slate-100">{detailUser.userSummary.role}</p>
-                  <p className="text-sm text-gray-600 dark:text-slate-400">{detailUser.userSummary.status}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Vai trò / Trạng thái</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    <span className={
+                      detailUser.userSummary.role === 'admin' ? 'text-violet-600 dark:text-violet-400' :
+                      detailUser.userSummary.role === 'support' ? 'text-cyan-600 dark:text-cyan-400' :
+                      detailUser.userSummary.role === 'mentor' ? 'text-emerald-600 dark:text-emerald-400' :
+                      detailUser.userSummary.role === 'candidate' ? 'text-blue-600 dark:text-blue-400' :
+                      ''
+                    }>
+                      {roleLabel[detailUser.userSummary.role] || detailUser.userSummary.role}
+                    </span>
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">{detailUser.userSummary.status === 'active' ? <span className="text-emerald-600 dark:text-emerald-400">Hoạt động</span> : detailUser.userSummary.status === 'suspended' ? <span className="text-amber-600 dark:text-amber-400">Đình chỉ</span> : <span className="text-red-600 dark:text-red-400">Tạm khóa</span>}</p>
                 </Card>
                 <Card className="p-4">
                   <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Xác minh email</p>
-                  <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-slate-100">{detailUser.userSummary.emailVerified ? 'Verified' : 'Unverified'}</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-slate-100">{detailUser.userSummary.emailVerified ? <span className="text-emerald-600 dark:text-emerald-400">Đã xác minh</span> : <span className="text-amber-600 dark:text-amber-400">Chưa xác minh</span>}</p>
                   <p className="text-sm text-gray-600 dark:text-slate-400">Last login: {formatDateTime(detailUser.userSummary.lastLoginAt)}</p>
                 </Card>
                 <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Support tickets</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">Hỗ trợ</p>
                   <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-slate-100">{detailUser.supportTicketCount ?? 0}</p>
                   <p className="text-sm text-gray-600 dark:text-slate-400">Created: {formatDateTime(detailUser.userSummary.createdAt)}</p>
                 </Card>
@@ -579,18 +661,22 @@ export const AdminUsersPage: React.FC = () => {
                   <h3 className="font-semibold text-gray-900 dark:text-slate-100">Cập nhật trạng thái</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {statusOptions.map((status) => (
-                    <Button
-                      key={status}
-                      type="button"
-                      variant={detailUser.userSummary.status === status ? 'default' : 'outline'}
-                      onClick={() => void updateStatus(status)}
-                      disabled={statusUpdating !== null}
-                    >
-                      {statusUpdating === status ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      {statusLabel[status]}
-                    </Button>
-                  ))}
+                  {statusOptions.map((status) => {
+                    const isSelected = detailUser.userSummary.status === status;
+                    return (
+                      <Button
+                        key={status}
+                        type="button"
+                        variant={isSelected ? 'default' : 'outline'}
+                        className={getStatusBtnClass(status, isSelected)}
+                        onClick={() => void updateStatus(status)}
+                        disabled={statusUpdating !== null}
+                      >
+                        {statusUpdating === status ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {statusLabel[status]}
+                      </Button>
+                    );
+                  })}
                 </div>
               </Card>
 
@@ -600,18 +686,22 @@ export const AdminUsersPage: React.FC = () => {
                   <h3 className="font-semibold text-gray-900 dark:text-slate-100">Cập nhật vai trò (Role)</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {roleOptions.map((role) => (
-                    <Button
-                      key={role}
-                      type="button"
-                      variant={detailUser.userSummary.role?.toLowerCase() === role ? 'default' : 'outline'}
-                      onClick={() => void updateRole(role)}
-                      disabled={roleUpdating !== null}
-                    >
-                      {roleUpdating === role ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      <span className="capitalize">{role}</span>
-                    </Button>
-                  ))}
+                  {roleOptions.map((role) => {
+                    const isSelected = detailUser.userSummary.role?.toLowerCase() === role;
+                    return (
+                      <Button
+                        key={role}
+                        type="button"
+                        variant={isSelected ? 'default' : 'outline'}
+                        className={getRoleBtnClass(role, isSelected)}
+                        onClick={() => void updateRole(role)}
+                        disabled={roleUpdating !== null}
+                      >
+                        {roleUpdating === role ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {roleLabel[role]}
+                      </Button>
+                    );
+                  })}
                 </div>
               </Card>
             </div>
@@ -647,8 +737,8 @@ export const AdminUsersPage: React.FC = () => {
                 return (
                   <label key={spec.id} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${isSelected ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20' : 'border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
                     <div className="flex h-5 items-center mt-0.5">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="w-4 h-4 text-cyan-600 rounded border-gray-300"
                         checked={isSelected}
                         onChange={(e) => {

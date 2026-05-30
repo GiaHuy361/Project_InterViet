@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 type FinalStatus =
   | 'completed'
@@ -111,6 +112,7 @@ export function useAsyncPolling<T>({
         const timeoutError = new Error('Quá trình đang diễn ra mất quá nhiều thời gian. Vui lòng thử lại.');
         setError(timeoutError);
         onFailureRef.current?.(timeoutError);
+        toast.error(timeoutError.message);
         stopPolling();
         return;
       }
@@ -129,10 +131,11 @@ export function useAsyncPolling<T>({
         return;
       }
 
-      if ((['failed', 'cancelled'] as FinalStatus[]).includes(status as FinalStatus)) {
+      if ((['failed', 'cancelled', 'error'] as FinalStatus[]).includes(status as FinalStatus)) {
         const finalError = new Error('Tiến trình xử lý thất bại. Vui lòng thử lại.');
         setError(finalError);
         onFailureRef.current?.(finalError);
+        toast.error(finalError.message);
         stopPolling();
         return;
       }
@@ -145,6 +148,7 @@ export function useAsyncPolling<T>({
 
       setError(err);
       onFailureRef.current?.(err);
+      toast.error(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra trong quá trình xử lý');
       stopPolling();
     } finally {
       if (pollRunIdRef.current === runId) {

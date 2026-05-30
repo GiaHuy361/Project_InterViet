@@ -70,9 +70,9 @@ export const LoginPage: React.FC = () => {
       let returnUrl = searchParams.get('returnUrl');
       if (returnUrl) {
         if (role === 'admin' && !returnUrl.startsWith('/admin/')) returnUrl = null;
-        if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
-        if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
-        if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
+        else if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
+        else if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
+        else if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
       }
 
       navigate(returnUrl || defaultPath);
@@ -106,9 +106,9 @@ export const LoginPage: React.FC = () => {
       let returnUrl = searchParams.get('returnUrl');
       if (returnUrl) {
         if (role === 'admin' && !returnUrl.startsWith('/admin/')) returnUrl = null;
-        if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
-        if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
-        if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
+        else if (role === 'support' && !returnUrl.startsWith('/support/')) returnUrl = null;
+        else if (role === 'mentor' && !returnUrl.startsWith('/mentor/')) returnUrl = null;
+        else if (role === 'candidate' && (returnUrl.startsWith('/admin/') || returnUrl.startsWith('/support/') || returnUrl.startsWith('/mentor/'))) returnUrl = null;
       }
 
       navigate(returnUrl || defaultPath);

@@ -130,7 +130,7 @@ export const MentorBookingsPage: React.FC = () => {
     if (!selectedBooking) return;
     setActionLoading(true);
     try {
-      await mentorService.submitMentorReview(selectedBooking.id, {
+      await mentorService.submitMentorBookingReview(selectedBooking.id, {
         rating: Number(reviewRating),
         comment: reviewComment.trim(),
       });
