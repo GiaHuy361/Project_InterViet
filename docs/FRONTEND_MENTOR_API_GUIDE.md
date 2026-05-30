@@ -371,7 +371,7 @@ sequenceDiagram
   "specialtyIds": [
     "e1f2g3h4-i5j6-4k7l-8m9n-0o1p2q3r4s5t"
   ],
-  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc nhập link phòng họp riêng khi đăng ký
+  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Không bắt buộc (Optional) khi nộp đơn đăng ký ban đầu
 }
 ```
 * **Response Body (201 Created):**

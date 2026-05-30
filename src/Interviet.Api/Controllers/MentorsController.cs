@@ -212,14 +212,12 @@ public class MentorsController : ApiControllerBase
             }
         }
 
-        if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+        if (!string.IsNullOrWhiteSpace(req.MeetingUrl))
         {
-            return BadRequest(new { error = "Link phòng họp trực tuyến (Meeting URL) là bắt buộc khi đăng ký làm Mentor." });
-        }
-
-        if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
-        {
-            return BadRequest(new { error = "Link phòng họp trực tuyến phải là một đường dẫn URL hợp lệ." });
+            if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+            {
+                return BadRequest(new { error = "Link phòng họp trực tuyến phải là một đường dẫn URL hợp lệ." });
+            }
         }
 
         // Create new MentorProfile
