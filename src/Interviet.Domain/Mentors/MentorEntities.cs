@@ -19,6 +19,7 @@ public class MentorProfile : AuditableEntity
     public decimal RatingAverage { get; set; }
     public int RatingCount { get; set; }
     public string Status { get; set; } = "active"; // active | inactive
+    public string? MeetingUrl { get; set; }
 
     public ICollection<MentorSpecialty> Specialties { get; set; } = [];
     public ICollection<MentorAvailabilitySlot> AvailabilitySlots { get; set; } = [];

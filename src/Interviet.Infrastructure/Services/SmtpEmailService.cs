@@ -37,8 +37,13 @@ public sealed class SmtpEmailService : IEmailService
 
             email.Body = bodyBuilder.ToMessageBody();
 
+
             using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(_options.Host, _options.Port, SecureSocketOptions.StartTls, ct);
+            var secureOption = _options.Port == 465 
+                ? SecureSocketOptions.SslOnConnect 
+                : SecureSocketOptions.StartTls;
+
+            await smtp.ConnectAsync(_options.Host, _options.Port, secureOption, ct);
             await smtp.AuthenticateAsync(_options.Username, _options.Password, ct);
             await smtp.SendAsync(email, ct);
             await smtp.DisconnectAsync(true, ct);

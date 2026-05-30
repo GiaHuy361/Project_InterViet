@@ -124,6 +124,7 @@ public sealed class UpdateMentorProfileRequest
     public List<string> Expertise { get; init; } = [];
     public List<string> Industries { get; init; } = [];
     public List<string> Languages { get; init; } = [];
+    public string? MeetingUrl { get; init; }
 }
 
 public sealed class MentorProfileResponse
@@ -143,6 +144,7 @@ public sealed class MentorProfileResponse
     public List<string> Industries { get; init; } = [];
     public List<string> Languages { get; init; } = [];
     public List<MentorSpecialtyDto> Specialties { get; init; } = [];
+    public string? MeetingUrl { get; init; }
 }
 
 public sealed class MentorDashboardSummaryResponse

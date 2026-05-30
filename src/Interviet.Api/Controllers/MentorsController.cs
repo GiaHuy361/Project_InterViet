@@ -212,6 +212,16 @@ public class MentorsController : ApiControllerBase
             }
         }
 
+        if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+        {
+            return BadRequest(new { error = "Link phòng họp trực tuyến (Meeting URL) là bắt buộc khi đăng ký làm Mentor." });
+        }
+
+        if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+        {
+            return BadRequest(new { error = "Link phòng họp trực tuyến phải là một đường dẫn URL hợp lệ." });
+        }
+
         // Create new MentorProfile
         var profile = new MentorProfile
         {
@@ -228,7 +238,8 @@ public class MentorsController : ApiControllerBase
             IsVerified = false,
             Status = "inactive",
             RatingAverage = 5.0m,
-            RatingCount = 0
+            RatingCount = 0,
+            MeetingUrl = req.MeetingUrl?.Trim()
         };
 
         // Assign specialties if provided
@@ -265,6 +276,7 @@ public class RegisterMentorRequest
     public List<string>? Industries { get; set; }
     public List<string>? Languages { get; set; }
     public List<Guid>? SpecialtyIds { get; set; }
+    public string? MeetingUrl { get; set; }
 }
 
 

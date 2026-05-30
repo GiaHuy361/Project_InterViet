@@ -182,7 +182,8 @@ sequenceDiagram
   "yearsOfExperience": 6.5,
   "expertise": ["Backend", "Microservices"],
   "industries": ["Fintech", "E-commerce"],
-  "languages": ["Tiếng Việt", "English"]
+  "languages": ["Tiếng Việt", "English"],
+  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc nhập link phòng họp riêng của Mentor
 }
 ```
 * **Response Body (200 OK):** Trả về thông tin hồ sơ đã cập nhật.
@@ -369,7 +370,8 @@ sequenceDiagram
   "languages": ["Tiếng Việt", "English"],
   "specialtyIds": [
     "e1f2g3h4-i5j6-4k7l-8m9n-0o1p2q3r4s5t"
-  ]
+  ],
+  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc nhập link phòng họp riêng khi đăng ký
 }
 ```
 * **Response Body (201 Created):**

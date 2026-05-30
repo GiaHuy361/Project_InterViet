@@ -133,7 +133,8 @@ public sealed class MentorWorkspaceController : ApiControllerBase
             Expertise = expertise,
             Industries = industries,
             Languages = languages,
-            Specialties = specialtiesMapped
+            Specialties = specialtiesMapped,
+            MeetingUrl = profile.MeetingUrl
         };
 
         return Ok(response);
@@ -163,6 +164,16 @@ public sealed class MentorWorkspaceController : ApiControllerBase
             return NotFound(new { message = "Mentor profile not found. Please GET the profile first to initialize it." });
         }
 
+        if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+        {
+            return BadRequest(new { message = "Link phòng họp trực tuyến (Meeting URL) là bắt buộc." });
+        }
+
+        if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+        {
+            return BadRequest(new { message = "Link phòng họp trực tuyến phải là một đường dẫn URL hợp lệ (ví dụ: https://meet.google.com/...)." });
+        }
+
         // Update fields
         profile.FullName = req.FullName.Trim();
         profile.Headline = req.Headline?.Trim();
@@ -172,6 +183,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         profile.ExpertiseJson = System.Text.Json.JsonSerializer.Serialize(req.Expertise ?? new List<string>());
         profile.IndustriesJson = System.Text.Json.JsonSerializer.Serialize(req.Industries ?? new List<string>());
         profile.LanguagesJson = System.Text.Json.JsonSerializer.Serialize(req.Languages ?? new List<string>());
+        profile.MeetingUrl = req.MeetingUrl.Trim();
         profile.UpdatedAt = DateTime.UtcNow;
 
         // Optionally sync user's display details
@@ -226,7 +238,8 @@ public sealed class MentorWorkspaceController : ApiControllerBase
             Expertise = expertise,
             Industries = industries,
             Languages = languages,
-            Specialties = specialtiesMapped
+            Specialties = specialtiesMapped,
+            MeetingUrl = profile.MeetingUrl
         };
 
         return Ok(response, "Cập nhật hồ sơ Mentor thành công.");
@@ -704,18 +717,16 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         }
         else if (normalizedStatus == "confirmed")
         {
-            if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+            if (!string.IsNullOrWhiteSpace(req.MeetingUrl))
             {
-                return BadRequest(new { message = "Link phòng họp trực tuyến (Meeting URL) là bắt buộc khi xác nhận lịch hẹn." });
-            }
-
-            if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
-            {
-                return BadRequest(new { message = "Link phòng họp phải là một đường dẫn URL hợp lệ (ví dụ: https://meet.google.com/...)." });
+                if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+                {
+                    return BadRequest(new { message = "Link phòng họp phải là một đường dẫn URL hợp lệ (ví dụ: https://meet.google.com/...)." });
+                }
+                b.MeetingUrl = req.MeetingUrl.Trim();
             }
 
             b.Status = "confirmed";
-            b.MeetingUrl = req.MeetingUrl.Trim();
             b.UpdatedAt = now;
             if (b.AvailabilitySlot != null)
             {

@@ -282,7 +282,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
             _db.Invoices.Add(bookingInvoice);
 
             booking.Status = "confirmed";
-            booking.MeetingUrl = null; // Mentor will manually update meeting URL upon confirmation
+            booking.MeetingUrl = booking.Mentor.MeetingUrl; // Use the Mentor's custom Meeting URL from their profile
             booking.UpdatedAt = now;
 
             if (booking.AvailabilitySlot is not null)
@@ -342,7 +342,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                           <tr><td><strong>Mã hóa đơn:</strong></td><td>{bookingInvoiceNumber}</td></tr>
                           <tr><td><strong>Số tiền đã thanh toán:</strong></td><td>{displayAmount}</td></tr>
                           <tr><td><strong>Phương thức:</strong></td><td>{providerDisplay}</td></tr>
-                          <tr><td><strong>Link tham gia họp:</strong></td><td><em>Mentor sẽ cập nhật link phòng họp trực tuyến sau khi xác nhận lịch hẹn.</em></td></tr>
+                          <tr><td><strong>Link tham gia họp:</strong></td><td><a href="{booking.MeetingUrl}">{booking.MeetingUrl}</a></td></tr>
                         </table>
                         <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
                         """;
@@ -370,7 +370,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                         userId           : userId,
                         type             : "mentor.booking_confirmed",
                         title            : "Lịch hẹn Mentor đã xác nhận",
-                        message          : $"Lịch đặt với {booking.Mentor.FullName} đã được xác nhận thành công. Vui lòng chờ Mentor cập nhật link họp trực tuyến nhé.",
+                        message          : $"Lịch đặt với {booking.Mentor.FullName} đã được xác nhận thành công. Link phòng họp trực tuyến của bạn đã sẵn sàng.",
                         actionUrl        : $"/mentor-bookings/{bookingId}",
                         data             : new
                         {
@@ -379,7 +379,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                             mentorName = booking.Mentor.FullName,
                             startsAt = booking.ScheduledStartsAt,
                             endsAt = booking.ScheduledEndsAt,
-                            meetingUrl = (string?)null
+                            meetingUrl = booking.MeetingUrl
                         },
                         priority         : NotificationPriority.Normal,
                         deduplicationKey : $"mentor.booking_confirmed:{bookingId}");
