@@ -267,19 +267,9 @@ try
         var db = scope.ServiceProvider.GetRequiredService<Interviet.Infrastructure.Persistence.AppDbContext>();
         try
         {
-            var isPostgres = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
-            if (isPostgres)
-            {
-                // PostgreSQL: EnsureCreated creates all tables from model directly.
-                // (No Postgres-specific migration files exist yet — EnsureCreated is safe for fresh DB.)
-                await db.Database.EnsureCreatedAsync();
-                Log.Information("PostgreSQL schema ensured via EnsureCreatedAsync.");
-            }
-            else
-            {
-                await db.Database.MigrateAsync();
-                Log.Information("Database migrations applied successfully.");
-            }
+            // Apply database migrations on startup to ensure schema is up-to-date for both SQL Server and PostgreSQL
+            await db.Database.MigrateAsync();
+            Log.Information("Database migrations applied successfully.");
 
             var mentorOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Interviet.Application.Common.Options.MentorNetworkOptions>>().Value;
             if (mentorOpts.EnableSeedData)
