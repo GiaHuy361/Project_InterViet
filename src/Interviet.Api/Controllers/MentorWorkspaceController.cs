@@ -249,7 +249,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
     /// Gets all active specialties from the system catalog for the mentor to choose.
     /// Route: GET /api/v1/mentor/specialties
     /// </summary>
-    [Authorize(Policy = "MentorOnly")]
+    [AllowAnonymous]
     [HttpGet("specialties")]
     public async Task<IActionResult> GetSpecialtiesCatalog()
     {
