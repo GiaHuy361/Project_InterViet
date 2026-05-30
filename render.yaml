@@ -115,7 +115,7 @@ services:
       - key: Admin__SeedAdminEmail
         value: admin@interviet.vn
       - key: MentorNetwork__MockMeetingBaseUrl
-        value: http://localhost:3000/mentor-bookings
+        value: https://interviet-frontend.vercel.app/mentor-bookings
 
 databases:
   - name: interviet-db
