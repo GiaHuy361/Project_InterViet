@@ -84,15 +84,25 @@ public sealed class ForgotPasswordCommandHandler : IRequestHandler<ForgotPasswor
 
         var resetLink = $"{_frontendOptions.BaseUrl.TrimEnd('/')}/reset-password?token={rawToken}";
 
-        await _emailService.SendAsync(new EmailMessage(
-            user.Email,
-            user.FullName,
-            "Khôi phục mật khẩu INTER-VIET",
-            $"<p>Chào {user.FullName},</p><p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu từ bạn. Nhấp vào liên kết bên dưới để tiến hành:</p><p><a href=\"{resetLink}\">{resetLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút. Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>",
-            TemplateCode: "password_reset"
-        ), cancellationToken);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _emailService.SendAsync(new EmailMessage(
+                    user.Email,
+                    user.FullName,
+                    "Khôi phục mật khẩu INTER-VIET",
+                    $"<p>Chào {user.FullName},</p><p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu từ bạn. Nhấp vào liên kết bên dưới để tiến hành:</p><p><a href=\"{resetLink}\">{resetLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút. Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>",
+                    TemplateCode: "password_reset"
+                ), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending forgot password email to {Email}", user.Email);
+            }
+        });
 
-        _logger.LogInformation("Password reset email sent. UserId={UserId}", user.Id);
+        _logger.LogInformation("Password reset email handoff to background. UserId={UserId}", user.Id);
         return Result.Success();
     }
 }

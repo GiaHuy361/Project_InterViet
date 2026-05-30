@@ -282,10 +282,8 @@ public sealed class BillingSuccessService : IBillingSuccessService
             _db.Invoices.Add(bookingInvoice);
 
             booking.Status = "confirmed";
+            booking.MeetingUrl = null; // Mentor will manually update meeting URL upon confirmation
             booking.UpdatedAt = now;
-
-            var mockMeetingUrl = $"{_mentorOptions.MockMeetingBaseUrl.TrimEnd('/')}/{bookingId}/join";
-            booking.MeetingUrl = mockMeetingUrl;
 
             if (booking.AvailabilitySlot is not null)
             {
@@ -314,54 +312,55 @@ public sealed class BillingSuccessService : IBillingSuccessService
                 }
             });
 
-            var bookingEmailSent = false;
-            try
+            var bookingEmailSent = true;
+            _ = Task.Run(async () =>
             {
-                var displayAmount = session.CurrencyCode == "VND"
-                    ? $"{session.Amount:N0} ₫"
-                    : $"{session.Amount:N2} {session.CurrencyCode}";
-
-                var providerDisplay = MockProvider.GetDisplayName(session.Provider);
-                var serviceTypeDisplay = booking.ServiceType switch
+                try
                 {
-                    "cv_review" => "CV Review",
-                    "mock_interview" => "Mock Interview",
-                    "career_coaching" => "Career Coaching",
-                    "technical_mentoring" => "Technical Mentoring",
-                    _ => booking.ServiceType
-                };
+                    var displayAmount = session.CurrencyCode == "VND"
+                        ? $"{session.Amount:N0} ₫"
+                        : $"{session.Amount:N2} {session.CurrencyCode}";
 
-                var htmlBody = $"""
-                    <h2>Thanh toán lịch hẹn Mentor thành công!</h2>
-                    <p>Xin chào <strong>{bookingUser.FullName}</strong>,</p>
-                    <p>Lịch hẹn của bạn với Mentor <strong>{booking.Mentor.FullName}</strong> đã được xác nhận thành công.</p>
-                    <table border="0" cellpadding="6" style="border-collapse:collapse;">
-                      <tr><td><strong>Dịch vụ:</strong></td><td>{serviceTypeDisplay}</td></tr>
-                      <tr><td><strong>Thời gian bắt đầu:</strong></td><td>{booking.ScheduledStartsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
-                      <tr><td><strong>Thời gian kết thúc:</strong></td><td>{booking.ScheduledEndsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
-                      <tr><td><strong>Mã hóa đơn:</strong></td><td>{bookingInvoiceNumber}</td></tr>
-                      <tr><td><strong>Số tiền đã thanh toán:</strong></td><td>{displayAmount}</td></tr>
-                      <tr><td><strong>Phương thức:</strong></td><td>{providerDisplay}</td></tr>
-                      <tr><td><strong>Link tham gia họp:</strong></td><td><a href="{mockMeetingUrl}">{mockMeetingUrl}</a></td></tr>
-                    </table>
-                    <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
-                    """;
+                    var providerDisplay = MockProvider.GetDisplayName(session.Provider);
+                    var serviceTypeDisplay = booking.ServiceType switch
+                    {
+                        "cv_review" => "CV Review",
+                        "mock_interview" => "Mock Interview",
+                        "career_coaching" => "Career Coaching",
+                        "technical_mentoring" => "Technical Mentoring",
+                        _ => booking.ServiceType
+                    };
 
-                await _emailService.SendAsync(new EmailMessage(
-                    ToAddress : bookingUser.Email,
-                    ToName    : bookingUser.FullName,
-                    Subject   : "Xác nhận lịch đặt Mentor thành công",
-                    HtmlBody  : htmlBody
-                ), ct);
+                    var htmlBody = $"""
+                        <h2>Thanh toán lịch hẹn Mentor thành công!</h2>
+                        <p>Xin chào <strong>{bookingUser.FullName}</strong>,</p>
+                        <p>Lịch hẹn của bạn với Mentor <strong>{booking.Mentor.FullName}</strong> đã được xác nhận thành công.</p>
+                        <table border="0" cellpadding="6" style="border-collapse:collapse;">
+                          <tr><td><strong>Dịch vụ:</strong></td><td>{serviceTypeDisplay}</td></tr>
+                          <tr><td><strong>Thời gian bắt đầu:</strong></td><td>{booking.ScheduledStartsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
+                          <tr><td><strong>Thời gian kết thúc:</strong></td><td>{booking.ScheduledEndsAt:dd/MM/yyyy HH:mm} UTC</td></tr>
+                          <tr><td><strong>Mã hóa đơn:</strong></td><td>{bookingInvoiceNumber}</td></tr>
+                          <tr><td><strong>Số tiền đã thanh toán:</strong></td><td>{displayAmount}</td></tr>
+                          <tr><td><strong>Phương thức:</strong></td><td>{providerDisplay}</td></tr>
+                          <tr><td><strong>Link tham gia họp:</strong></td><td><em>Mentor sẽ cập nhật link phòng họp trực tuyến sau khi xác nhận lịch hẹn.</em></td></tr>
+                        </table>
+                        <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
+                        """;
 
-                bookingEmailSent = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to send mentor booking success email to user {UserId} for invoice {InvoiceNumber}",
-                    userId, bookingInvoiceNumber);
-            }
+                    await _emailService.SendAsync(new EmailMessage(
+                        ToAddress : bookingUser.Email,
+                        ToName    : bookingUser.FullName,
+                        Subject   : "Xác nhận lịch đặt Mentor thành công",
+                        HtmlBody  : htmlBody
+                    ), CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to send mentor booking success email to user {UserId} for invoice {InvoiceNumber}",
+                        userId, bookingInvoiceNumber);
+                }
+            });
 
             _ = Task.Run(async () =>
             {
@@ -371,7 +370,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                         userId           : userId,
                         type             : "mentor.booking_confirmed",
                         title            : "Lịch hẹn Mentor đã xác nhận",
-                        message          : $"Lịch đặt với {booking.Mentor.FullName} đã được xác nhận thành công. Link họp trực tuyến đã sẵn sàng.",
+                        message          : $"Lịch đặt với {booking.Mentor.FullName} đã được xác nhận thành công. Vui lòng chờ Mentor cập nhật link họp trực tuyến nhé.",
                         actionUrl        : $"/mentor-bookings/{bookingId}",
                         data             : new
                         {
@@ -380,7 +379,7 @@ public sealed class BillingSuccessService : IBillingSuccessService
                             mentorName = booking.Mentor.FullName,
                             startsAt = booking.ScheduledStartsAt,
                             endsAt = booking.ScheduledEndsAt,
-                            meetingUrl = mockMeetingUrl
+                            meetingUrl = (string?)null
                         },
                         priority         : NotificationPriority.Normal,
                         deduplicationKey : $"mentor.booking_confirmed:{bookingId}");
@@ -574,50 +573,51 @@ public sealed class BillingSuccessService : IBillingSuccessService
         });
 
         // Fire-and-forget email
-        var emailSent = false;
-        try
+        var emailSent = true;
+        _ = Task.Run(async () =>
         {
-            var displayAmount = session.CurrencyCode == "VND"
-                ? $"{session.Amount:N0} ₫"
-                : $"{session.Amount:N2} {session.CurrencyCode}";
+            try
+            {
+                var displayAmount = session.CurrencyCode == "VND"
+                    ? $"{session.Amount:N0} ₫"
+                    : $"{session.Amount:N2} {session.CurrencyCode}";
 
-            var providerDisplay = MockProvider.GetDisplayName(session.Provider);
-            var subscriptionUrl = $"{_billing.FrontendBaseUrl.TrimEnd('/')}/subscription";
+                var providerDisplay = MockProvider.GetDisplayName(session.Provider);
+                var subscriptionUrl = $"{_billing.FrontendBaseUrl.TrimEnd('/')}/subscription";
 
-            var htmlBody = $"""
-                <h2>Thanh toán thành công!</h2>
-                <p>Xin chào <strong>{user.FullName}</strong>,</p>
-                <p>Gói <strong>{plan.Name}</strong> của bạn đã được kích hoạt thành công qua {providerDisplay}.</p>
-                <table border="0" cellpadding="6" style="border-collapse:collapse;">
-                  <tr><td><strong>Mã hóa đơn:</strong></td><td>{invoiceNumber}</td></tr>
-                  <tr><td><strong>Số tiền:</strong></td><td>{displayAmount}</td></tr>
-                  <tr><td><strong>Ngày thanh toán:</strong></td><td>{now:dd/MM/yyyy HH:mm} UTC</td></tr>
-                  <tr><td><strong>Hiệu lực từ:</strong></td><td>{now:dd/MM/yyyy}</td></tr>
-                  <tr><td><strong>Hiệu lực đến:</strong></td><td>{endsAt:dd/MM/yyyy}</td></tr>
-                </table>
-                <p style="margin-top:16px;">
-                  <a href="{subscriptionUrl}" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
-                    Xem thông tin gói dịch vụ
-                  </a>
-                </p>
-                <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
-                """;
+                var htmlBody = $"""
+                    <h2>Thanh toán thành công!</h2>
+                    <p>Xin chào <strong>{user.FullName}</strong>,</p>
+                    <p>Gói <strong>{plan.Name}</strong> của bạn đã được kích hoạt thành công qua {providerDisplay}.</p>
+                    <table border="0" cellpadding="6" style="border-collapse:collapse;">
+                      <tr><td><strong>Mã hóa đơn:</strong></td><td>{invoiceNumber}</td></tr>
+                      <tr><td><strong>Số tiền:</strong></td><td>{displayAmount}</td></tr>
+                      <tr><td><strong>Ngày thanh toán:</strong></td><td>{now:dd/MM/yyyy HH:mm} UTC</td></tr>
+                      <tr><td><strong>Hiệu lực từ:</strong></td><td>{now:dd/MM/yyyy}</td></tr>
+                      <tr><td><strong>Hiệu lực đến:</strong></td><td>{endsAt:dd/MM/yyyy}</td></tr>
+                    </table>
+                    <p style="margin-top:16px;">
+                      <a href="{subscriptionUrl}" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
+                        Xem thông tin gói dịch vụ
+                      </a>
+                    </p>
+                    <p style="margin-top:24px;color:#666;">Trân trọng,<br/>Đội ngũ INTER-VIET</p>
+                    """;
 
-            await _emailService.SendAsync(new EmailMessage(
-                ToAddress : user.Email,
-                ToName    : user.FullName,
-                Subject   : "Thanh toán INTER-VIET thành công",
-                HtmlBody  : htmlBody
-            ), ct);
-
-            emailSent = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "Failed to send payment success email to user {UserId} for invoice {InvoiceNumber}",
-                userId, invoiceNumber);
-        }
+                await _emailService.SendAsync(new EmailMessage(
+                    ToAddress : user.Email,
+                    ToName    : user.FullName,
+                    Subject   : "Thanh toán INTER-VIET thành công",
+                    HtmlBody  : htmlBody
+                ), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to send payment success email to user {UserId} for invoice {InvoiceNumber}",
+                    userId, invoiceNumber);
+            }
+        });
 
         // Fire-and-forget in-app notification
         _ = Task.Run(async () =>

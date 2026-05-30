@@ -111,15 +111,25 @@ public sealed class ResendVerificationEmailCommandHandler : IRequestHandler<Rese
         // Send email
         var verifyLink = $"{_frontendOptions.BaseUrl.TrimEnd('/')}/verify-email?token={rawVerifyToken}";
 
-        await _emailService.SendAsync(new EmailMessage(
-            user.Email,
-            user.FullName,
-            "Xác thực email INTER-VIET của bạn",
-            $"<p>Chào {user.FullName},</p><p>Vui lòng xác thực email của bạn bằng cách nhấp vào liên kết bên dưới:</p><p><a href=\"{verifyLink}\">{verifyLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút.</p>",
-            TemplateCode: "email_verification"
-        ), cancellationToken);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _emailService.SendAsync(new EmailMessage(
+                    user.Email,
+                    user.FullName,
+                    "Xác thực email INTER-VIET của bạn",
+                    $"<p>Chào {user.FullName},</p><p>Vui lòng xác thực email của bạn bằng cách nhấp vào liên kết bên dưới:</p><p><a href=\"{verifyLink}\">{verifyLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút.</p>",
+                    TemplateCode: "email_verification"
+                ), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending resend verification email to {Email}", user.Email);
+            }
+        });
 
-        _logger.LogInformation("ResendVerify: Email sent to {Email}", request.Email);
+        _logger.LogInformation("ResendVerify: Email handoff to background for {Email}", request.Email);
 
         return Result.Success();
     }

@@ -704,7 +704,18 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         }
         else if (normalizedStatus == "confirmed")
         {
+            if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+            {
+                return BadRequest(new { message = "Link phòng họp trực tuyến (Meeting URL) là bắt buộc khi xác nhận lịch hẹn." });
+            }
+
+            if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+            {
+                return BadRequest(new { message = "Link phòng họp phải là một đường dẫn URL hợp lệ (ví dụ: https://meet.google.com/...)." });
+            }
+
             b.Status = "confirmed";
+            b.MeetingUrl = req.MeetingUrl.Trim();
             b.UpdatedAt = now;
             if (b.AvailabilitySlot != null)
             {
@@ -717,7 +728,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
                     action: "mentor.booking_confirmed_by_mentor",
                     resource: "MentorBooking",
                     resourceId: b.Id.ToString(),
-                    metadata: new { previousStatus = prevStatus, currentStatus = b.Status }
+                    metadata: new { previousStatus = prevStatus, currentStatus = b.Status, meetingUrl = b.MeetingUrl }
                 );
             }
             catch {}
@@ -728,7 +739,7 @@ public sealed class MentorWorkspaceController : ApiControllerBase
                     userId: b.UserId,
                     type: "mentor.booking_confirmed",
                     title: "Lịch hẹn Mentor được xác nhận",
-                    message: $"Lịch đặt với {profile.FullName} đã được xác nhận thành công.",
+                    message: $"Lịch đặt với {profile.FullName} đã được xác nhận thành công. Link phòng họp: {b.MeetingUrl}",
                     actionUrl: $"/mentor-bookings/{b.Id}"
                 );
             }
@@ -772,6 +783,80 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Cập nhật trạng thái lịch hẹn thành công.", previousStatus = prevStatus, currentStatus = b.Status });
+    }
+
+    /// <summary>
+    /// Updates meeting URL of a booking as a mentor.
+    /// Route: PATCH /api/v1/mentor/bookings/{id:guid}/meeting-url
+    /// </summary>
+    [HttpPatch("bookings/{id:guid}/meeting-url")]
+    public async Task<IActionResult> UpdateMeetingUrl(Guid id, [FromBody] UpdateMeetingUrlRequest req)
+    {
+        if (req == null)
+            return BadRequest(new { message = "Request body is required." });
+
+        if (string.IsNullOrWhiteSpace(req.MeetingUrl))
+            return BadRequest(new { message = "Link phòng họp không được để trống." });
+
+        // Validate URL format simply
+        if (!Uri.TryCreate(req.MeetingUrl, UriKind.Absolute, out _))
+        {
+            return BadRequest(new { message = "Link phòng họp phải là một đường dẫn URL hợp lệ (ví dụ: https://meet.google.com/...)." });
+        }
+
+        var userId = _currentUserService.UserId;
+
+        var profile = await _context.MentorProfiles
+            .FirstOrDefaultAsync(p => p.UserId == userId);
+
+        if (profile == null)
+        {
+            return BadRequest(new { message = "Hồ sơ Mentor chưa được khởi tạo." });
+        }
+
+        var b = await _context.MentorBookings
+            .FirstOrDefaultAsync(x => x.Id == id && x.MentorId == profile.Id);
+
+        if (b == null)
+        {
+            return NotFound(new { message = "Không tìm thấy lịch đặt hẹn này." });
+        }
+
+        if (b.Status == "cancelled" || b.Status == "completed")
+        {
+            return BadRequest(new { message = "Không thể cập nhật link phòng họp cho lịch hẹn đã hoàn thành hoặc đã bị hủy." });
+        }
+
+        var oldUrl = b.MeetingUrl;
+        b.MeetingUrl = req.MeetingUrl.Trim();
+        b.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _auditLogService.LogAsync(
+                action: "mentor.booking_meeting_url_updated",
+                resource: "MentorBooking",
+                resourceId: b.Id.ToString(),
+                metadata: new { oldMeetingUrl = oldUrl, newMeetingUrl = b.MeetingUrl }
+            );
+        }
+        catch {}
+
+        try
+        {
+            await _notificationService.CreateAsync(
+                userId: b.UserId,
+                type: "mentor.meeting_url_updated",
+                title: "Link phòng họp đã được cập nhật",
+                message: $"Mentor {profile.FullName} đã cập nhật link phòng họp mới cho lịch hẹn của bạn.",
+                actionUrl: $"/mentor-bookings/{b.Id}"
+            );
+        }
+        catch {}
+
+        return Ok(new { message = "Cập nhật link phòng họp thành công.", meetingUrl = b.MeetingUrl });
     }
 
     /// <summary>

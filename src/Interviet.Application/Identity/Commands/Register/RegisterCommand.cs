@@ -152,13 +152,23 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
         var verifyLink = $"{_frontendOptions.BaseUrl.TrimEnd('/')}/verify-email?token={rawVerifyToken}";
 
         // Send verification email after commit (fire-and-forget style — stub in Phase 1)
-        await _emailService.SendAsync(new EmailMessage(
-            user.Email,
-            user.FullName,
-            "Xác thực email INTER-VIET của bạn",
-            $"<p>Chào {user.FullName},</p><p>Vui lòng xác thực email của bạn bằng cách nhấp vào liên kết bên dưới:</p><p><a href=\"{verifyLink}\">{verifyLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút.</p>",
-            TemplateCode: "email_verification"
-        ), cancellationToken);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _emailService.SendAsync(new EmailMessage(
+                    user.Email,
+                    user.FullName,
+                    "Xác thực email INTER-VIET của bạn",
+                    $"<p>Chào {user.FullName},</p><p>Vui lòng xác thực email của bạn bằng cách nhấp vào liên kết bên dưới:</p><p><a href=\"{verifyLink}\">{verifyLink}</a></p><p>Liên kết này sẽ hết hạn trong 15 phút.</p>",
+                    TemplateCode: "email_verification"
+                ), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending verification email to {Email}", user.Email);
+            }
+        });
 
         return new AuthResponse(
             user.Id, user.Email, user.FullName, user.Status,

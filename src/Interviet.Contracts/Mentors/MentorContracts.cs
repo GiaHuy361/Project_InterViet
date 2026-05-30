@@ -159,8 +159,9 @@ public sealed class MentorDashboardSummaryResponse
 
 public sealed class UpdateBookingStatusRequest
 {
-    public string Status { get; init; } = string.Empty; // confirmed | cancelled | completed
-    public string? CancelReason { get; init; }
+    public string Status { get; set; } = string.Empty; // confirmed | cancelled | completed
+    public string? CancelReason { get; set; }
+    public string? MeetingUrl { get; set; }
 }
 
 public sealed class ConfigureAvailabilitySlotsRequest
@@ -214,3 +215,9 @@ public sealed class AdminAssignSpecialtiesRequest
 {
     public List<Guid> SpecialtyIds { get; init; } = [];
 }
+
+public sealed class UpdateMeetingUrlRequest
+{
+    public string MeetingUrl { get; init; } = string.Empty;
+}
+

@@ -1,6 +1,6 @@
 # 📘 HƯỚNG DẪN TÍCH HỢP FRONTEND - LUỒNG NGHIỆP VỤ MENTOR
 
-Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết 22 API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
+Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết 28 API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
 
 ---
 
@@ -41,7 +41,7 @@ sequenceDiagram
 
 ---
 
-## 🗂️ CHI TIẾT 22 API ENDPOINTS & PAYLOAD JSON MẪU
+## 🗂️ CHI TIẾT 28 API ENDPOINTS & PAYLOAD JSON MẪU
 
 ---
 
@@ -285,7 +285,8 @@ sequenceDiagram
 ```json
 {
   "status": "confirmed", // confirmed | cancelled | completed
-  "cancelReason": "Bận lịch đột xuất" // Bắt buộc truyền nếu status = cancelled
+  "cancelReason": "Bận lịch đột xuất", // Bắt buộc truyền nếu status = cancelled
+  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc truyền và phải là URL hợp lệ nếu status = confirmed
 }
 ```
 * **Response Body (200 OK):**
@@ -297,11 +298,28 @@ sequenceDiagram
 }
 ```
 
-#### 12. Xem danh sách khung giờ rảnh cá nhân đã cấu hình
+#### 12. Cập nhật Link phòng họp trực tuyến (Meeting URL) của lịch hẹn
+* **HTTP Method:** `PATCH`
+* **Route:** `/api/v1/mentor/bookings/{id:guid}/meeting-url`
+* **Request Body (JSON):**
+```json
+{
+  "meetingUrl": "https://meet.google.com/abc-xyz-123"
+}
+```
+* **Response Body (200 OK):**
+```json
+{
+  "message": "Cập nhật link phòng họp thành công.",
+  "meetingUrl": "https://meet.google.com/abc-xyz-123"
+}
+```
+
+#### 13. Xem danh sách khung giờ rảnh cá nhân đã cấu hình
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/availability`
 
-#### 13. Cài đặt / Cập nhật khung giờ rảnh mới (Thêm lịch rảnh)
+#### 14. Cài đặt / Cập nhật khung giờ rảnh mới (Thêm lịch rảnh)
 * **HTTP Method:** `PUT`
 * **Route:** `/api/v1/mentor/availability`
 * **Request Body (JSON):**
@@ -336,7 +354,7 @@ sequenceDiagram
 ### Phân hệ 3: 🎓 Dành cho Ứng viên đã đăng nhập (Candidate API)
 *Yêu cầu Token JWT của Candidate: `Headers -> Authorization: Bearer <Token_Candidate>`*
 
-#### 14. Đăng ký trở thành Mentor (Mentor Onboarding Application)
+#### 15. Đăng ký trở thành Mentor (Mentor Onboarding Application)
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentors/register`
 * **Request Body (JSON):**
@@ -362,20 +380,20 @@ sequenceDiagram
 }
 ```
 
-#### 15. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập (API bảo mật)
+#### 16. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập (API bảo mật)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors`
 * **Query Params:** `specialty`, `serviceType`, `rating`, `search`, `page`, `pageSize`
 
-#### 16. Xem chi tiết Mentor (Yêu cầu đăng nhập)
+#### 17. Xem chi tiết Mentor (Yêu cầu đăng nhập)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors/{id:guid}`
 
-#### 17. Xem khung giờ rảnh của Mentor (Yêu cầu đăng nhập)
+#### 18. Xem khung giờ rảnh của Mentor (Yêu cầu đăng nhập)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors/{id:guid}/availability`
 
-#### 18. Gửi yêu cầu đặt lịch hẹn (Book Mentor)
+#### 19. Gửi yêu cầu đặt lịch hẹn (Book Mentor)
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings`
 * **Request Body (JSON):**
@@ -399,15 +417,15 @@ sequenceDiagram
 }
 ```
 
-#### 19. Xem danh sách lịch hẹn đã đặt của Candidate
+#### 20. Xem danh sách lịch hẹn đã đặt của Candidate
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor-bookings`
 
-#### 20. Xem chi tiết lịch hẹn đã đặt
+#### 21. Xem chi tiết lịch hẹn đã đặt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}`
 
-#### 21. Candidate chủ động Hủy lịch hẹn
+#### 22. Candidate chủ động Hủy lịch hẹn
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}/cancel`
 * **Request Body (JSON):**
@@ -417,7 +435,7 @@ sequenceDiagram
 }
 ```
 
-#### 22. Candidate gửi đánh giá & viết nhận xét (Sau khi hoàn thành cuộc hẹn)
+#### 23. Candidate gửi đánh giá & viết nhận xét (Sau khi hoàn thành cuộc hẹn)
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}/review`
 * **Request Body (JSON):**
@@ -434,26 +452,26 @@ sequenceDiagram
 ### Phân hệ 4: 👑 Dành cho Quản trị viên (Admin API)
 *Yêu cầu Token JWT của Admin: `Headers -> Authorization: Bearer <Token_Admin>`*
 
-#### 23. Lấy toàn bộ danh sách Mentor trong hệ thống để duyệt
+#### 24. Lấy toàn bộ danh sách Mentor trong hệ thống để duyệt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/admin/mentors`
 * **Query Params:** `search`, `isVerified` (Để true/false để lọc danh sách cần duyệt/đã duyệt).
 
-#### 24. Phê duyệt duyệt / Hủy duyệt hồ sơ chuyên gia
+#### 25. Phê duyệt duyệt / Hủy duyệt hồ sơ chuyên gia
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/verify?verify=true`
 * **Query Params:** `verify=true` (Duyệt) | `verify=false` (Hủy duyệt).
 
-#### 25. Đóng / Mở hoạt động hồ sơ Mentor
+#### 26. Đóng / Mở hoạt động hồ sơ Mentor
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/status?status=active`
 * **Query Params:** `status` (`active` | `inactive`).
 
-#### 26. Quản lý xem toàn bộ các Booking trong hệ thống
+#### 27. Quản lý xem toàn bộ các Booking trong hệ thống
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/admin/mentor-bookings`
 
-#### 27. Thêm mới / Cập nhật chuyên mục hệ thống (CRUD Chuyên Môn)
+#### 28. Thêm mới / Cập nhật chuyên mục hệ thống (CRUD Chuyên Môn)
 * **HTTP Method:** `POST` (Tạo mới) | `PUT` (Cập nhật) | `DELETE` (Xóa)
 * **Route:** `/api/v1/admin/mentors/specialties` hoặc `/api/v1/admin/mentors/specialties/{id:guid}`
 
@@ -472,3 +490,7 @@ sequenceDiagram
    * `confirmed` (Thành công - Đã thanh toán và được xác nhận)
    * `completed` (Buổi hẹn đã kết thúc tốt đẹp)
    * `cancelled` (Lịch hẹn bị hủy bỏ từ phía Mentor hoặc Candidate)
+4. **Cơ chế xử lý Email bất đồng bộ (Background Email Sending):**
+   Toàn bộ các API gửi email (Đăng ký tài khoản, Đổi mật khẩu, Xác thực lại email, Hóa đơn thanh toán thành công, Xác nhận lịch đặt Mentor thành công) trong Backend C# hiện đã được chuyển giao cho các luồng xử lý chạy ngầm (**Background Tasks - Fire-and-Forget** thông qua `Task.Run`).
+   * **Lợi ích:** API sẽ phản hồi thành công `200 OK` hoặc `201 Created` ngay lập tức (**~0.1s**), loại bỏ hoàn toàn hiện tượng treo spinner xoay tròn tải trang do chờ đợi SMTP Server kết nối hoặc gặp lỗi timeout khi Render chặn cổng gửi email outbound (Port 587).
+   * **Frontend:** Không cần xử lý chờ đợi gửi email phức tạp, chỉ cần nhận kết quả trả về từ API và hiển thị thông báo thành công cho người dùng ngay lập tức.
