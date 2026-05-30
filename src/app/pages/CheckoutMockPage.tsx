@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { AppPageHeader } from '../components/design-system/AppPageHeader';
+import PaymentCountdown from '../components/PaymentCountdown';
 import { isDevBillingEnabled } from '../../config/devBilling';
 import billingService, {
   type BillingBankTransferRequest,
@@ -84,6 +85,7 @@ export const CheckoutMockPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [providerLoading, setProviderLoading] = useState(true);
+  const [isExpired, setIsExpired] = useState(false);
   const [paymentForm, setPaymentForm] = useState<BillingBankTransferRequest>({
     payerAccountNumber: '',
     payerAccountName: '',
@@ -130,7 +132,7 @@ export const CheckoutMockPage: React.FC = () => {
             checkoutSessionId: paymentInstructions.checkoutSessionId,
             checkoutUrl: `/checkout/mock/${paymentInstructions.checkoutSessionId}`,
             status: 'pending',
-            expiresAt: '',
+            expiresAt: new Date(Date.now() + 15 * 60000).toISOString(),
             provider: checkoutProvider ?? providerList.find((item) => item.enabled)?.provider ?? 'vnpay',
             planKey: paymentInstructions.planKey,
             contextType: paymentInstructions.purpose === 'mentor_booking' ? 'mentor_booking' : 'subscription',
@@ -295,6 +297,13 @@ export const CheckoutMockPage: React.FC = () => {
         }
       />
 
+      {session?.expiresAt && (
+        <PaymentCountdown 
+          expiresAt={session.expiresAt} 
+          onExpired={() => setIsExpired(true)} 
+        />
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="space-y-5 p-6">
           <div className="flex items-center justify-between gap-3">
@@ -379,7 +388,7 @@ export const CheckoutMockPage: React.FC = () => {
               </div>
             </div>
 
-            <Button type="submit" disabled={submitting || loading || !sessionId} className="w-full sm:w-auto">
+            <Button type="submit" disabled={submitting || loading || !sessionId || isExpired} className="w-full sm:w-auto">
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
               Tôi đã chuyển khoản thành công
             </Button>
