@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Interviet.Application.Common.Interfaces;
 using Interviet.Contracts.Mentors;
 using Interviet.Domain.Mentors;
+using Interviet.Domain.Identity;
 using Interviet.Shared.Results;
 
 namespace Interviet.Api.Controllers;
@@ -182,4 +184,87 @@ public class MentorsController : ApiControllerBase
 
         return Ok(slots);
     }
+
+    /// <summary>
+    /// POST /api/v1/mentors/register
+    /// Registers the currently authenticated candidate as a mentor.
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterAsMentor([FromBody] RegisterMentorRequest req, CancellationToken ct)
+    {
+        var userId = _currentUser.UserId;
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user == null)
+            return NotFound(new { error = "User not found" });
+
+        // Check if mentor profile already exists
+        var existingProfile = await _db.MentorProfiles.FirstOrDefaultAsync(p => p.UserId == userId, ct);
+        if (existingProfile != null)
+        {
+            if (existingProfile.IsVerified)
+            {
+                return BadRequest(new { error = "Tài khoản của bạn đã là chuyên gia (Mentor) được xác thực trong hệ thống." });
+            }
+            else
+            {
+                return BadRequest(new { error = "Hồ sơ đăng ký làm chuyên gia của bạn đã được gửi trước đó và đang chờ phê duyệt." });
+            }
+        }
+
+        // Create new MentorProfile
+        var profile = new MentorProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            FullName = string.IsNullOrWhiteSpace(req.FullName) ? user.FullName : req.FullName.Trim(),
+            Headline = req.Headline?.Trim(),
+            AvatarUrl = user.AvatarUrl,
+            Bio = req.Bio?.Trim(),
+            YearsOfExperience = req.YearsOfExperience,
+            ExpertiseJson = System.Text.Json.JsonSerializer.Serialize(req.Expertise ?? new List<string>()),
+            IndustriesJson = System.Text.Json.JsonSerializer.Serialize(req.Industries ?? new List<string>()),
+            LanguagesJson = System.Text.Json.JsonSerializer.Serialize(req.Languages ?? new List<string>()),
+            IsVerified = false,
+            Status = "inactive",
+            RatingAverage = 5.0m,
+            RatingCount = 0
+        };
+
+        // Assign specialties if provided
+        if (req.SpecialtyIds != null && req.SpecialtyIds.Any())
+        {
+            var specialties = await _db.MentorSpecialties
+                .Where(s => req.SpecialtyIds.Contains(s.Id))
+                .ToListAsync(ct);
+            profile.Specialties = specialties;
+        }
+
+        _db.MentorProfiles.Add(profile);
+
+        // Update user role to mentor
+        user.RoleCode = RoleCodes.Mentor;
+
+        await _db.SaveChangesAsync(ct);
+
+        return Created("", new 
+        { 
+            message = "Đăng ký thành công. Vui lòng chờ quản trị viên phê duyệt hồ sơ của bạn.",
+            mentorProfileId = profile.Id 
+        });
+    }
 }
+
+public class RegisterMentorRequest
+{
+    public string FullName { get; set; } = string.Empty;
+    public string? Headline { get; set; }
+    public string? Bio { get; set; }
+    public decimal YearsOfExperience { get; set; }
+    public List<string>? Expertise { get; set; }
+    public List<string>? Industries { get; set; }
+    public List<string>? Languages { get; set; }
+    public List<Guid>? SpecialtyIds { get; set; }
+}
+
+

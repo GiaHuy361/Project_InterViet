@@ -894,6 +894,34 @@ public sealed class MentorWorkspaceController : ApiControllerBase
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
 
+        // Auto-create profiles for users assigned as mentors who don't have a profile yet
+        var mentorUsersWithoutProfile = await _context.Users
+            .Where(u => u.RoleCode == RoleCodes.Mentor)
+            .Where(u => !_context.MentorProfiles.Any(p => p.UserId == u.Id))
+            .ToListAsync();
+
+        if (mentorUsersWithoutProfile.Any())
+        {
+            foreach (var user in mentorUsersWithoutProfile)
+            {
+                var newProfile = new MentorProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    FullName = string.IsNullOrWhiteSpace(user.FullName) ? "Mentor " + user.Email : user.FullName,
+                    AvatarUrl = user.AvatarUrl,
+                    IsVerified = false,
+                    Status = "inactive",
+                    RatingAverage = 5.0m,
+                    RatingCount = 0,
+                    YearsOfExperience = 0,
+                    Specialties = new List<MentorSpecialty>()
+                };
+                _context.MentorProfiles.Add(newProfile);
+            }
+            await _context.SaveChangesAsync();
+        }
+
         var query = _context.MentorProfiles.AsQueryable();
 
         if (isVerified.HasValue)

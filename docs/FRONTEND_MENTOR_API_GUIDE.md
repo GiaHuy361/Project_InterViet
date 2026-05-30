@@ -1,6 +1,6 @@
 # 📘 HƯỚNG DẪN TÍCH HỢP FRONTEND - LUỒNG NGHIỆP VỤ MENTOR
 
-Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết 21 API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
+Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết 22 API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
 
 ---
 
@@ -11,14 +11,16 @@ Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hư�
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Mentor
-    actor Admin
     actor Candidate
+    actor Admin
+    actor Mentor
 
     %% Luồng 1
-    Note over Mentor, Admin: Luồng 1: Đăng ký & Phê duyệt Chuyên gia
-    Mentor->>Backend: Cập nhật thông tin Chuyên gia (IsVerified mặc định = false)
+    Note over Candidate, Admin: Luồng 1: Đăng ký & Phê duyệt Chuyên gia
+    Candidate->>Backend: Gửi đơn đăng ký làm Mentor (POST /api/v1/mentors/register)
+    Note right of Backend: Đổi role của User thành mentor, tạo Profile (IsVerified = false)
     Admin->>Backend: Duyệt/Xác thực hồ sơ Mentor (Verify = true)
+    Mentor->>Backend: Đăng nhập Workspace cập nhật chi tiết hồ sơ cá nhân
     
     %% Luồng 2
     Note over Mentor: Luồng 2: Cài đặt lịch rảnh
@@ -39,7 +41,7 @@ sequenceDiagram
 
 ---
 
-## 🗂️ CHI TIẾT 21 API ENDPOINTS & PAYLOAD JSON MẪU
+## 🗂️ CHI TIẾT 22 API ENDPOINTS & PAYLOAD JSON MẪU
 
 ---
 
@@ -146,7 +148,7 @@ sequenceDiagram
 #### 4. Xem thông tin hồ sơ của tôi (Self Profile)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/profile`
-* **Response Body (200 OK):** (Trả về cấu trúc tương tự API Chi tiết công khai, nhưng kèm thông tin trạng thái duyệt)
+* **Response Body (200 OK):** *(Trả về cấu trúc tương tự API Chi tiết công khai, nhưng kèm thông tin trạng thái duyệt)*
 ```json
 {
   "id": "c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -334,20 +336,46 @@ sequenceDiagram
 ### Phân hệ 3: 🎓 Dành cho Ứng viên đã đăng nhập (Candidate API)
 *Yêu cầu Token JWT của Candidate: `Headers -> Authorization: Bearer <Token_Candidate>`*
 
-#### 14. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập (API bảo mật)
+#### 14. Đăng ký trở thành Mentor (Mentor Onboarding Application)
+* **HTTP Method:** `POST`
+* **Route:** `/api/v1/mentors/register`
+* **Request Body (JSON):**
+```json
+{
+  "fullName": "Nguyễn Văn A",
+  "headline": "Senior .NET Engineer @ TechCorp",
+  "bio": "Xin chào, mình có hơn 6 năm kinh nghiệm lập trình C# Backend...",
+  "yearsOfExperience": 6.5,
+  "expertise": ["Backend", "Microservices"],
+  "industries": ["Fintech", "E-commerce"],
+  "languages": ["Tiếng Việt", "English"],
+  "specialtyIds": [
+    "e1f2g3h4-i5j6-4k7l-8m9n-0o1p2q3r4s5t"
+  ]
+}
+```
+* **Response Body (201 Created):**
+```json
+{
+  "message": "Đăng ký thành công. Vui lòng chờ quản trị viên phê duyệt hồ sơ của bạn.",
+  "mentorProfileId": "c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c"
+}
+```
+
+#### 15. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập (API bảo mật)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors`
 * **Query Params:** `specialty`, `serviceType`, `rating`, `search`, `page`, `pageSize`
 
-#### 15. Xem chi tiết Mentor (Yêu cầu đăng nhập)
+#### 16. Xem chi tiết Mentor (Yêu cầu đăng nhập)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors/{id:guid}`
 
-#### 16. Xem khung giờ rảnh của Mentor (Yêu cầu đăng nhập)
+#### 17. Xem khung giờ rảnh của Mentor (Yêu cầu đăng nhập)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors/{id:guid}/availability`
 
-#### 17. Gửi yêu cầu đặt lịch hẹn (Book Mentor)
+#### 18. Gửi yêu cầu đặt lịch hẹn (Book Mentor)
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings`
 * **Request Body (JSON):**
@@ -371,15 +399,15 @@ sequenceDiagram
 }
 ```
 
-#### 18. Xem danh sách lịch hẹn đã đặt của Candidate
+#### 19. Xem danh sách lịch hẹn đã đặt của Candidate
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor-bookings`
 
-#### 19. Xem chi tiết lịch hẹn đã đặt
+#### 20. Xem chi tiết lịch hẹn đã đặt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}`
 
-#### 20. Candidate chủ động Hủy lịch hẹn
+#### 21. Candidate chủ động Hủy lịch hẹn
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}/cancel`
 * **Request Body (JSON):**
@@ -389,7 +417,7 @@ sequenceDiagram
 }
 ```
 
-#### 21. Candidate gửi đánh giá & viết nhận xét (Sau khi hoàn thành cuộc hẹn)
+#### 22. Candidate gửi đánh giá & viết nhận xét (Sau khi hoàn thành cuộc hẹn)
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor-bookings/{id:guid}/review`
 * **Request Body (JSON):**
@@ -406,26 +434,26 @@ sequenceDiagram
 ### Phân hệ 4: 👑 Dành cho Quản trị viên (Admin API)
 *Yêu cầu Token JWT của Admin: `Headers -> Authorization: Bearer <Token_Admin>`*
 
-#### 22. Lấy toàn bộ danh sách Mentor trong hệ thống để duyệt
+#### 23. Lấy toàn bộ danh sách Mentor trong hệ thống để duyệt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/admin/mentors`
 * **Query Params:** `search`, `isVerified` (Để true/false để lọc danh sách cần duyệt/đã duyệt).
 
-#### 23. Phê duyệt duyệt / Hủy duyệt hồ sơ chuyên gia
+#### 24. Phê duyệt duyệt / Hủy duyệt hồ sơ chuyên gia
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/verify?verify=true`
 * **Query Params:** `verify=true` (Duyệt) | `verify=false` (Hủy duyệt).
 
-#### 24. Đóng / Mở hoạt động hồ sơ Mentor
+#### 25. Đóng / Mở hoạt động hồ sơ Mentor
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/status?status=active`
 * **Query Params:** `status` (`active` | `inactive`).
 
-#### 25. Quản lý xem toàn bộ các Booking trong hệ thống
+#### 26. Quản lý xem toàn bộ các Booking trong hệ thống
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/admin/mentor-bookings`
 
-#### 26. Thêm mới / Cập nhật chuyên mục hệ thống (CRUD Chuyên Môn)
+#### 27. Thêm mới / Cập nhật chuyên mục hệ thống (CRUD Chuyên Môn)
 * **HTTP Method:** `POST` (Tạo mới) | `PUT` (Cập nhật) | `DELETE` (Xóa)
 * **Route:** `/api/v1/admin/mentors/specialties` hoặc `/api/v1/admin/mentors/specialties/{id:guid}`
 
