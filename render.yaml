@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: interviet-ai-service
+    env: python
+    buildCommand: pip install -r requirements.txt
+    # Bảo đảm có proxy-headers cho luồng Realtime Voice
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false # Anh sẽ tự điền key thật trên Render Dashboard
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PYTHON_API_BASE_URL
+        value: https://interviet-ai-service.onrender.com # Điền domain Render của chính nó để Frontend bốc URL kết nối
