@@ -104,11 +104,15 @@ public class MentorBookingsController : ApiControllerBase
         _db.MentorBookings.Add(booking);
 
         // 3. Create Checkout Session
+        var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        long orderCode = (long)(DateTime.UtcNow - epoch).TotalMilliseconds;
+
         var checkoutSessionId = Guid.NewGuid();
         var checkoutSession = new BillingCheckoutSession
         {
             Id = checkoutSessionId,
             UserId = _currentUser.UserId,
+            OrderCode = orderCode,
             Provider = "vnpay", // default mock provider
             Amount = slot.PriceAmount,
             CurrencyCode = slot.CurrencyCode,
