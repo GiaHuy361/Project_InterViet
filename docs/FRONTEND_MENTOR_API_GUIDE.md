@@ -1,6 +1,6 @@
 # 📘 HƯỚNG DẪN TÍCH HỢP FRONTEND - LUỒNG NGHIỆP VỤ MENTOR
 
-Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết 28 API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
+Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hướng dẫn các bước thực hiện và **chi tiết API Endpoints kèm JSON Payload mẫu** phục vụ cho việc tích hợp giao diện (Frontend) luồng Mentor trong hệ thống **INTER-VIET**.
 
 ---
 
@@ -8,40 +8,31 @@ Tài liệu này tổng hợp toàn bộ **luồng nghiệp vụ (flow)**, hư�
 
 Để xây dựng một luồng Mentor hoàn chỉnh, Frontend cần thực hiện phối hợp các API theo 4 luồng chính sau:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Candidate
-    actor Admin
-    actor Mentor
+```
+LUỒNG 1: Đăng ký & Phê duyệt Chuyên gia
+  Candidate → POST /api/v1/mentors/register
+  Admin → POST /api/v1/mentor/admin/mentors/{id}/verify?verify=true
+  Mentor → PUT /api/v1/mentor/profile (cập nhật hồ sơ đầy đủ)
 
-    %% Luồng 1
-    Note over Candidate, Admin: Luồng 1: Đăng ký & Phê duyệt Chuyên gia
-    Candidate->>Backend: Gửi đơn đăng ký làm Mentor (POST /api/v1/mentors/register)
-    Note right of Backend: Đổi role của User thành mentor, tạo Profile (IsVerified = false)
-    Admin->>Backend: Duyệt/Xác thực hồ sơ Mentor (Verify = true)
-    Mentor->>Backend: Đăng nhập Workspace cập nhật chi tiết hồ sơ cá nhân
-    
-    %% Luồng 2
-    Note over Mentor: Luồng 2: Cài đặt lịch rảnh
-    Mentor->>Backend: Cập nhật các Khung giờ rảnh (Availability Slots)
+LUỒNG 2: Cài đặt lịch rảnh
+  Mentor → PUT /api/v1/mentor/availability
 
-    %% Luồng 3
-    Note over Candidate, Mentor: Luồng 3: Tìm kiếm & Đặt lịch
-    Candidate->>Backend: Xem danh sách & Đặt lịch hẹn (Booking)
-    Backend-->>Candidate: Tạo Booking & Trả về link Thanh toán (Checkout)
-    Candidate->>PayOS: Thanh toán trực tuyến (Hoặc bấm giả lập thành công ở local)
-    
-    %% Luồng 4
-    Note over Candidate, Mentor: Luồng 4: Tiến hành hẹn & Đánh giá
-    Mentor->>Backend: Xác nhận cuộc hẹn & Bắt đầu gặp mặt qua Meeting URL
-    Mentor->>Backend: Đánh dấu Hoàn thành buổi hẹn (Completed)
-    Candidate->>Backend: Viết nhận xét & Đánh giá sao (Review)
+LUỒNG 3: Tìm kiếm → Đặt lịch → Thanh toán (PayOS)
+  Candidate → GET /api/v1/mentors (tìm Mentor)
+  Candidate → POST /api/v1/mentor-bookings (đặt lịch)
+  Backend   → Trả về checkoutUrl (PayOS)
+  Candidate → redirect sang checkoutUrl để thanh toán
+  PayOS     → Webhook → Backend xác nhận → Booking thành succeeded
+  Frontend  → Polling GET /api/v1/billing/payments/{paymentId} hoặc nhận SignalR
+
+LUỒNG 4: Tiến hành hẹn & Đánh giá
+  Mentor    → POST /api/v1/mentor/bookings/{id}/status (confirmed / completed)
+  Candidate → POST /api/v1/mentor-bookings/{id}/review (đánh giá sao)
 ```
 
 ---
 
-## 🗂️ CHI TIẾT 28 API ENDPOINTS & PAYLOAD JSON MẪU
+## 🗂️ CHI TIẾT API ENDPOINTS & PAYLOAD JSON MẪU
 
 ---
 
@@ -51,7 +42,7 @@ sequenceDiagram
 #### 1. Lấy danh sách Mentor công khai đã được Admin duyệt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/public/mentors`
-* **Query Params:** 
+* **Query Params:**
   * `page` (Mặc định: 1)
   * `pageSize` (Mặc định: 20)
   * `search` (Tìm theo tên, bio, headline)
@@ -148,7 +139,7 @@ sequenceDiagram
 #### 4. Xem thông tin hồ sơ của tôi (Self Profile)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/profile`
-* **Response Body (200 OK):** *(Trả về cấu trúc tương tự API Chi tiết công khai, nhưng kèm thông tin trạng thái duyệt)*
+* **Response Body (200 OK):**
 ```json
 {
   "id": "c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -162,6 +153,7 @@ sequenceDiagram
   "ratingAverage": 4.9,
   "ratingCount": 12,
   "status": "active",
+  "meetingUrl": "https://meet.google.com/abc-xyz-123",
   "expertise": ["Backend", "Microservices"],
   "industries": ["Fintech"],
   "languages": ["Tiếng Việt"],
@@ -183,7 +175,7 @@ sequenceDiagram
   "expertise": ["Backend", "Microservices"],
   "industries": ["Fintech", "E-commerce"],
   "languages": ["Tiếng Việt", "English"],
-  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc nhập link phòng họp riêng của Mentor
+  "meetingUrl": "https://meet.google.com/abc-xyz-123"
 }
 ```
 * **Response Body (200 OK):** Trả về thông tin hồ sơ đã cập nhật.
@@ -228,7 +220,7 @@ sequenceDiagram
 }
 ```
 
-#### 8. Xem thống kê Dashboard của Mentor (Số lượng lịch đặt, doanh thu...)
+#### 8. Xem thống kê Dashboard của Mentor
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/dashboard/summary`
 * **Response Body (200 OK):**
@@ -248,7 +240,7 @@ sequenceDiagram
 #### 9. Lấy danh sách lịch đặt hẹn của Mentor (Khách đặt lịch với mình)
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/bookings`
-* **Query Params:** `status` (Lọc theo trạng thái), `search` (Tìm theo tên ứng viên), `page`, `pageSize`.
+* **Query Params:** `status`, `search`, `page`, `pageSize`
 * **Response Body (200 OK):**
 ```json
 {
@@ -285,11 +277,13 @@ sequenceDiagram
 * **Request Body (JSON):**
 ```json
 {
-  "status": "confirmed", // confirmed | cancelled | completed
-  "cancelReason": "Bận lịch đột xuất", // Bắt buộc truyền nếu status = cancelled
-  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Bắt buộc truyền và phải là URL hợp lệ nếu status = confirmed
+  "status": "confirmed",
+  "cancelReason": "Bận lịch đột xuất",
+  "meetingUrl": "https://meet.google.com/abc-xyz-123"
 }
 ```
+> ⚠️ `cancelReason` bắt buộc khi `status = cancelled`. `meetingUrl` bắt buộc khi `status = confirmed`.
+
 * **Response Body (200 OK):**
 ```json
 {
@@ -345,8 +339,8 @@ sequenceDiagram
 * **Response Body (200 OK):**
 ```json
 {
-  "clearedCount": 2, // Số khung giờ rảnh cũ chưa có ai đặt đã bị xóa đi
-  "addedCount": 2 // Số khung giờ rảnh mới được thêm vào thành công
+  "clearedCount": 2,
+  "addedCount": 2
 }
 ```
 
@@ -371,7 +365,7 @@ sequenceDiagram
   "specialtyIds": [
     "e1f2g3h4-i5j6-4k7l-8m9n-0o1p2q3r4s5t"
   ],
-  "meetingUrl": "https://meet.google.com/abc-xyz-123" // Không bắt buộc (Optional) khi nộp đơn đăng ký ban đầu
+  "meetingUrl": "https://meet.google.com/abc-xyz-123"
 }
 ```
 * **Response Body (201 Created):**
@@ -382,7 +376,7 @@ sequenceDiagram
 }
 ```
 
-#### 16. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập (API bảo mật)
+#### 16. Duyệt danh sách Mentor dành cho Candidate đã đăng nhập
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentors`
 * **Query Params:** `specialty`, `serviceType`, `rating`, `search`, `page`, `pageSize`
@@ -402,10 +396,12 @@ sequenceDiagram
 ```json
 {
   "slotId": "a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p",
-  "serviceType": "cv_review", // cv_review | mock_interview | career_coaching | technical_mentoring
+  "serviceType": "cv_review",
   "candidateNotes": "Nhờ mentor xem kỹ giúp em phần kinh nghiệm dự án .NET..."
 }
 ```
+> `serviceType` hợp lệ: `cv_review` | `mock_interview` | `career_coaching` | `technical_mentoring`
+
 * **Response Body (200 OK):**
 ```json
 {
@@ -414,14 +410,39 @@ sequenceDiagram
   "amount": 200000.0,
   "currencyCode": "VND",
   "checkoutSessionId": "08be8dfa-8091-46c5-8e57-ac646083e843",
-  "checkoutUrl": "https://pay.payos.vn/web/fbaac18082b943b2bf60cfdd89d04dc7", // Redirect Candidate sang trang này để thanh toán
-  "paymentInstructionsUrl": "/api/v1/billing/checkout-sessions/08be8dfa-8091-46c5-8e57-ac646083e843/payment-instructions"
+  "checkoutUrl": "https://pay.payos.vn/web/fbaac18082b943b2bf60cfdd89d04dc7",
+  "paymentInstructionsUrl": null
 }
 ```
+
+> ✅ **Frontend chỉ cần lấy `checkoutUrl` và redirect người dùng sang đó.** Không gọi `paymentInstructionsUrl` (deprecated).
 
 #### 20. Xem danh sách lịch hẹn đã đặt của Candidate
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor-bookings`
+* **Query Params:** `page`, `pageSize`, `status`
+* **Response Body (200 OK):**
+```json
+{
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "items": [
+    {
+      "id": "b1b2b3b4-b5b6-4b7b-8b8b-9b9b9b9b9b9b",
+      "mentorName": "Nguyễn Văn A",
+      "mentorAvatarUrl": "https://...",
+      "status": "confirmed",
+      "scheduledStartsAt": "2026-06-01T08:00:00Z",
+      "scheduledEndsAt": "2026-06-01T09:00:00Z",
+      "serviceType": "cv_review",
+      "amount": 200000.0,
+      "currencyCode": "VND",
+      "meetingUrl": "https://meet.google.com/abc-xyz-123"
+    }
+  ]
+}
+```
 
 #### 21. Xem chi tiết lịch hẹn đã đặt
 * **HTTP Method:** `GET`
@@ -443,7 +464,7 @@ sequenceDiagram
 * **Request Body (JSON):**
 ```json
 {
-  "rating": 5, // 1 đến 5 sao
+  "rating": 5,
   "comment": "Mentor chỉ ra các lỗi CV rất chi tiết, hướng đi rõ ràng."
 }
 ```
@@ -457,17 +478,17 @@ sequenceDiagram
 #### 24. Lấy toàn bộ danh sách Mentor trong hệ thống để duyệt
 * **HTTP Method:** `GET`
 * **Route:** `/api/v1/mentor/admin/mentors`
-* **Query Params:** `search`, `isVerified` (Để true/false để lọc danh sách cần duyệt/đã duyệt).
+* **Query Params:** `search`, `isVerified`
 
-#### 25. Phê duyệt duyệt / Hủy duyệt hồ sơ chuyên gia
+#### 25. Phê duyệt / Hủy duyệt hồ sơ chuyên gia
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/verify?verify=true`
-* **Query Params:** `verify=true` (Duyệt) | `verify=false` (Hủy duyệt).
+* **Query Params:** `verify=true` (Duyệt) | `verify=false` (Hủy duyệt)
 
 #### 26. Đóng / Mở hoạt động hồ sơ Mentor
 * **HTTP Method:** `POST`
 * **Route:** `/api/v1/mentor/admin/mentors/{id:guid}/status?status=active`
-* **Query Params:** `status` (`active` | `inactive`).
+* **Query Params:** `status=active` | `status=inactive`
 
 #### 27. Quản lý xem toàn bộ các Booking trong hệ thống
 * **HTTP Method:** `GET`
@@ -479,20 +500,161 @@ sequenceDiagram
 
 ---
 
+## 💳 LUỒNG THANH TOÁN PAYOS CHO MENTOR BOOKING (QUAN TRỌNG)
+
+> ⚠️ **Lưu ý:** Từ Phase 18 trở đi, toàn bộ thanh toán đều dùng **PayOS thật**. Không còn sử dụng mock payment hay bank transfer thủ công nữa.
+
+### Sơ đồ luồng đầy đủ:
+
+```
+[1] POST /api/v1/mentor-bookings
+         ↓
+  Backend tạo Booking (pending_payment) + CheckoutSession + gọi PayOS
+         ↓
+  Response trả về: checkoutUrl + checkoutSessionId + bookingId
+         ↓
+[2] Frontend redirect: window.location.href = checkoutUrl
+         ↓
+  Người dùng thanh toán trên trang PayOS (quét QR hoặc thẻ ngân hàng)
+         ↓
+[3] PayOS gọi Webhook → Backend (POST /api/v1/billing/payos/webhook)
+  Backend xác nhận chữ ký → cập nhật Booking thành "confirmed" + tạo Invoice
+         ↓
+[4] PayOS redirect người dùng về returnUrl:
+  https://interviet-frontend.vercel.app/payment/success?paymentId=xxx
+         ↓
+[5] Frontend tại trang /payment/success:
+  → Gọi GET /api/v1/billing/payments/{paymentId} để kiểm tra status
+  → Lắng nghe SignalR event "payment.updated" hoặc "subscription.activated"
+         ↓
+[6] Nếu status = "succeeded" → Hiển thị màn hình thành công
+    Nếu status = "failed" / "cancelled" → Hiển thị lỗi + nút thử lại
+```
+
+---
+
+### API Thanh toán chi tiết:
+
+#### A. Kiểm tra trạng thái thanh toán (Polling tại trang Success/Cancel)
+* **HTTP Method:** `GET`
+* **Route:** `/api/v1/billing/payments/{paymentId}`
+* **Lưu ý:** `paymentId` = `checkoutSessionId` (cùng một giá trị GUID)
+* **Response Body (200 OK):**
+```json
+{
+  "id": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "provider": "payos",
+  "planKey": null,
+  "checkoutSessionId": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "purpose": "mentor_booking",
+  "description": "Đặt lịch mentor - CV Review",
+  "amount": 200000.0,
+  "currencyCode": "VND",
+  "status": "succeeded",
+  "paidAt": "2026-06-01T08:15:00Z",
+  "failedAt": null
+}
+```
+
+#### B. Xem chi tiết Checkout Session (nếu cần kiểm tra thêm)
+* **HTTP Method:** `GET`
+* **Route:** `/api/v1/billing/checkout-sessions/{id:guid}`
+* **Response Body (200 OK):**
+```json
+{
+  "id": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "planKey": null,
+  "provider": "payos",
+  "purpose": "mentor_booking",
+  "description": "Đặt lịch mentor - CV Review",
+  "amount": 200000.0,
+  "currencyCode": "VND",
+  "status": "succeeded",
+  "expiresAt": "2026-06-01T08:45:00Z",
+  "completedAt": "2026-06-01T08:15:00Z",
+  "failureReason": null,
+  "createdAt": "2026-06-01T08:00:00Z"
+}
+```
+
+#### C. Resume phiên thanh toán thất bại (Retry Payment)
+> Dùng khi Booking ở trạng thái `pending_payment` nhưng session bị `failed` / `expired` / `cancelled`
+
+* **HTTP Method:** `POST`
+* **Route:** `/api/v1/billing/checkout-sessions/{id:guid}/resume`
+* **Body:** Không cần body
+* **Response Body (200 OK):**
+```json
+{
+  "message": "Khôi phục phiên thanh toán thành công. Bạn có thể tiến hành thanh toán lại.",
+  "checkoutSessionId": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "status": "pending",
+  "expiresAt": "2026-06-01T09:15:00Z",
+  "paymentInstructionsUrl": "/api/v1/billing/checkout-sessions/08be8dfa-.../payment-instructions"
+}
+```
+> ✅ Sau khi resume thành công → Gọi lại `GET /api/v1/billing/checkout-sessions/{id}` để lấy `checkoutUrl` mới rồi redirect sang PayOS lại.
+
+---
+
+### Sự kiện SignalR cần lắng nghe (tại trang /payment/success):
+
+**Hub Endpoint:** `wss://interviet-backend-api.onrender.com/hubs/notifications`
+
+```typescript
+// Lắng nghe kết quả thanh toán mentor booking
+connection.on("payment.updated", (payload) => {
+  // payload.paymentId, payload.status ("succeeded" | "failed"), payload.purpose
+  if (payload.purpose === "mentor_booking" && payload.paymentId === currentPaymentId) {
+    if (payload.status === "succeeded") showSuccessUI();
+    if (payload.status === "failed") showFailedUI();
+  }
+});
+```
+
+---
+
+### Bảng trạng thái Booking Status:
+
+| Status | Ý nghĩa | Hành vi UI |
+|---|---|---|
+| `pending_payment` | Chờ thanh toán qua PayOS | Hiện nút "Thanh toán ngay", spinner chờ |
+| `confirmed` | Đã thanh toán + Mentor xác nhận | Hiện meetingUrl, đếm ngược đến giờ hẹn |
+| `completed` | Buổi hẹn kết thúc | Hiện nút "Viết đánh giá" |
+| `cancelled` | Bị hủy (bởi Mentor hoặc Candidate) | Hiện lý do hủy, nút đặt lại |
+
+---
+
+### Bảng trạng thái Checkout Session / Payment:
+
+| Status | Ý nghĩa | Hành vi UI |
+|---|---|---|
+| `pending` | Đang chờ thanh toán | Hiện spinner, lắng nghe SignalR / polling |
+| `succeeded` | Thanh toán thành công | ✅ Hiện màn hình chúc mừng |
+| `failed` | Lỗi thanh toán từ PayOS | ❌ Hiện lỗi + nút Resume/Retry |
+| `cancelled` | Người dùng hủy trên cổng PayOS | ❌ Hiện thông báo hủy + nút Resume/Retry |
+| `expired` | Hết hạn 15 phút chưa thanh toán | ⏰ Hiện thông báo hết hạn + nút Resume/Retry |
+
+---
+
 ## 💡 CÁC LƯU Ý KỸ THUẬT QUAN TRỌNG CHO FRONTEND
 
-1. **Kiểu Dịch vụ (`serviceType`):** Phải thuộc 1 trong 4 từ khóa sau (không viết sai chính tả):
+1. **Không dùng `paymentInstructionsUrl`**: Trường này đã deprecated. Frontend **tuyệt đối không** gọi endpoint `/payment-instructions` hay render UI chuyển khoản thủ công trong luồng PayOS.
+
+2. **Không tin tưởng query params URL từ PayOS**: Khi PayOS redirect về `/payment/success?status=PAID`, **không** tự động cập nhật trạng thái dựa vào tham số URL. Luôn gọi `GET /api/v1/billing/payments/{id}` để xác nhận từ Backend.
+
+3. **Polling fallback**: Nếu SignalR không hoạt động, chạy polling mỗi 5 giây, tối đa 20 lần (khoảng 100 giây). Sau đó hiển thị nút "Kiểm tra lại thủ công".
+
+4. **Kiểu Dịch vụ (`serviceType`):** Phải thuộc 1 trong 4 giá trị sau:
    * `cv_review` (Đánh giá CV)
    * `mock_interview` (Phỏng vấn thử)
    * `career_coaching` (Định hướng nghề nghiệp)
    * `technical_mentoring` (Cố vấn kỹ thuật)
-2. **Định dạng thời gian (Datetime):** Tất cả các khung giờ gửi lên hoặc nhận về đều tuân theo chuẩn **ISO 8601** và múi giờ **UTC** (được kết thúc bằng ký tự `Z`, ví dụ: `2026-06-01T08:00:00Z`). Frontend cần chuyển đổi sang múi giờ địa phương (GMT+7) khi hiển thị lên giao diện cho người dùng.
-3. **Mã trạng thái cuộc hẹn (`Booking Status`):**
-   * `pending_payment` (Đang chờ thanh toán qua cổng PayOS)
-   * `confirmed` (Thành công - Đã thanh toán và được xác nhận)
-   * `completed` (Buổi hẹn đã kết thúc tốt đẹp)
-   * `cancelled` (Lịch hẹn bị hủy bỏ từ phía Mentor hoặc Candidate)
-4. **Cơ chế xử lý Email bất đồng bộ (Background Email Sending):**
-   Toàn bộ các API gửi email (Đăng ký tài khoản, Đổi mật khẩu, Xác thực lại email, Hóa đơn thanh toán thành công, Xác nhận lịch đặt Mentor thành công) trong Backend C# hiện đã được chuyển giao cho các luồng xử lý chạy ngầm (**Background Tasks - Fire-and-Forget** thông qua `Task.Run`).
-   * **Lợi ích:** API sẽ phản hồi thành công `200 OK` hoặc `201 Created` ngay lập tức (**~0.1s**), loại bỏ hoàn toàn hiện tượng treo spinner xoay tròn tải trang do chờ đợi SMTP Server kết nối hoặc gặp lỗi timeout khi Render chặn cổng gửi email outbound (Port 587).
-   * **Frontend:** Không cần xử lý chờ đợi gửi email phức tạp, chỉ cần nhận kết quả trả về từ API và hiển thị thông báo thành công cho người dùng ngay lập tức.
+
+5. **Định dạng thời gian (Datetime):** Tất cả datetime đều là **ISO 8601 UTC** (kết thúc bằng `Z`). Frontend cần chuyển sang GMT+7 khi hiển thị.
+
+6. **Email bất đồng bộ**: Toàn bộ email xác nhận đặt lịch, hóa đơn... được gửi bằng Background Task. API phản hồi `200 OK` ngay lập tức, không cần chờ email.
+
+7. **Thời gian giữ chỗ slot**: Sau khi đặt lịch, slot bị lock **15 phút**. Nếu không thanh toán trong 15 phút, session hết hạn (`expired`) và slot được giải phóng. Frontend nên hiển thị countdown timer.
+
+8. **Nút Resume/Retry**: Khi session ở trạng thái `failed` / `cancelled` / `expired`, hiển thị nút **"Thử lại thanh toán"** → gọi `POST /billing/checkout-sessions/{id}/resume` → redirect lại sang `checkoutUrl` mới.
