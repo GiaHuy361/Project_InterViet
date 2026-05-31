@@ -115,50 +115,6 @@ public class BillingController : ApiControllerBase
             new SimulatePaymentCancelledCommand(_currentUser.UserId, id, request.Reason)));
     }
 
-    // ── Resume / Retry Payment ────────────────────────────────────────────────
-
-    /// <summary>
-    /// POST /api/v1/billing/checkout-sessions/{id}/resume
-    /// Resumes a failed, cancelled or expired checkout session so the user can retry payment.
-    /// Resets status back to "pending", generates a new OrderCode and extends the expiry window.
-    /// Cannot resume a session that has already succeeded.
-    /// </summary>
-    [HttpPost("checkout-sessions/{id:guid}/resume")]
-    public async Task<IActionResult> ResumeCheckoutSession(Guid id, CancellationToken ct)
-    {
-        var session = await _db.BillingCheckoutSessions
-            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == _currentUser.UserId, ct);
-
-        if (session is null)
-            return NotFound(new { error = "Checkout session not found." });
-
-        if (session.Status == CheckoutSessionStatus.Succeeded)
-            return BadRequest(new { error = "Không thể khôi phục phiên thanh toán đã hoàn thành thành công." });
-
-        if (session.Status == CheckoutSessionStatus.Pending && DateTime.UtcNow <= session.ExpiresAt)
-            return BadRequest(new { error = "Phiên thanh toán vẫn đang còn hiệu lực. Bạn chưa cần khôi phục lại." });
-
-        // Generate a fresh unique OrderCode
-        var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        session.OrderCode    = (long)(DateTime.UtcNow - epoch).TotalMilliseconds;
-        session.Status       = CheckoutSessionStatus.Pending;
-        session.FailureReason = null;
-        session.CompletedAt  = null;
-        session.ExpiresAt    = DateTime.UtcNow.AddMinutes(_billing.MockCheckoutTtlMinutes);
-        session.UpdatedAt    = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(new
-        {
-            message           = "Khôi phục phiên thanh toán thành công. Bạn có thể tiến hành thanh toán lại.",
-            checkoutSessionId = session.Id,
-            status            = session.Status,
-            expiresAt         = session.ExpiresAt,
-            paymentInstructionsUrl = $"/api/v1/billing/checkout-sessions/{session.Id}/payment-instructions"
-        });
-    }
-
     // ── Phase 10B: Mock Checkout Experience ────────────────────────────────────
 
     /// <summary>Gets mock bank transfer payment instructions and QR code for the session.</summary>

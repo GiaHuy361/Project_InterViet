@@ -15,6 +15,8 @@ using Interviet.Contracts.Mentors;
 using Interviet.Contracts.Notifications;
 using Interviet.Domain.Billing;
 using Interviet.Domain.Mentors;
+using PayOS;
+using PayOS.Models.V2.PaymentRequests;
 
 namespace Interviet.Api.Controllers;
 
@@ -25,6 +27,9 @@ public class MentorBookingsController : ApiControllerBase
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly BillingOptions _billing;
+    private readonly PayosConfigOptions _payosOptions;
+    private readonly PaymentRedirectOptions _redirectOptions;
+    private readonly PayOSClient _payOSClient;
     private readonly INotificationService _notificationService;
     private readonly ILogger<MentorBookingsController> _logger;
 
@@ -40,12 +45,18 @@ public class MentorBookingsController : ApiControllerBase
         IAppDbContext db,
         ICurrentUserService currentUser,
         IOptions<BillingOptions> billing,
+        IOptions<PayosConfigOptions> payosOptions,
+        IOptions<PaymentRedirectOptions> redirectOptions,
+        PayOSClient payOSClient,
         INotificationService notificationService,
         ILogger<MentorBookingsController> logger)
     {
         _db = db;
         _currentUser = currentUser;
         _billing = billing.Value;
+        _payosOptions = payosOptions.Value;
+        _redirectOptions = redirectOptions.Value;
+        _payOSClient = payOSClient;
         _notificationService = notificationService;
         _logger = logger;
     }
@@ -103,62 +114,130 @@ public class MentorBookingsController : ApiControllerBase
         };
         _db.MentorBookings.Add(booking);
 
-        // 3. Create Checkout Session
-        var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        long orderCode = (long)(DateTime.UtcNow - epoch).TotalMilliseconds;
+        // 3. Create Checkout Session with real PayOS
+        if (!_payosOptions.Enabled)
+            return BadRequest(new { error = "Cổng thanh toán PayOS hiện đang tạm thời bị tắt. Vui lòng thử lại sau." });
 
+        var expiresAt = now.AddMinutes(_billing.MockCheckoutTtlMinutes);
         var checkoutSessionId = Guid.NewGuid();
+
+        // Short description max 25 chars for PayOS
+        var mentorName = slot.Mentor?.FullName ?? "Mentor";
+        var rawDesc = $"Dat lich {mentorName}";
+        var description = rawDesc.Length > 25 ? rawDesc[..25] : rawDesc;
+
+        var returnUrl = !string.IsNullOrWhiteSpace(_redirectOptions.ReturnUrl)
+            ? _redirectOptions.ReturnUrl
+            : $"{_billing.FrontendBaseUrl.TrimEnd('/')}/payment/success";
+        var cancelUrl = !string.IsNullOrWhiteSpace(_redirectOptions.CancelUrl)
+            ? _redirectOptions.CancelUrl
+            : $"{_billing.FrontendBaseUrl.TrimEnd('/')}/payment/cancel";
+
         var checkoutSession = new BillingCheckoutSession
         {
-            Id = checkoutSessionId,
-            UserId = _currentUser.UserId,
-            OrderCode = orderCode,
-            Provider = "vnpay", // default mock provider
-            Amount = slot.PriceAmount,
+            Id           = checkoutSessionId,
+            UserId       = _currentUser.UserId,
+            Provider     = "payos",
+            Amount       = slot.PriceAmount,
             CurrencyCode = slot.CurrencyCode,
-            Status = CheckoutSessionStatus.Pending,
-            ExpiresAt = now.AddMinutes(_billing.MockCheckoutTtlMinutes),
-            Purpose = "mentor_booking",
-            ResourceId = bookingId,
-            Description = $"Đặt lịch Mentor với {slot.Mentor.FullName}",
-            CreatedAt = now,
-            UpdatedAt = now
+            Status       = CheckoutSessionStatus.Pending,
+            ReturnUrl    = returnUrl,
+            CancelUrl    = cancelUrl,
+            ExpiresAt    = expiresAt,
+            Purpose      = "mentor_booking",
+            ResourceId   = bookingId,
+            Description  = $"Đặt lịch Mentor với {mentorName}",
+            CreatedAt    = now,
+            UpdatedAt    = now
         };
-        checkoutSession.CheckoutUrl = $"{_billing.FrontendBaseUrl.TrimEnd('/')}/checkout/mock/{checkoutSessionId}";
-        _db.BillingCheckoutSessions.Add(checkoutSession);
 
-        await _db.SaveChangesAsync(ct);
+        // Retry up to 3 times on OrderCode collision
+        var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        string? payosError = null;
+        for (int retry = 1; retry <= 3; retry++)
+        {
+            long orderCode = (long)(DateTime.UtcNow - epoch).TotalMilliseconds + (retry - 1);
+            checkoutSession.OrderCode = orderCode;
 
-        if (slot.Mentor.UserId.HasValue)
+            try
+            {
+                var payosRequest = new CreatePaymentLinkRequest
+                {
+                    OrderCode   = orderCode,
+                    Amount      = (int)slot.PriceAmount,
+                    Description = description,
+                    Items       = new List<PaymentLinkItem>
+                    {
+                        new PaymentLinkItem
+                        {
+                            Name     = $"Mentor Session - {booking.ServiceType}",
+                            Quantity = 1,
+                            Price    = (int)slot.PriceAmount
+                        }
+                    },
+                    ReturnUrl  = returnUrl,
+                    CancelUrl  = cancelUrl,
+                    ExpiredAt  = (int)new DateTimeOffset(expiresAt).ToUnixTimeSeconds()
+                };
+
+                var payosResponse = await _payOSClient.PaymentRequests.CreateAsync(payosRequest);
+                checkoutSession.CheckoutUrl = payosResponse.CheckoutUrl;
+            }
+            catch (Exception ex)
+            {
+                payosError = ex.Message;
+                _logger.LogWarning(ex, "PayOS link creation failed (attempt {Retry}/3) for booking {BookingId}", retry, bookingId);
+                if (retry == 3)
+                    return StatusCode(502, new { error = $"Không thể tạo link thanh toán PayOS: {payosError}" });
+                continue;
+            }
+
+            try
+            {
+                if (retry == 1) _db.BillingCheckoutSessions.Add(checkoutSession);
+                await _db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+                when ((ex.InnerException?.Message ?? "").Contains("OrderCode", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("OrderCode collision on attempt {Retry}/3", retry);
+                if (retry == 3)
+                    return Conflict(new { error = "Không thể tạo phiên thanh toán do xung đột mã đơn hàng. Vui lòng thử lại." });
+            }
+        }
+
+        // Fire-and-forget notification to mentor
+        if (slot.Mentor?.UserId.HasValue == true)
         {
             _ = Task.Run(async () =>
             {
                 try
                 {
                     await _notificationService.CreateAsync(
-                        userId: slot.Mentor.UserId.Value,
-                        type: "mentor.booking_created",
-                        title: "Yêu cầu đặt lịch hẹn mới",
-                        message: $"Ứng viên đã gửi yêu cầu đặt lịch hẹn mới cho dịch vụ {booking.ServiceType}.",
-                        actionUrl: $"/mentor-bookings/{booking.Id}"
+                        userId    : slot.Mentor.UserId.Value,
+                        type      : "mentor.booking_created",
+                        title     : "Yêu cầu đặt lịch hẹn mới",
+                        message   : $"Ứng viên đã gửi yêu cầu đặt lịch hẹn mới cho dịch vụ {booking.ServiceType}.",
+                        actionUrl : $"/mentor-bookings/{booking.Id}"
                     );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to create booking created notification for mentor {MentorId}", slot.Mentor.Id);
+                    _logger.LogWarning(ex, "Failed to send booking notification for mentor {MentorId}", slot.Mentor.Id);
                 }
             });
         }
 
         var response = new BookMentorResponse
         {
-            BookingId = bookingId,
-            Status = booking.Status,
-            Amount = booking.Amount,
-            CurrencyCode = booking.CurrencyCode,
+            BookingId         = bookingId,
+            Status            = booking.Status,
+            Amount            = booking.Amount,
+            CurrencyCode      = booking.CurrencyCode,
             CheckoutSessionId = checkoutSessionId,
-            CheckoutUrl = checkoutSession.CheckoutUrl,
-            PaymentInstructionsUrl = $"/api/v1/billing/checkout-sessions/{checkoutSessionId}/payment-instructions"
+            CheckoutUrl       = checkoutSession.CheckoutUrl ?? string.Empty,
+            PaymentInstructionsUrl = null  // deprecated – not used with PayOS
         };
 
         return Ok(response);
