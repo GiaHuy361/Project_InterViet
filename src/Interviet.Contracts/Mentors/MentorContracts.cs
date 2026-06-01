@@ -62,7 +62,7 @@ public sealed class BookMentorResponse
     public string CurrencyCode { get; init; } = "VND";
     public Guid CheckoutSessionId { get; init; }
     public string CheckoutUrl { get; init; } = string.Empty;
-    public string PaymentInstructionsUrl { get; init; } = string.Empty;
+    public string? PaymentInstructionsUrl { get; init; } = null; // deprecated – always null with PayOS
 }
 
 public sealed class ReviewResponse
