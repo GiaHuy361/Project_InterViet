@@ -21,11 +21,12 @@ LUỒNG 3: Tìm kiếm → Đặt lịch → Thanh toán PayOS (QUAN TRỌNG)
   Candidate → GET  /api/v1/mentors (tìm Mentor)
   Candidate → POST /api/v1/mentor-bookings (đặt lịch)
               Backend tạo Booking (pending_payment) + gọi PayOS API lấy link thật
-              Response trả về checkoutUrl (https://pay.payos.vn/...)
+              Response trả về checkoutUrl + checkoutSessionId
   Candidate → redirect window.location.href = checkoutUrl
   PayOS     → Người dùng thanh toán (QR hoặc thẻ ngân hàng)
   PayOS     → Webhook → Backend xác nhận → Booking thành "confirmed"
-  Frontend  → GET /api/v1/billing/payments/{paymentId} (polling) hoặc SignalR
+  Frontend  → Polling GET /api/v1/billing/checkout-sessions/{checkoutSessionId}
+              (KHÔNG dùng /payments/{id} vì record chỉ tạo sau khi webhook về)
 
 LUỒNG 4: Tiến hành hẹn & Đánh giá
   Mentor    → POST /api/v1/mentor/bookings/{id}/status (confirmed / completed)
@@ -404,31 +405,76 @@ LUỒNG 4: Tiến hành hẹn & Đánh giá
 ### Sơ đồ toàn bộ:
 ```
 [B1] POST /api/v1/mentor-bookings
-     → Response: { checkoutUrl: "https://pay.payos.vn/..." }
+     → Response: { checkoutUrl, checkoutSessionId, bookingId }
          ↓
-[B2] window.location.href = checkoutUrl
+[B2] Lưu checkoutSessionId vào state, redirect:
+     window.location.href = checkoutUrl
      → Người dùng thanh toán trên trang PayOS (QR / thẻ ngân hàng)
          ↓
 [B3] PayOS → Webhook → Backend
      → Backend xác nhận chữ ký → Booking: pending_payment → confirmed
+     → PaymentTransaction được TẠO RA tại đây (chưa có trước thời điểm này!)
      → SignalR đẩy event: "payment.updated"
          ↓
-[B4] PayOS redirect về: /payment/success?paymentId={id}&orderCode={code}
+[B4] PayOS redirect về:
+     /payment/success?checkoutSessionId={id}&orderCode={code}  (thành công)
+     /payment/cancel?checkoutSessionId={id}&orderCode={code}   (hủy)
          ↓
-[B5] Frontend tại trang /payment/success:
-     → Gọi GET /api/v1/billing/payments/{paymentId} (polling mỗi 5s, tối đa 20 lần)
-     → Lắng nghe SignalR event "payment.updated"
+[B5] Frontend tại trang /payment/success — POLLING ĐÚNG CÁCH:
+     ⚠️ KHÔNG gọi /billing/payments/{id} ngay — record chưa tồn tại!
+     ✅ Gọi GET /api/v1/billing/checkout-sessions/{checkoutSessionId} (polling mỗi 5s)
+     ✅ Lắng nghe SignalR event "payment.updated" song song
          ↓
-[B6] status = "succeeded" → ✅ Hiển thị thành công, cập nhật UI booking
-     status = "failed" / "cancelled" → ❌ Hiển thị lỗi, nút "Đặt lại"
+     Nếu session.status = "pending"   → tiếp tục polling
+     Nếu session.status = "succeeded" → gọi GET /billing/payments/{checkoutSessionId}
+                                         để lấy thông tin đầy đủ → hiển thị thành công
+     Nếu session.status = "failed"/"cancelled"/"expired" → hiển thị lỗi
+```
+
+> ⚠️ **QUAN TRỌNG**: `PaymentTransaction` chỉ được tạo ra SAU KHI PayOS Webhook bắn về thành công.
+> Nếu polling `/billing/payments/{id}` ngay khi redirect về sẽ nhận lỗi `Payment.NotFound (404)`.
+> **Phải dùng `/billing/checkout-sessions/{id}` để polling trước.**
+
+---
+
+### API 1: Polling trạng thái (dùng ngay khi về trang /payment/success)
+
+#### `GET /api/v1/billing/checkout-sessions/{checkoutSessionId}`
+> Endpoint này **luôn có dữ liệu** ngay từ lúc tạo booking. Dùng để polling.
+
+* **Response (200) — Đang chờ:**
+```json
+{
+  "id": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "provider": "payos",
+  "purpose": "mentor_booking",
+  "description": "Đặt lịch Mentor với Nguyễn Văn A",
+  "amount": 200000.0,
+  "currencyCode": "VND",
+  "status": "pending",
+  "expiresAt": "2026-06-01T08:45:00Z",
+  "completedAt": null,
+  "failureReason": null,
+  "createdAt": "2026-06-01T08:00:00Z"
+}
+```
+
+* **Response (200) — Đã thanh toán thành công:**
+```json
+{
+  "id": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "status": "succeeded",
+  "completedAt": "2026-06-01T08:15:00Z",
+  ...
+}
 ```
 
 ---
 
-### API Kiểm tra trạng thái thanh toán (dùng ở trang /payment/success)
+### API 2: Lấy thông tin payment (chỉ gọi SAU KHI status = "succeeded")
 
-#### `GET /api/v1/billing/payments/{paymentId}`
-> `paymentId` = `checkoutSessionId` (cùng một GUID)
+#### `GET /api/v1/billing/payments/{checkoutSessionId}`
+> Chỉ tồn tại sau khi PayOS Webhook về thành công.
 
 * **Response (200):**
 ```json
@@ -501,16 +547,65 @@ connection.on("payment.updated", (payload) => {
 
 1. **❌ Không gọi `/payment-instructions`**: Endpoint này chỉ dành cho mock (đã tắt trên production). Không dựng UI chuyển khoản thủ công.
 
-2. **❌ Không tin tưởng query params URL**: Khi PayOS redirect về, không tự cập nhật trạng thái dựa vào `?status=PAID`. Luôn gọi `GET /billing/payments/{id}`.
+2. **❌ Không tin tưởng query params URL**: Khi PayOS redirect về, không tự cập nhật trạng thái dựa vào `?status=PAID`. Luôn gọi API Backend để xác nhận.
 
-3. **⏱️ Slot bị lock 15 phút**: Sau khi đặt lịch, slot bị giữ 15 phút. Nếu không thanh toán → slot được giải phóng. Frontend nên hiển thị countdown timer.
+3. **🚨 Polling đúng thứ tự**:
+   - Dùng `GET /billing/checkout-sessions/{id}` để polling (luôn tồn tại ngay từ đầu)
+   - Chỉ gọi `GET /billing/payments/{id}` sau khi session `status = "succeeded"` (record mới được tạo)
+   - Gọi `/billing/payments/{id}` ngay khi mới redirect về sẽ nhận `404 Payment.NotFound`
 
-4. **🔄 Nếu thanh toán thất bại**: Slot được giải phóng → User phải **đặt lịch lại từ đầu** (`POST /mentor-bookings` lần nữa), không có API Resume cho mentor booking.
+4. **⏱️ Slot bị lock 15 phút**: Sau khi đặt lịch, slot bị giữ 15 phút. Nếu không thanh toán → slot được giải phóng. Frontend nên hiển thị countdown timer.
 
-5. **📡 Polling Fallback**: SignalR là realtime chính. Nếu SignalR lỗi → polling `GET /billing/payments/{id}` mỗi 5s, tối đa 20 lần (~100s) rồi hiện nút kiểm tra thủ công.
+5. **🔄 Nếu thanh toán thất bại**: Slot được giải phóng → User phải **đặt lịch lại từ đầu** (`POST /mentor-bookings` lần nữa).
 
-6. **📅 Định dạng thời gian**: Tất cả datetime là **ISO 8601 UTC** (kết thúc bằng `Z`). Frontend chuyển sang GMT+7 khi hiển thị.
+6. **📡 Polling Fallback**: SignalR là realtime chính. Nếu SignalR lỗi → polling `GET /billing/checkout-sessions/{id}` mỗi 5s, tối đa 20 lần (~100s) rồi hiện nút kiểm tra thủ công.
 
-7. **📧 Email bất đồng bộ**: Email xác nhận gửi bằng Background Task. API trả `200 OK` ngay lập tức, không cần chờ email.
+7. **📅 Định dạng thời gian**: Tất cả datetime là **ISO 8601 UTC** (kết thúc bằng `Z`). Frontend chuyển sang GMT+7 khi hiển thị.
 
-8. **🔑 serviceType hợp lệ**: `cv_review` | `mock_interview` | `career_coaching` | `technical_mentoring`
+8. **📧 Email bất đồng bộ**: Email xác nhận gửi bằng Background Task. API trả `200 OK` ngay lập tức, không cần chờ email.
+
+9. **🔑 serviceType hợp lệ**: `cv_review` | `mock_interview` | `career_coaching` | `technical_mentoring`
+
+---
+
+## 🧪 Pseudocode mẫu cho trang /payment/success
+
+```typescript
+async function handlePaymentSuccessPage(checkoutSessionId: string) {
+  showLoadingSpinner();
+
+  // Kết nối SignalR song song
+  connection.on("payment.updated", (payload) => {
+    if (payload.paymentId === checkoutSessionId && payload.purpose === "mentor_booking") {
+      clearInterval(pollingInterval);
+      if (payload.status === "succeeded") showSuccessUI();
+      else showFailedUI(payload.status);
+    }
+  });
+
+  // Polling checkout-sessions (KHÔNG phải /payments)
+  let attempt = 0;
+  const pollingInterval = setInterval(async () => {
+    attempt++;
+    if (attempt > 20) { // ~100 giây
+      clearInterval(pollingInterval);
+      showManualCheckUI(); // "Vui lòng kiểm tra lại lịch hẹn của bạn"
+      return;
+    }
+
+    const session = await api.get(`/billing/checkout-sessions/${checkoutSessionId}`);
+    const status = session.data.status;
+
+    if (status === "succeeded") {
+      clearInterval(pollingInterval);
+      // Lúc này PaymentTransaction đã tồn tại → có thể gọi tiếp nếu cần
+      // const payment = await api.get(`/billing/payments/${checkoutSessionId}`);
+      showSuccessUI();
+    } else if (["failed", "cancelled", "expired"].includes(status)) {
+      clearInterval(pollingInterval);
+      showFailedUI(status); // Nút "Đặt lịch lại"
+    }
+    // Nếu "pending" → tiếp tục polling
+  }, 5000);
+}
+```
