@@ -515,10 +515,47 @@ connection.on("payment.updated", (payload) => {
 
 | Kịch bản | URL |
 |---|---|
-| Thanh toán thành công | `https://interviet-frontend.vercel.app/payment/success?paymentId={id}` |
-| Người dùng hủy | `https://interviet-frontend.vercel.app/payment/cancel?paymentId={id}` |
+| Thanh toán thành công | `https://interviet-frontend.vercel.app/payment/success?checkoutSessionId={id}` |
+| Người dùng hủy | `https://interviet-frontend.vercel.app/payment/cancel?checkoutSessionId={id}` |
 
 > ❌ **Không tin tưởng query params trên URL.** Luôn gọi API Backend để xác nhận status thật.
+
+---
+
+### ⚠️ Xử lý khi người dùng HỦY thanh toán trên PayOS
+
+**PayOS KHÔNG gửi webhook khi user hủy** — chỉ redirect về `cancelUrl`.
+Frontend phải **chủ động gọi API backend** để cập nhật trạng thái:
+
+#### `POST /api/v1/billing/checkout-sessions/{checkoutSessionId}/cancel`
+> Gọi ngay khi frontend nhận redirect về trang `/payment/cancel`
+
+* **Body:** Không cần
+* **Response (200):**
+```json
+{
+  "message": "Phiên thanh toán đã được hủy.",
+  "checkoutSessionId": "08be8dfa-8091-46c5-8e57-ac646083e843",
+  "status": "cancelled"
+}
+```
+
+**Logic tại trang `/payment/cancel`:**
+```typescript
+async function handleCancelPage(checkoutSessionId: string) {
+  // Gọi backend để cập nhật trạng thái cancelled
+  await api.post(`/billing/checkout-sessions/${checkoutSessionId}/cancel`);
+  
+  // Hiển thị UI hủy + nút "Đặt lịch lại"
+  showCancelledUI();
+}
+```
+
+> ✅ Backend sẽ tự động:
+> - Cập nhật session → `cancelled`
+> - Cập nhật booking → `cancelled`  
+> - Giải phóng slot → `available` (user khác có thể đặt lại)
+
 
 ---
 

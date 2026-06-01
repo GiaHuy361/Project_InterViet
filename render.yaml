@@ -79,9 +79,9 @@ services:
       - key: Billing__MockPaymentsEnabled
         value: "false"
       - key: PaymentRedirect__ReturnUrl
-        value: https://interviet-frontend.vercel.app/subscription/success
+        value: https://interviet-frontend.vercel.app/payment/success
       - key: PaymentRedirect__CancelUrl
-        value: https://interviet-frontend.vercel.app/subscription/cancel
+        value: https://interviet-frontend.vercel.app/payment/cancel
       - key: PayOS__Enabled
         value: "true"
       - key: PayOS__ClientId

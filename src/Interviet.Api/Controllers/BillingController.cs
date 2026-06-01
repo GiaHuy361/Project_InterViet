@@ -89,6 +89,67 @@ public class BillingController : ApiControllerBase
             new GetCheckoutSessionQuery(_currentUser.UserId, id)));
     }
 
+    /// <summary>
+    /// POST /api/v1/billing/checkout-sessions/{id}/cancel
+    /// Called by Frontend when PayOS redirects to cancelUrl (user cancelled on PayOS).
+    /// PayOS does NOT send a webhook on cancellation, so frontend must explicitly notify backend.
+    /// </summary>
+    [HttpPost("checkout-sessions/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelCheckoutSession(Guid id, CancellationToken ct)
+    {
+        var session = await _db.BillingCheckoutSessions
+            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == _currentUser.UserId, ct);
+
+        if (session is null)
+            return NotFound(new { error = "Checkout session not found." });
+
+        if (session.Status == CheckoutSessionStatus.Succeeded)
+            return BadRequest(new { error = "Cannot cancel a completed payment session." });
+
+        // Idempotent — already cancelled/failed/expired
+        if (session.Status is CheckoutSessionStatus.Cancelled
+            or CheckoutSessionStatus.Failed
+            or CheckoutSessionStatus.Expired)
+            return Ok(new { message = "Session already terminated.", status = session.Status });
+
+        session.Status       = CheckoutSessionStatus.Cancelled;
+        session.FailureReason = "Cancelled by user on PayOS payment page.";
+        session.CompletedAt  = DateTime.UtcNow;
+        session.UpdatedAt    = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        // If this is a mentor booking, release the slot reservation
+        if (session.Purpose == "mentor_booking" && session.ResourceId.HasValue)
+        {
+            var booking = await _db.MentorBookings
+                .Include(b => b.AvailabilitySlot)
+                .FirstOrDefaultAsync(b => b.Id == session.ResourceId.Value, ct);
+
+            if (booking is not null && booking.Status == "pending_payment")
+            {
+                booking.Status = "cancelled";
+                booking.CancelReason = "Người dùng hủy thanh toán trên cổng PayOS.";
+                booking.CancelledAt = DateTime.UtcNow;
+                booking.UpdatedAt = DateTime.UtcNow;
+
+                if (booking.AvailabilitySlot is not null)
+                {
+                    booking.AvailabilitySlot.Status = "available";
+                    booking.AvailabilitySlot.ReservedUntil = null;
+                }
+
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
+        return Ok(new
+        {
+            message = "Phiên thanh toán đã được hủy.",
+            checkoutSessionId = session.Id,
+            status = session.Status
+        });
+    }
+
     // ── Simulate endpoints ────────────────────────────────────────────────────
 
     /// <summary>Simulates a successful payment for the checkout session.</summary>
