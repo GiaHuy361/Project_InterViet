@@ -98,7 +98,7 @@ app.include_router(cv_match.router, tags=["Phase 3 - CV-JD Matching"])
 # 3. SYSTEM ENDPOINTS
 # ==========================================
 
-@app.get("/health", tags=["System"])
+@app.head("/health", tags=["System"])
 async def health_check():
     """Kiểm tra trạng thái hoạt động của Service"""
     return {
