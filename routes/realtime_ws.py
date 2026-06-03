@@ -39,10 +39,6 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
     gemini_ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={api_key}"
 
     try:
-        # BÁC SĨ THẾ CHỖ: Cấu hình gói tin Setup có SERVER_VAD để trị bệnh trễ input
-        # 2. Cấu hình gói tin Setup chuẩn chỉnh của Gemini (Đã bỏ turnDetection)
-        # 2. Cấu hình gói tin Setup chuẩn tốc độ cao cho Gemini Live API
-        # 2. Cấu hình gói tin Setup chuẩn hóa cho cả bản 2.0 và 2.5
         setup_msg = {
             "setup": {
                 "model": f"models/{model}",
@@ -71,7 +67,6 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
                 try:
                     while is_active:
                         data = await websocket.receive_text()
-                        logger.info(f"[FRONT -> PY] Nhận data lúc: {time.time()} | Độ dài: {len(data)}")
                         await gemini_ws.send(data)
                 except WebSocketDisconnect:
                     # Bắt trọn gói khi bấm nút ngắt kết nối ở HTML, tắt êm đẹp không ném lỗi bậy
@@ -130,35 +125,11 @@ async def openai_webrtc_sdp(request: Request):
     
     if not session_data or session_data.get("provider") != "openai":
         raise HTTPException(status_code=403, detail="Token không hợp lệ hoặc đã hết hạn")
-        
-    # api_key = session_data["api_key"]
-    # model = session_data["model"]
-    # instructions = session_data.get("instructions", "")
-    # voice = session_data.get("voice", "alloy")
     
     sdp_offer_bytes = await request.body()
     sdp_offer = sdp_offer_bytes.decode("utf-8")
     
     del ACTIVE_PROXY_SESSIONS[proxy_token]
-    
-    # 2. ĐÓNG GÓI CONFIG THEO ĐÚNG ĐỊNH DẠNG JSON CỦA BẢN GA
-    # session_config = {
-    #     "type": "realtime",
-    #     "model": model,
-    #     "instructions": instructions,
-    #     "audio": {
-    #         "output": {
-    #             "voice": voice
-    #         }
-    #     }
-    # }
-    
-    # CHỐT HẠ: Chuyển đổi sang Multipart/Form-Data bằng cách dùng tham số files của httpx
-    # Định dạng: (filename, content, content_type)
-    # multipart_data = {
-    #     "sdp": (None, sdp_offer, "text/plain"),
-    #     "session": (None, json.dumps(session_config), "application/json")
-    # }
     
     openai_url = "https://api.openai.com/v1/realtime/calls"
     headers = {
