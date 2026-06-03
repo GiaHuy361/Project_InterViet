@@ -19,8 +19,9 @@ public sealed class HealthController : ApiControllerBase
         _healthCheckService = healthCheckService;
     }
 
-    /// <summary>Simple liveness check — returns 200 if the process is running.</summary>
+    /// <summary>Simple liveness check — returns 200 if the process is running. Supports both GET and HEAD (UptimeRobot Free tier).</summary>
     [HttpGet]
+    [HttpHead]
     [Route("/api/v1/health")]
     public IActionResult Liveness() =>
         Ok(new { status = "Healthy", timestamp = DateTime.UtcNow });
