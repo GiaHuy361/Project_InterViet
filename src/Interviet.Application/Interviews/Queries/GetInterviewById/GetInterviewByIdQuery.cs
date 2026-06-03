@@ -72,8 +72,8 @@ public sealed class GetInterviewByIdQueryHandler
                 Strengths         = JsonParseHelper.ParseStringArray(session.Report.StrengthsJson),
                 Weaknesses        = JsonParseHelper.ParseStringArray(session.Report.WeaknessesJson),
                 Recommendations   = JsonParseHelper.ParseStringArray(session.Report.RecommendationsJson),
-                ScoreBreakdowns   = [],   // not persisted in InterviewReport entity
-                FeedbackItems     = [],   // not persisted in InterviewReport entity
+                ScoreBreakdowns   = JsonParseHelper.ParseObjectArray(session.Report.ScoreBreakdownsJson),
+                FeedbackItems     = JsonParseHelper.ParseObjectArray(session.Report.FeedbackItemsJson),
                 ModelVersion      = session.Report.ModelVersion,
                 SchemaVersion     = session.Report.SchemaVersion
             };
