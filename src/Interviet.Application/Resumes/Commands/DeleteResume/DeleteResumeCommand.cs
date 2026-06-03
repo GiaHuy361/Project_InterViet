@@ -11,11 +11,13 @@ public sealed class DeleteResumeCommandHandler : IRequestHandler<DeleteResumeCom
 {
     private readonly IAppDbContext _db;
     private readonly IDateTimeProvider _dt;
+    private readonly IQuotaService _quotaService;
 
-    public DeleteResumeCommandHandler(IAppDbContext db, IDateTimeProvider dt)
+    public DeleteResumeCommandHandler(IAppDbContext db, IDateTimeProvider dt, IQuotaService quotaService)
     {
         _db = db;
         _dt = dt;
+        _quotaService = quotaService;
     }
 
     public async Task<Result> Handle(DeleteResumeCommand request, CancellationToken ct)
@@ -38,6 +40,18 @@ public sealed class DeleteResumeCommandHandler : IRequestHandler<DeleteResumeCom
         resume.UpdatedAt  = now;
 
         await _db.SaveChangesAsync(ct);
+
+        // Hoàn trả quota cv.storage — slot lưu trữ phải được giải phóng khi xóa CV
+        // (khác với cv.optimization là tiêu hao vĩnh viễn, không hoàn lại)
+        await _quotaService.RefundAsync(
+            userId        : request.UserId,
+            featureKey    : QuotaFeatureKeys.CvStorage,
+            amount        : 1,
+            referenceType : "Resume",
+            referenceId   : request.ResumeId,
+            reason        : "CV deleted by user — storage slot released",
+            ct            : ct);
+
         return Result.Success();
     }
 }
