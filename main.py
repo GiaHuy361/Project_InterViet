@@ -106,7 +106,7 @@ async def health_check():
         "phase": "Production-Ready"
     }
 
-@app.head("/health", tags=["System"])
+@app.head("/health", tags=["Kick API"])
 async def health_check():
     """Kiểm tra trạng thái hoạt động của Service"""
     return {
