@@ -131,33 +131,52 @@ async def openai_webrtc_sdp(request: Request):
     if not session_data or session_data.get("provider") != "openai":
         raise HTTPException(status_code=403, detail="Token không hợp lệ hoặc đã hết hạn")
         
-    api_key = session_data["api_key"]
-    model = session_data["model"]
-    instructions = session_data.get("instructions", "")
-    voice = session_data.get("voice", "alloy")
+    # api_key = session_data["api_key"]
+    # model = session_data["model"]
+    # instructions = session_data.get("instructions", "")
+    # voice = session_data.get("voice", "alloy")
     
     sdp_offer_bytes = await request.body()
     sdp_offer = sdp_offer_bytes.decode("utf-8")
     
     del ACTIVE_PROXY_SESSIONS[proxy_token]
     
-    # 2. Gọi sang OpenAI bằng endpoint GA chuẩn (yêu cầu application/sdp)
-    openai_url = f"https://api.openai.com/v1/realtime"
+    # 2. ĐÓNG GÓI CONFIG THEO ĐÚNG ĐỊNH DẠNG JSON CỦA BẢN GA
+    # session_config = {
+    #     "type": "realtime",
+    #     "model": model,
+    #     "instructions": instructions,
+    #     "audio": {
+    #         "output": {
+    #             "voice": voice
+    #         }
+    #     }
+    # }
+    
+    # CHỐT HẠ: Chuyển đổi sang Multipart/Form-Data bằng cách dùng tham số files của httpx
+    # Định dạng: (filename, content, content_type)
+    # multipart_data = {
+    #     "sdp": (None, sdp_offer, "text/plain"),
+    #     "session": (None, json.dumps(session_config), "application/json")
+    # }
+    
+    openai_url = "https://api.openai.com/v1/realtime/calls"
     headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/sdp" 
+        "Authorization": f"Bearer {proxy_token}",
+        "Content-Type": "application/sdp" # Thêm cờ bảo mật theo chuẩn GA
     }
     
     async with httpx.AsyncClient() as client:
         response = await client.post(
             openai_url,
             headers=headers,
-            content=sdp_offer,
+            content=sdp_offer, # Gửi text thuần, không dùng FormData, không dùng files
             timeout=15.0
         )
         
         if response.status_code not in (200, 201):
-            logger.error(f"[OPENAI SDP ERROR] {response.text}")
-            raise HTTPException(status_code=502, detail="OpenAI từ chối kết nối WebRTC")
+            logger.error(f"[OPENAI SDP ERROR] Status: {response.status_code} | Response: {response.text}")
+            raise HTTPException(status_code=502, detail=f"OpenAI từ chối kết nối WebRTC: {response.text}")
             
+        # 3. Trả về SDP Answer dưới dạng text/plain (hoặc application/sdp) để Frontend thiết lập cuộc gọi
         return Response(content=response.text, media_type="application/sdp")
