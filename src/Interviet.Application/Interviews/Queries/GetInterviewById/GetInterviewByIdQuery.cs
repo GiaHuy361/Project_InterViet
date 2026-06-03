@@ -72,8 +72,8 @@ public sealed class GetInterviewByIdQueryHandler
                 Strengths         = JsonParseHelper.ParseStringArray(session.Report.StrengthsJson),
                 Weaknesses        = JsonParseHelper.ParseStringArray(session.Report.WeaknessesJson),
                 Recommendations   = JsonParseHelper.ParseStringArray(session.Report.RecommendationsJson),
-                ScoreBreakdowns   = JsonParseHelper.ParseObjectArray(session.Report.ScoreBreakdownsJson),
-                FeedbackItems     = JsonParseHelper.ParseObjectArray(session.Report.FeedbackItemsJson),
+                ScoreBreakdowns   = [],   // TODO: re-enable after Python contract confirmed
+                FeedbackItems     = [],   // TODO: re-enable after Python contract confirmed
                 ModelVersion      = session.Report.ModelVersion,
                 SchemaVersion     = session.Report.SchemaVersion
             };
