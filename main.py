@@ -101,4 +101,9 @@ app.include_router(realtime_ws.router, tags=["Interview Engine Realtime Stream"]
 @app.get("/health", tags=["System"])
 async def health_check():
     """Endpoint để C# ping kiểm tra trạng thái service"""
-    return {"status": "ok", "service": "ai-interview", "version": "1.1.0", "port": 8002}
+    return {"status": "ok", "service": "ai-interview", "version": "1.1.0"}
+
+@app.head("/health", tags=["Kick API"])
+async def health_check():
+    """Kiểm tra trạng thái hoạt động của Service"""
+    return {"status": "ok", "service": "ai-interview", "version": "1.1.0"}
