@@ -163,6 +163,17 @@ public sealed class NotificationService : INotificationService
                         createdAt = notification.CreatedAt
                     });
 
+                    await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification", new
+                    {
+                        id = notification.Id,
+                        type = feType,
+                        title = notification.Title,
+                        message = notification.Message,
+                        actionUrl = feUrl,
+                        data = parsedData ?? new object(),
+                        createdAt = notification.CreatedAt
+                    });
+
                     await _hubContext.Clients.Group($"user:{userId}").SendAsync("notification.unread_count_changed", new
                     {
                         unreadCount = unreadCount
