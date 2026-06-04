@@ -186,7 +186,7 @@ public sealed class CompleteInterviewCommandHandler
                     userId           : command.UserId,
                     type             : NotificationType.InterviewReportReady,
                     title            : "Báo cáo phỏng vấn đã sẵn sàng",
-                    message          : $"Bạn đạt {aiResult.OverallScore:F1}/100 trong phiên phỏng vấn. Xem báo cáo chi tiết.",
+                    message          : $"Bạn đạt {aiResult.OverallScore:F1}/10 trong phiên phỏng vấn. Xem báo cáo chi tiết.",
                     actionUrl        : $"/interviews/{session.Id}/report",
                     data             : new { sessionId = session.Id, overallScore = aiResult.OverallScore },
                     priority         : NotificationPriority.High,
