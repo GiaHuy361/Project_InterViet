@@ -895,7 +895,10 @@ public sealed class MentorWorkspaceController : ApiControllerBase
                 Id = s.Id,
                 StartsAt = s.StartsAt,
                 EndsAt = s.EndsAt,
-                Status = s.Status,
+                // Report expired-reserved slots as "available" so mentor's calendar shows the correct effective state
+                Status = (s.Status == "reserved" && s.ReservedUntil != null && s.ReservedUntil < DateTime.UtcNow)
+                    ? "available"
+                    : s.Status,
                 PriceAmount = s.PriceAmount,
                 CurrencyCode = s.CurrencyCode
             })
@@ -929,7 +932,9 @@ public sealed class MentorWorkspaceController : ApiControllerBase
 
         // Clear existing future unbooked slots
         var slotsToDelete = await _context.MentorAvailabilitySlots
-            .Where(s => s.MentorId == mentorId && s.StartsAt > now && s.Status == "available" && (s.ReservedUntil == null || s.ReservedUntil < now))
+            .Where(s => s.MentorId == mentorId && s.StartsAt > now
+                     && (s.Status == "available" || (s.Status == "reserved" && s.ReservedUntil != null && s.ReservedUntil < now))
+                     && (s.ReservedUntil == null || s.ReservedUntil < now))
             .ToListAsync();
 
         _context.MentorAvailabilitySlots.RemoveRange(slotsToDelete);

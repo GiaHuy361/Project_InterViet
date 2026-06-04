@@ -137,6 +137,9 @@ public static class DependencyInjection
         services.AddScoped<IReportShareService, ReportShareService>();
         services.AddScoped<IReportPdfService, ReportPdfService>();
 
+        // ── Background services ────────────────────────────────────────────
+        services.AddHostedService<MentorBookingCleanupBackgroundService>();
+
 
         // ── Storage service ───────────────────────────────────────────────
         services.AddSingleton<IStorageService>(sp =>

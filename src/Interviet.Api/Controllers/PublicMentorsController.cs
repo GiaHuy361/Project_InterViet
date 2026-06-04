@@ -120,7 +120,9 @@ public sealed class PublicMentorsController : ApiControllerBase
 
         var now = DateTime.UtcNow;
         var slots = mentor.AvailabilitySlots
-            .Where(s => s.StartsAt > now && s.Status == "available" && (s.ReservedUntil == null || s.ReservedUntil < now))
+            .Where(s => s.StartsAt > now
+                     && (s.Status == "available" || (s.Status == "reserved" && s.ReservedUntil != null && s.ReservedUntil < now))
+                     && (s.ReservedUntil == null || s.ReservedUntil < now))
             .OrderBy(s => s.StartsAt)
             .Select(s => new MentorAvailabilitySlotDto
             {
@@ -190,7 +192,10 @@ public sealed class PublicMentorsController : ApiControllerBase
 
         var now = DateTime.UtcNow;
         var slots = await _db.MentorAvailabilitySlots
-            .Where(s => s.MentorId == id && s.StartsAt > now && s.Status == "available" && (s.ReservedUntil == null || s.ReservedUntil < now))
+            .Where(s => s.MentorId == id
+                     && s.StartsAt > now
+                     && (s.Status == "available" || (s.Status == "reserved" && s.ReservedUntil != null && s.ReservedUntil < now))
+                     && (s.ReservedUntil == null || s.ReservedUntil < now))
             .OrderBy(s => s.StartsAt)
             .Select(s => new MentorAvailabilitySlotDto
             {
