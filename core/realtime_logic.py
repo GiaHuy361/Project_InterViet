@@ -109,6 +109,11 @@ def build_realtime_instructions(payload: Any) -> str:
 Mục tiêu ứng viên: {goal_text}.
 Loại phỏng vấn: {payload.interviewType}. Phong cách: {payload.interviewerMode}.
 Ngôn ngữ: {payload.language}.
+THÔNG TIN CV CỦA ỨNG VIÊN:
+---
+{payload.cvText}
+---
+Dựa vào CV trên, hãy ưu tiên đặt các câu hỏi liên quan đến trải nghiệm thực tế, công nghệ đã dùng và các dự án ứng viên đã làm để buổi phỏng vấn đạt chất lượng chuyên môn cao nhất.
 
 QUY TẮC BẮT BUỘC KHI NÓI CHUYỆN:
 1. Hãy mở lời chào và đặt câu hỏi đầu tiên luôn để bắt đầu.

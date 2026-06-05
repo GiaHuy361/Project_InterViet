@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 # --- REQUEST PAYLOAD TỪ C# ---
@@ -16,6 +16,7 @@ class RealtimeSessionRequest(BaseModel):
     enableTranscript: bool = True
     correlationId: str
     requestId: str
+    cvText: Optional[str] = Field(None, description="Nội dung văn bản thô hoặc tóm tắt CV của ứng viên")
 
 # --- RESPONSE DATA TRẢ VỀ CHO C# ---
 class RealtimeSessionData(BaseModel):
@@ -26,6 +27,3 @@ class RealtimeSessionData(BaseModel):
     provider: str   # "openai" hoặc "gemini"
     model: str      # Tên model thực tế được gán
     instructions: Optional[str] = None
-
-# --- ENVELOPE RESPONSE CHUẨN ---
-# Dùng chung InterviewResponseEnvelope từ schemas.interview_schema
