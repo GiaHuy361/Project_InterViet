@@ -18,8 +18,7 @@ REALTIME_MODELS = [
     "gpt-realtime-mini",
     "gpt-realtime",
     "gpt-realtime-1.5",
-    "gpt-realtime-2",
-    "gpt-4o-realtime-preview"
+    "gpt-realtime-2"
 ]
 
 # 1. Tự động ánh xạ từ gói cước sang Realtime model mặc định
@@ -27,7 +26,7 @@ REALTIME_TIER_MAPPING = {
     "free": ["gemini-2.5-flash-native-audio-preview-12-2025"],
     "monthly": ["gemini-2.5-flash-native-audio-preview-12-2025", "gemini-3.1-flash-live-preview"],
     "quarterly": ["gpt-realtime-mini"],
-    "yearly": ["gpt-realtime", "gpt-realtime-1.5", "gpt-realtime-2","gpt-4o-realtime-preview"]
+    "yearly": ["gpt-realtime", "gpt-realtime-1.5", "gpt-realtime-2"]
 }
 
 # 2. Tự động ánh xạ từ model text cụ thể sang model realtime tương đương
@@ -47,7 +46,7 @@ TEXT_TO_REALTIME_MAPPING = {
     "gpt-5.1": "gpt-realtime-mini",
     "gpt-5.2": "gpt-realtime-mini",
     "gpt-4.1": "gpt-realtime",
-    "gpt-5.4": "gpt-realtime-1.5",
+    "gpt-5.4": "gpt-realtime-2",
     "o3": "gpt-realtime",
     "gpt-4o": "gpt-realtime-1.5",
 
@@ -59,7 +58,7 @@ TEXT_TO_REALTIME_MAPPING = {
     # --- Dòng Gemini Pro / preview cao cấp ---
     "gemini-3-flash-preview": "gemini-3.1-flash-live-preview",
     "gemini-2.5-pro": "gemini-3.1-flash-live-preview",
-    "gemini-3.1-pro-preview": "gemini-3.1-flash-live-preview"
+    "gemini-3.1-pro-preview": "gpt-realtime-1.5"
 }
 
 def resolve_realtime_models(requested_model: str) -> List[str]:
