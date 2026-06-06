@@ -272,7 +272,8 @@ public sealed class HttpAiInterviewClient : IAiInterviewClient
                 language        = request.Language,
                 voice           = request.Voice,
                 enableTranscript = request.EnableTranscript,
-                tokenTtlSeconds = request.TokenTtlSeconds
+                tokenTtlSeconds = request.TokenTtlSeconds,
+                cvText          = request.CvText   // null nếu không có CV — Python bỏ qua nếu null
             };
 
             var json    = JsonSerializer.Serialize(body);

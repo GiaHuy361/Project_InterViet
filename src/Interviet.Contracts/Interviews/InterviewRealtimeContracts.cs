@@ -17,6 +17,18 @@ public sealed record StartInterviewRealtimeRequest
 
     /// <summary>Enable server-side transcript (recommended). Default true.</summary>
     public bool EnableTranscript { get; init; } = true;
+
+    /// <summary>
+    /// (Optional) ID của CV đã upload. Nếu truyền vào, hệ thống sẽ tự lấy ParsedText
+    /// từ database và gửi cho AI để hỏi dựa trên CV của ứng viên.
+    /// </summary>
+    public Guid? ResumeId { get; init; }
+
+    /// <summary>
+    /// (Optional) Nội dung CV dạng text thuần. Dùng khi không có ResumeId
+    /// hoặc muốn override nội dung CV. Tối đa 8000 ký tự.
+    /// </summary>
+    public string? CvText { get; init; }
 }
 
 public sealed record EndInterviewRealtimeRequest

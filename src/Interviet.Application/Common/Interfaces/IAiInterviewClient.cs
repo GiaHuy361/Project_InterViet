@@ -166,6 +166,12 @@ public sealed class AiCreateRealtimeSessionRequest
     public string? Voice { get; init; }
     public bool EnableTranscript { get; init; } = true;
     public int TokenTtlSeconds { get; init; } = 600;
+
+    /// <summary>
+    /// (Optional) Nội dung CV đã được trích xuất. Python sẽ nhúng vào system prompt
+    /// để AI hỏi câu hỏi dựa trên kinh nghiệm và kỹ năng của ứng viên.
+    /// </summary>
+    public string? CvText { get; init; }
 }
 
 public sealed class AiRealtimeSessionResult

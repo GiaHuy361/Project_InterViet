@@ -126,6 +126,58 @@ public sealed class StartInterviewRealtimeCommandHandler
         _db.InterviewRealtimeSessions.Add(realtimeSession);
         await _db.SaveChangesAsync(ct);
 
+        // ── Resolve CV text (optional) ────────────────────────────────────────
+        // Priority: 1) ResumeId từ DB, 2) CvText thả thảng từ request
+        string? resolvedCvText = null;
+
+        if (req.ResumeId.HasValue)
+        {
+            // Load Resume kèm ActiveVersion để lấy ExtractedText
+            var resume = await _db.Resumes
+                .Include(r => r.ActiveVersion)
+                .FirstOrDefaultAsync(
+                    r => r.Id == req.ResumeId.Value && r.UserId == command.UserId && !r.IsDeleted, ct);
+
+            if (resume is not null && resume.ActiveVersion is not null)
+            {
+                // Ưu tiên ExtractedText từ version đang active
+                resolvedCvText = resume.ActiveVersion.ExtractedText;
+
+                // Nếu chưa có ExtractedText (chưa parse), thử lấy RawText từ ResumeParsedData
+                if (string.IsNullOrWhiteSpace(resolvedCvText))
+                {
+                    var parsedData = await _db.ResumeParsedData
+                        .Where(p => p.ResumeId == resume.Id && p.ResumeVersionId == resume.ActiveVersion.Id)
+                        .OrderByDescending(p => p.CreatedAt)
+                        .FirstOrDefaultAsync(ct);
+
+                    resolvedCvText = parsedData?.RawText;
+                }
+
+                // Giới hạn 8000 ký tự tránh vượt context window
+                if (!string.IsNullOrWhiteSpace(resolvedCvText) && resolvedCvText.Length > 8000)
+                    resolvedCvText = resolvedCvText[..8000];
+
+                _logger.LogInformation(
+                    "CV text resolved from ResumeId={ResumeId} ({Length} chars) for SessionId={SessionId}",
+                    req.ResumeId.Value, resolvedCvText?.Length ?? 0, command.SessionId);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "ResumeId={ResumeId} not found or does not belong to UserId={UserId}. Skipping CV context.",
+                    req.ResumeId.Value, command.UserId);
+            }
+        }
+
+        // Fallback: CvText thả thảng nếu không có ResumeId hoặc lookup thất bại
+        if (string.IsNullOrWhiteSpace(resolvedCvText) && !string.IsNullOrWhiteSpace(req.CvText))
+        {
+            resolvedCvText = req.CvText.Length > 8000
+                ? req.CvText[..8000]
+                : req.CvText;
+        }
+
         // ── Call Python ───────────────────────────────────────────────────────
         var aiResult = await _aiClient.CreateRealtimeSessionAsync(new AiCreateRealtimeSessionRequest
         {
@@ -142,7 +194,8 @@ public sealed class StartInterviewRealtimeCommandHandler
             Language        = req.Language,
             Voice           = req.Voice,
             EnableTranscript = req.EnableTranscript,
-            TokenTtlSeconds = _opts.InterviewRealtimeTokenTtlSeconds
+            TokenTtlSeconds = _opts.InterviewRealtimeTokenTtlSeconds,
+            CvText          = resolvedCvText           // null nếu người dùng không chọn CV
         }, ct);
 
         if (!aiResult.IsSuccess)
