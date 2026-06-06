@@ -170,14 +170,6 @@ public sealed class StartInterviewRealtimeCommandHandler
             }
         }
 
-        // Fallback: CvText thả thảng nếu không có ResumeId hoặc lookup thất bại
-        if (string.IsNullOrWhiteSpace(resolvedCvText) && !string.IsNullOrWhiteSpace(req.CvText))
-        {
-            resolvedCvText = req.CvText.Length > 8000
-                ? req.CvText[..8000]
-                : req.CvText;
-        }
-
         // ── Call Python ───────────────────────────────────────────────────────
         var aiResult = await _aiClient.CreateRealtimeSessionAsync(new AiCreateRealtimeSessionRequest
         {
