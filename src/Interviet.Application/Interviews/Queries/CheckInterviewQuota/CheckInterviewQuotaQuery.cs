@@ -33,14 +33,25 @@ public sealed class CheckInterviewQuotaQueryHandler
         var policy = await _db.UsageQuotaPolicies
             .FirstOrDefaultAsync(p => p.PlanId == planId && p.FeatureKey == QuotaFeatureKeys.InterviewAi, ct);
 
+        var periodType = policy?.PeriodType ?? "total";
+        var periodKey = periodType switch
+        {
+            "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "subscription" => sub != null 
+                ? $"sub_{sub.Id}_{sub.CurrentPeriodStartsAt:yyyyMMddHHmmss}" 
+                : "total",
+            "total" => "total",
+            _ => "total"
+        };
+
         // Load current counter
-        var today   = DateOnly.FromDateTime(DateTime.UtcNow);
         var counter = await _db.UserQuotaCounters
             .FirstOrDefaultAsync(c =>
                 c.UserId     == request.UserId &&
                 c.FeatureKey == QuotaFeatureKeys.InterviewAi &&
-                c.PeriodType == "daily" &&
-                c.PeriodKey  == today.ToString("yyyy-MM-dd"), ct);
+                c.PeriodType == periodType &&
+                c.PeriodKey  == periodKey, ct);
 
         int used      = counter?.UsedValue ?? 0;
         bool isUnlimited = policy?.IsUnlimited ?? false;
@@ -60,8 +71,8 @@ public sealed class CheckInterviewQuotaQueryHandler
             Message        = canCreate
                 ? (isUnlimited
                     ? "Không giới hạn số lượt phỏng vấn."
-                    : $"Còn {remaining} lượt phỏng vấn hôm nay.")
-                : "Bạn đã sử dụng hết số lượt phỏng vấn hôm nay. Nâng cấp plan để có thêm lượt."
+                    : $"Còn {remaining} lượt phỏng vấn trong chu kỳ này.")
+                : "Bạn đã sử dụng hết số lượt phỏng vấn trong chu kỳ này. Nâng cấp hoặc mua thêm lượt để có thêm lượt."
         });
     }
 }

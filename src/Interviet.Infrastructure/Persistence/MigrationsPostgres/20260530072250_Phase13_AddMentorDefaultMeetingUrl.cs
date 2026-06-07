@@ -12,22 +12,11 @@ namespace Interviet.Infrastructure.Persistence.MigrationsPostgres
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "MeetingUrl",
-                schema: "app",
-                table: "MentorProfiles",
-                type: "character varying(500)",
-                maxLength: 500,
-                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "MeetingUrl",
-                schema: "app",
-                table: "MentorProfiles");
         }
     }
 }

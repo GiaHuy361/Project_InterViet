@@ -61,6 +61,8 @@ public sealed class ActivateDevSubscriptionCommandHandler : IRequestHandler<Acti
         {
             endsAt = plan.BillingCycle switch
             {
+                "weekly" => now.AddDays(7),
+                "combo" => now.AddYears(10),
                 "monthly" => now.AddMonths(1),
                 "quarterly" => now.AddMonths(3),
                 "yearly" => now.AddYears(1),

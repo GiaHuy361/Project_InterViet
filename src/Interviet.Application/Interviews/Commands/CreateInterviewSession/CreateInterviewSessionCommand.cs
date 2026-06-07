@@ -60,6 +60,14 @@ public sealed class CreateInterviewSessionCommandHandler
         if (req.DurationMinutes is <= 0 or > 120)
             return Error.Validation("Interview.DurationInvalid", "Thời lượng phỏng vấn phải từ 1 đến 120 phút.");
 
+        // ── Check duration limit based on plan ──────────────────────────────
+        var durationCheck = await _quota.CheckFeatureLimitAsync(command.UserId, "interview.max_duration", req.DurationMinutes, ct);
+        if (!durationCheck.IsSuccess)
+        {
+            return Error.Validation("Interview.DurationExceededPlanLimit",
+                $"Thời lượng phỏng vấn {req.DurationMinutes} phút vượt quá giới hạn tối đa cho phép của gói cước hiện tại.");
+        }
+
         // ── Check quota BEFORE creating ─────────────────────────────────────
         var quotaCheck = await _quota.CheckAsync(command.UserId, QuotaFeatureKeys.InterviewAi, 1, ct);
         if (!quotaCheck.IsSuccess)

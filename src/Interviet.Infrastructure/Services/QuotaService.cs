@@ -18,7 +18,7 @@ public sealed class QuotaService : IQuotaService
         _logger = logger;
     }
 
-    private async Task<(Guid PlanId, UsageQuotaPolicy? Policy)> GetPolicyAsync(Guid userId, string featureKey, CancellationToken ct)
+    private async Task<(Subscription? Subscription, Guid PlanId, UsageQuotaPolicy? Policy)> GetPolicyAsync(Guid userId, string featureKey, CancellationToken ct)
     {
         // Get active subscription
         var sub = await _db.Subscriptions
@@ -41,12 +41,12 @@ public sealed class QuotaService : IQuotaService
         var policy = await _db.UsageQuotaPolicies
             .FirstOrDefaultAsync(p => p.PlanId == planId && p.FeatureKey == featureKey, ct);
 
-        return (planId, policy);
+        return (sub, planId, policy);
     }
 
     public async Task<Result> CheckAsync(Guid userId, string featureKey, int amount = 1, CancellationToken ct = default)
     {
-        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        var (sub, _, policy) = await GetPolicyAsync(userId, featureKey, ct);
         if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
             return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
 
@@ -57,6 +57,9 @@ public sealed class QuotaService : IQuotaService
         {
             "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
             "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "subscription" => sub != null 
+                ? $"sub_{sub.Id}_{sub.CurrentPeriodStartsAt:yyyyMMddHHmmss}" 
+                : "total",
             "total" => "total",
             _ => "total"
         };
@@ -76,7 +79,7 @@ public sealed class QuotaService : IQuotaService
 
     public async Task<Result> CheckFeatureLimitAsync(Guid userId, string featureKey, int requestedAmount, CancellationToken ct = default)
     {
-        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        var (_, _, policy) = await GetPolicyAsync(userId, featureKey, ct);
         if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
             return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
 
@@ -92,7 +95,7 @@ public sealed class QuotaService : IQuotaService
 
     public async Task<Result> ConsumeAsync(Guid userId, string featureKey, int amount = 1, string referenceType = "", Guid? referenceId = null, CancellationToken ct = default)
     {
-        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        var (sub, _, policy) = await GetPolicyAsync(userId, featureKey, ct);
         if (policy == null || (!policy.IsUnlimited && policy.MaxValue == 0)) 
             return Error.Forbidden("Quota.Exceeded", "Bạn không có quyền sử dụng tính năng này.");
 
@@ -101,6 +104,9 @@ public sealed class QuotaService : IQuotaService
         {
             "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
             "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "subscription" => sub != null 
+                ? $"sub_{sub.Id}_{sub.CurrentPeriodStartsAt:yyyyMMddHHmmss}" 
+                : "total",
             "total" => "total",
             _ => "total"
         };
@@ -170,7 +176,7 @@ public sealed class QuotaService : IQuotaService
 
     public async Task RefundAsync(Guid userId, string featureKey, int amount = 1, string referenceType = "", Guid? referenceId = null, string reason = "", CancellationToken ct = default)
     {
-        var (_, policy) = await GetPolicyAsync(userId, featureKey, ct);
+        var (sub, _, policy) = await GetPolicyAsync(userId, featureKey, ct);
         if (policy == null) return;
 
         var periodType = policy.PeriodType;
@@ -178,6 +184,9 @@ public sealed class QuotaService : IQuotaService
         {
             "daily" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
             "monthly" => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM"),
+            "subscription" => sub != null 
+                ? $"sub_{sub.Id}_{sub.CurrentPeriodStartsAt:yyyyMMddHHmmss}" 
+                : "total",
             "total" => "total",
             _ => "total"
         };
