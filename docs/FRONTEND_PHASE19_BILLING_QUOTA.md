@@ -232,8 +232,8 @@ Nếu frontend cần hiển thị chi tiết số lượt tối đa của từng
 | `interview.ai` | Lượt phỏng vấn AI | 3 | 1 | 5 | 10 | 24 | 60 |
 | `match.create` | Lượt Matching CV-JD | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
 | `multi_jd.match` | Số JD tối đa mỗi lượt Multi-Match | 3 | 3 | 3 | 3 | 10 | 20 |
-| `resume.upload` | Tải CV lên (lần/ngày) | 3 | 3 | 3 | 10 | 30 | Vô hạn (`unlimited`) |
-| `resume.parse` | Phân tích CV (lần/ngày) | 3 | 3 | 3 | 10 | 30 | Vô hạn (`unlimited`) |
+| `resume.upload` | Tải CV lên | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
+| `resume.parse` | Phân tích CV | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
 | `jobdescription.create` | Tạo JD (lần/ngày) | 5 | 5 | 5 | 20 | 50 | Vô hạn (`unlimited`) |
 
 ---
