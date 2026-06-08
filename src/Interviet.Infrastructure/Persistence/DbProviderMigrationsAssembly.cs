@@ -44,5 +44,44 @@ public class DbProviderMigrationsAssembly : MigrationsAssembly
             return filtered;
         }
     }
+
+    public override ModelSnapshot? ModelSnapshot
+    {
+        get
+        {
+            var isPostgres = _context.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL";
+            var targetNamespace = isPostgres
+                ? "Interviet.Infrastructure.Persistence.MigrationsPostgres"
+                : "Interviet.Infrastructure.Persistence.Migrations";
+
+            Console.WriteLine($"[DIAGNOSTIC] DbProviderMigrationsAssembly.ModelSnapshot active provider is Postgres={isPostgres}, targeting namespace={targetNamespace}");
+
+            var assembly = Assembly;
+            Console.WriteLine($"[DIAGNOSTIC] Migrations assembly name: {assembly?.FullName}");
+
+            var types = assembly?.GetTypes() ?? Array.Empty<Type>();
+            Console.WriteLine($"[DIAGNOSTIC] Total types in assembly: {types.Length}");
+
+            foreach (var t in types)
+            {
+                if (typeof(ModelSnapshot).IsAssignableFrom(t))
+                {
+                    Console.WriteLine($"[DIAGNOSTIC] Found ModelSnapshot subclass: {t.FullName}, Namespace={t.Namespace}");
+                }
+            }
+
+            var snapshotType = types
+                .FirstOrDefault(t => typeof(ModelSnapshot).IsAssignableFrom(t) && t.Namespace == targetNamespace);
+
+            Console.WriteLine($"[DIAGNOSTIC] Selected snapshot type: {snapshotType?.FullName}");
+
+            if (snapshotType == null)
+            {
+                return null;
+            }
+
+            return Activator.CreateInstance(snapshotType) as ModelSnapshot;
+        }
+    }
 }
 #pragma warning restore EF1001
