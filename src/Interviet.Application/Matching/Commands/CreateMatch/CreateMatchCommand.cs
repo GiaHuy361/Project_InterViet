@@ -42,6 +42,14 @@ public sealed class CreateMatchCommandHandler
     public async Task<Result<CreateMatchResponse>> Handle(
         CreateMatchCommand request, CancellationToken ct)
     {
+        // ── Email Verification Check ───────────────────────────────────────────
+        var user = await _db.Users.FindAsync([request.UserId], ct);
+        if (user is null)
+            return Error.NotFound("User.NotFound", "Không tìm thấy người dùng.");
+        if (!user.IsEmailVerified)
+            return Error.Forbidden("User.EmailNotVerified",
+                "Vui lòng xác minh địa chỉ email của bạn trước khi thực hiện hành động này.");
+
         var quotaCheck = await _quotaService.CheckAsync(request.UserId, QuotaFeatureKeys.MatchCreate, 1, ct);
         if (!quotaCheck.IsSuccess) return quotaCheck.Error;
 

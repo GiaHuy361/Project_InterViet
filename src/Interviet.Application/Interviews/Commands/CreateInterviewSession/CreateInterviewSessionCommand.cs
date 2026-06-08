@@ -41,6 +41,14 @@ public sealed class CreateInterviewSessionCommandHandler
     {
         var req = command.Request;
 
+        // ── Email Verification Check ───────────────────────────────────────────
+        var user = await _db.Users.FindAsync([command.UserId], ct);
+        if (user is null)
+            return Error.NotFound("User.NotFound", "Không tìm thấy người dùng.");
+        if (!user.IsEmailVerified)
+            return Error.Forbidden("User.EmailNotVerified",
+                "Vui lòng xác minh địa chỉ email của bạn trước khi thực hiện hành động này.");
+
         // ── Validation ──────────────────────────────────────────────────────
         if (string.IsNullOrWhiteSpace(req.Position))
             return Error.Validation("Interview.PositionRequired", "Vui lòng nhập vị trí phỏng vấn.");

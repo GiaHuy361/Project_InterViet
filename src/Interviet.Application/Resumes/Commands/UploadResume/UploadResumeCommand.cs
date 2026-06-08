@@ -114,6 +114,14 @@ public sealed class UploadResumeCommandHandler : IRequestHandler<UploadResumeCom
         var now    = _dt.UtcNow;
         var userId = request.UserId;
 
+        // ── Email Verification Check ───────────────────────────────────────────
+        var user = await _db.Users.FindAsync([userId], ct);
+        if (user is null)
+            return Error.NotFound("User.NotFound", "Không tìm thấy người dùng.");
+        if (!user.IsEmailVerified)
+            return Error.Forbidden("User.EmailNotVerified",
+                "Vui lòng xác minh địa chỉ email của bạn trước khi thực hiện hành động này.");
+
         // ── Quota Check ────────────────────────────────────────────────────────
         var uploadCheck = await _quotaService.CheckAsync(userId, QuotaFeatureKeys.CvStorage, 1, ct);
         if (!uploadCheck.IsSuccess) return uploadCheck.Error;

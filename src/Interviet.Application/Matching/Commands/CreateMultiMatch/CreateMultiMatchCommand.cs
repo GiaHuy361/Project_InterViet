@@ -45,6 +45,14 @@ public sealed class CreateMultiMatchCommandHandler
     public async Task<Result<CreateMultiMatchResponse>> Handle(
         CreateMultiMatchCommand request, CancellationToken ct)
     {
+        // ── Email Verification Check ───────────────────────────────────────────
+        var user = await _db.Users.FindAsync([request.UserId], ct);
+        if (user is null)
+            return Error.NotFound("User.NotFound", "Không tìm thấy người dùng.");
+        if (!user.IsEmailVerified)
+            return Error.Forbidden("User.EmailNotVerified",
+                "Vui lòng xác minh địa chỉ email của bạn trước khi thực hiện hành động này.");
+
         if (request.JobDescriptionIds == null || !request.JobDescriptionIds.Any())
             return Error.Validation("Match.EmptyJobDescriptions", "Vui lòng chọn ít nhất một mô tả công việc.");
 
