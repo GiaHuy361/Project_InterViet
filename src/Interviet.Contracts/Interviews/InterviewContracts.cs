@@ -42,9 +42,34 @@ public static class AllowedAiModels
 {
     public static readonly HashSet<string> Keys = new(StringComparer.OrdinalIgnoreCase)
     {
+        // ── FREE / MONTHLY ─────────────────────────────────────────────────────
+        "gemini-2.5-flash-lite",
         "gpt-4o-mini",
-        "gpt-4o",
+        "gemini-3.1-flash-lite",
+        "gpt-5-mini",
+        "gemini-2.5-flash",
+        "gpt-4.1-mini",
+
+        // ── QUARTERLY PREMIUM ──────────────────────────────────────────────────
         "gemini-3-flash-preview",
+        "gpt-3.5-turbo",
+        "gpt-5.4-mini",
+        "o1-mini",
+        "o3-mini",
+        "o4-mini",
+        "gpt-5",
+        "gpt-5.1",
+        "gemini-2.5-pro",
+        "gpt-5.2",
+
+        // ── YEARLY PREMIUM ─────────────────────────────────────────────────────
+        "o3",
+        "gpt-4.1",
+        "gemini-3.1-pro-preview",
+        "gpt-4o",
+        "gpt-5.4",
+
+        // ── Legacy / Alias keys (giữ tương thích ngược) ────────────────────────
         "gemini-3.1-pro",
         "standard",
         "basic",
@@ -84,8 +109,10 @@ public sealed record CreateInterviewSessionRequest
     public string InterviewerMode { get; init; } = string.Empty;
 
     /// <summary>
-    /// AI model: gpt-4o-mini | gpt-4o | gemini-3-flash-preview | standard | basic | advanced.
-    /// Required. Must be one of the supported values.
+    /// AI model identifier. Required. Must be one of the supported values.
+    /// Free/Monthly: gemini-2.5-flash-lite, gpt-4o-mini, gemini-3.1-flash-lite, gpt-5-mini, gemini-2.5-flash, gpt-4.1-mini.
+    /// Quarterly: gemini-3-flash-preview, gpt-3.5-turbo, gpt-5.4-mini, o1-mini, o3-mini, o4-mini, gpt-5, gpt-5.1, gemini-2.5-pro, gpt-5.2.
+    /// Yearly: o3, gpt-4.1, gemini-3.1-pro-preview, gpt-4o, gpt-5.4.
     /// </summary>
     public string AiModel { get; init; } = string.Empty;
 }
