@@ -71,9 +71,11 @@ public abstract class ApiControllerBase : ControllerBase
 
     private static object Problem(Shared.Results.Error error) => new
     {
-        type = $"https://api.interviet.vn/errors/{error.Code.ToLower().Replace('.', '-')}",
-        title = error.Code,
-        detail = error.Description,
-        code = error.Code
+        success = false,
+        error = new
+        {
+            code = error.Code,
+            description = error.Description
+        }
     };
 }
