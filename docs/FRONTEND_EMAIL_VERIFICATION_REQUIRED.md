@@ -1,8 +1,16 @@
 # Hướng Dẫn Frontend: Luồng Bắt Buộc Xác Minh Email
 
-> **Phiên bản:** Phase 20  
-> **Ngày cập nhật:** 2026-06-08  
+> **Phiên bản:** Phase 20 (cập nhật 2026-06-09)
 > **Backend liên quan:** Email Verification Gate — áp dụng cho các tính năng cốt lõi
+
+---
+
+> [!IMPORTANT]
+> **BREAKING CHANGE — Cập nhật 2026-06-09**
+> Backend đã **thay đổi format response lỗi** cho toàn bộ hệ thống (tất cả 4xx/5xx).
+> Format cũ dùng `{ title, detail, code, type }` — **đã bị xóa**.
+> Format mới thống nhất là `{ success: false, error: { code, description } }`.
+> Frontend cần cập nhật tất cả chỗ đang đọc `response.data.code` → thành `response.data.error.code`.
 
 ---
 
@@ -25,13 +33,13 @@ Từ phiên bản này, Backend **bắt buộc người dùng phải xác minh e
 
 ---
 
-## 2. Response Lỗi Từ Backend
+## 2. Format Response Lỗi (Áp Dụng Toàn Hệ Thống)
 
-Khi người dùng chưa xác minh email và gọi vào một trong các endpoint trên, Backend trả về:
+Tất cả lỗi từ Backend (400, 401, 403, 404, 409, 429, 503...) đều trả về **cùng một format**:
 
-**HTTP Status:** `403 Forbidden`
+**HTTP Status:** tương ứng với từng loại lỗi (ví dụ `403 Forbidden`)
 
-**Body JSON:**
+**Body JSON — Format thống nhất:**
 ```json
 {
   "success": false,
@@ -42,34 +50,83 @@ Khi người dùng chưa xác minh email và gọi vào một trong các endpoin
 }
 ```
 
+**Ví dụ một số lỗi khác cùng format:**
+```json
+// 404 Not Found
+{ "success": false, "error": { "code": "Match.ResumeNotFound", "description": "Không tìm thấy CV." } }
+
+// 429 Too Many Requests (hết quota)
+{ "success": false, "error": { "code": "Quota.Exceeded", "description": "Bạn đã hết lượt sử dụng..." } }
+
+// 400 Bad Request
+{ "success": false, "error": { "code": "Interview.PositionRequired", "description": "Vui lòng nhập vị trí phỏng vấn." } }
+```
+
+> [!WARNING]
+> **Không còn các field `title`, `detail`, `type`, `code` ở root level nữa.**
+> Chỉ đọc qua `response.data.error.code` và `response.data.error.description`.
+
 ---
 
 ## 3. Xử Lý Phía Frontend
 
-### 3.1. Bắt Lỗi Tại HTTP Client (Axios Interceptor)
-
-Thêm interceptor vào global HTTP client để bắt lỗi `User.EmailNotVerified` và hiển thị Modal xác minh email:
+### 3.1. Cập Nhật Global Error Handler (Axios Interceptor)
 
 ```typescript
 // axiosInstance.ts (hoặc httpClient.ts)
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      error.response?.status === 403 &&
-      error.response?.data?.error?.code === 'User.EmailNotVerified'
-    ) {
-      // Dispatch event hoặc gọi trực tiếp để mở Modal xác minh email
+    const errorCode = error.response?.data?.error?.code;
+    const status    = error.response?.status;
+
+    // Bắt lỗi chưa xác minh email
+    if (status === 403 && errorCode === 'User.EmailNotVerified') {
       window.dispatchEvent(new CustomEvent('email-not-verified'));
     }
+
+    // Có thể bắt thêm các lỗi global khác tại đây
+    // if (status === 401) { ... xử lý hết phiên đăng nhập ... }
+    // if (status === 429) { ... thông báo hết quota ... }
+
     return Promise.reject(error);
   }
 );
 ```
 
-### 3.2. Thiết Kế Modal Nhắc Xác Minh Email
+### 3.2. Đọc Mã Lỗi Từ Response (Helper)
 
-Khi bắt được sự kiện `email-not-verified`, hiển thị một Modal với nội dung gợi ý:
+Nên tạo một helper để đọc lỗi nhất quán:
+
+```typescript
+// utils/apiError.ts
+export function getErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.error?.code;
+  }
+  return undefined;
+}
+
+export function getErrorDescription(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.error?.description;
+  }
+  return undefined;
+}
+
+// Dùng trong component:
+try {
+  await api.createMatch(payload);
+} catch (error) {
+  const code = getErrorCode(error);
+  if (code === 'User.EmailNotVerified') { /* ... */ }
+  if (code === 'Quota.Exceeded')        { /* ... */ }
+}
+```
+
+### 3.3. Thiết Kế Modal Nhắc Xác Minh Email
+
+Khi bắt được sự kiện `email-not-verified`, hiển thị một Modal:
 
 ```
 🔒 Xác minh email của bạn
@@ -86,7 +143,7 @@ Chúng tôi đã gửi một email kích hoạt đến: [email của user]
 - Nút **"Gửi lại email xác minh"** → gọi API `POST /api/v1/auth/resend-verification-email`
 - Nút **"Đóng"** để dismiss Modal
 
-### 3.3. API Gửi Lại Email Xác Minh
+### 3.4. API Gửi Lại Email Xác Minh
 
 ```
 POST /api/v1/auth/resend-verification-email
@@ -104,7 +161,7 @@ Body: (không cần body)
 
 **Xử lý sau khi gọi API:**
 - ✅ Thành công → Hiển thị thông báo: *"Email xác minh đã được gửi! Vui lòng kiểm tra hộp thư (kể cả mục Spam)."*
-- ❌ Thất bại (rate-limit hoặc lỗi khác) → Hiển thị thông báo lỗi tương ứng.
+- ❌ Thất bại → Đọc `error.code` để hiển thị thông báo lỗi phù hợp.
 
 ---
 
@@ -125,18 +182,16 @@ Trạng thái xác minh email (`isEmailVerified`) được trả về trong resp
 
 ### 4.2. Banner Cảnh Báo (Proactive Warning)
 
-Nếu `isEmailVerified === false`, nên hiển thị **banner cảnh báo** ở đầu trang (dưới Navbar) với nội dung:
+Nếu `isEmailVerified === false`, nên hiển thị **banner cảnh báo** ở đầu trang (dưới Navbar):
 
 ```
 ⚠️  Email của bạn chưa được xác minh. Một số tính năng sẽ bị hạn chế.
 [Gửi lại email xác minh]
 ```
 
-Điều này giúp người dùng biết trước thay vì gặp lỗi khi thực hiện hành động.
-
 ### 4.3. Vô Hiệu Hóa Nút (Optional Enhancement)
 
-Có thể vô hiệu hóa (`disabled`) các nút liên quan đến Upload CV, Tạo JD, So khớp, Phỏng vấn khi `isEmailVerified === false`, kèm tooltip giải thích.
+Có thể vô hiệu hóa (`disabled`) các nút Upload CV, Tạo JD, So khớp, Phỏng vấn khi `isEmailVerified === false`, kèm tooltip giải thích.
 
 ---
 
@@ -150,10 +205,11 @@ Backend kiểm tra IsEmailVerified
         │
         ├─── [IsEmailVerified = true] ──→ Xử lý bình thường ✅
         │
-        └─── [IsEmailVerified = false] ─→ 403 User.EmailNotVerified
-                        │
+        └─── [IsEmailVerified = false] ─→ 403 Forbidden
+                        │                { success: false,
+                        │                  error: { code: "User.EmailNotVerified", ... } }
                         ▼
-              Axios Interceptor bắt lỗi
+              Axios Interceptor bắt error.response.data.error.code
                         │
                         ▼
               Hiển thị Modal xác minh email
@@ -176,6 +232,8 @@ Backend kiểm tra IsEmailVerified
 
 ## 6. Checklist Tích Hợp
 
+- `[ ]` **[BREAKING]** Cập nhật tất cả chỗ đọc lỗi từ `response.data.code` → `response.data.error.code`
+- `[ ]` **[BREAKING]** Cập nhật tất cả chỗ đọc message lỗi từ `response.data.detail` → `response.data.error.description`
 - `[ ]` Thêm interceptor bắt lỗi `User.EmailNotVerified` vào HTTP client
 - `[ ]` Xây dựng component Modal xác minh email (reusable)
 - `[ ]` Gọi API `POST /api/v1/auth/resend-verification-email` khi nhấn nút gửi lại
