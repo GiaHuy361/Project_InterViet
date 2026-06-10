@@ -306,7 +306,7 @@ public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuota
 
         b.HasData(
             // --- Free ---
-            new UsageQuotaPolicy { Id = Guid.Parse("A1000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 1, IsUnlimited = false, CreatedAt = now },
+            new UsageQuotaPolicy { Id = Guid.Parse("A1000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("A2000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "cv.optimization", PeriodType = "total", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("A3000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "interview.ai", PeriodType = "total", MaxValue = 3, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("A4000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "mentor.session", PeriodType = "monthly", MaxValue = 0, IsUnlimited = false, CreatedAt = now },
@@ -318,7 +318,7 @@ public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuota
             new UsageQuotaPolicy { Id = Guid.Parse("AA000000-0000-0000-0000-000000000000"), PlanId = fId, FeatureKey = "interview.max_duration", PeriodType = "total", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
 
             // --- Monthly ---
-            new UsageQuotaPolicy { Id = Guid.Parse("B1000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
+            new UsageQuotaPolicy { Id = Guid.Parse("B1000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 30, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("B2000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "cv.optimization", PeriodType = "subscription", MaxValue = 30, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("B3000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "interview.ai", PeriodType = "subscription", MaxValue = 10, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("B4000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "mentor.session", PeriodType = "monthly", MaxValue = 0, IsUnlimited = false, CreatedAt = now },
@@ -330,7 +330,7 @@ public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuota
             new UsageQuotaPolicy { Id = Guid.Parse("BA000000-0000-0000-0000-000000000000"), PlanId = mId, FeatureKey = "interview.max_duration", PeriodType = "total", MaxValue = 15, IsUnlimited = false, CreatedAt = now },
 
             // --- Quarterly ---
-            new UsageQuotaPolicy { Id = Guid.Parse("C1000000-0000-0000-0000-000000000000"), PlanId = qId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 10, IsUnlimited = false, CreatedAt = now },
+            new UsageQuotaPolicy { Id = Guid.Parse("C1000000-0000-0000-0000-000000000000"), PlanId = qId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 100, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("C2000000-0000-0000-0000-000000000000"), PlanId = qId, FeatureKey = "cv.optimization", PeriodType = "subscription", MaxValue = 100, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("C3000000-0000-0000-0000-000000000000"), PlanId = qId, FeatureKey = "interview.ai", PeriodType = "subscription", MaxValue = 24, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("C4000000-0000-0000-0000-000000000000"), PlanId = qId, FeatureKey = "mentor.session", PeriodType = "monthly", MaxValue = 3, IsUnlimited = false, CreatedAt = now },
@@ -354,7 +354,7 @@ public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuota
             new UsageQuotaPolicy { Id = Guid.Parse("DA000000-0000-0000-0000-000000000000"), PlanId = yId, FeatureKey = "interview.max_duration", PeriodType = "total", MaxValue = 25, IsUnlimited = false, CreatedAt = now },
 
             // --- Combo ---
-            new UsageQuotaPolicy { Id = Guid.Parse("E1000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 1, IsUnlimited = false, CreatedAt = now },
+            new UsageQuotaPolicy { Id = Guid.Parse("E1000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 3, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("E2000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "cv.optimization", PeriodType = "subscription", MaxValue = 3, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("E3000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "interview.ai", PeriodType = "subscription", MaxValue = 1, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("E4000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "mentor.session", PeriodType = "monthly", MaxValue = 0, IsUnlimited = false, CreatedAt = now },
@@ -366,7 +366,7 @@ public class UsageQuotaPolicyConfiguration : IEntityTypeConfiguration<UsageQuota
             new UsageQuotaPolicy { Id = Guid.Parse("EA000000-0000-0000-0000-000000000000"), PlanId = cId, FeatureKey = "interview.max_duration", PeriodType = "total", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
 
             // --- Weekly ---
-            new UsageQuotaPolicy { Id = Guid.Parse("F1000000-0000-0000-0000-000000000000"), PlanId = wId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 1, IsUnlimited = false, CreatedAt = now },
+            new UsageQuotaPolicy { Id = Guid.Parse("F1000000-0000-0000-0000-000000000000"), PlanId = wId, FeatureKey = "cv.storage", PeriodType = "total", MaxValue = 15, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("F2000000-0000-0000-0000-000000000000"), PlanId = wId, FeatureKey = "cv.optimization", PeriodType = "subscription", MaxValue = 15, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("F3000000-0000-0000-0000-000000000000"), PlanId = wId, FeatureKey = "interview.ai", PeriodType = "subscription", MaxValue = 5, IsUnlimited = false, CreatedAt = now },
             new UsageQuotaPolicy { Id = Guid.Parse("F4000000-0000-0000-0000-000000000000"), PlanId = wId, FeatureKey = "mentor.session", PeriodType = "monthly", MaxValue = 0, IsUnlimited = false, CreatedAt = now },

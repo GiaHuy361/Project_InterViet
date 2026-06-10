@@ -227,7 +227,7 @@ Nếu frontend cần hiển thị chi tiết số lượt tối đa của từng
 
 | Feature Key | Ý nghĩa | Free | Combo | Weekly | Monthly | Quarterly | Yearly |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `cv.storage` | Số CV tối đa lưu trữ | 1 | 1 | 1 | 5 | 10 | Vô hạn (`unlimited`) |
+| `cv.storage` | Số CV tối đa lưu trữ | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
 | `cv.optimization` | Tối ưu CV (upload/parse) | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
 | `interview.ai` | Lượt phỏng vấn AI | 3 | 1 | 5 | 10 | 24 | 60 |
 | `match.create` | Lượt Matching CV-JD | 5 | 3 | 15 | 30 | 100 | Vô hạn (`unlimited`) |
