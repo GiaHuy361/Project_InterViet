@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,11 +6,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Interviet.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class Phase19_UpdateCvOptimizationQuotas : Migration
+    public partial class UpdateCvQuotaPolicies : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
+                keyValue: new Guid("a1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 5);
+
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -38,6 +47,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 schema: "app",
                 table: "UsageQuotaPolicies",
                 keyColumn: "Id",
+                keyValue: new Guid("b1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 30);
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
                 keyValue: new Guid("b2000000-0000-0000-0000-000000000000"),
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 30, "subscription" });
@@ -57,6 +74,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 keyValue: new Guid("b7000000-0000-0000-0000-000000000000"),
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 30, "subscription" });
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
+                keyValue: new Guid("c1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 100);
 
             migrationBuilder.UpdateData(
                 schema: "app",
@@ -110,6 +135,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 schema: "app",
                 table: "UsageQuotaPolicies",
                 keyColumn: "Id",
+                keyValue: new Guid("e1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 3);
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
                 keyValue: new Guid("e2000000-0000-0000-0000-000000000000"),
                 column: "PeriodType",
                 value: "subscription");
@@ -129,6 +162,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 keyValue: new Guid("e7000000-0000-0000-0000-000000000000"),
                 column: "PeriodType",
                 value: "subscription");
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
+                keyValue: new Guid("f1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 15);
 
             migrationBuilder.UpdateData(
                 schema: "app",
@@ -162,6 +203,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 schema: "app",
                 table: "UsageQuotaPolicies",
                 keyColumn: "Id",
+                keyValue: new Guid("a1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 1);
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
                 keyValue: new Guid("a2000000-0000-0000-0000-000000000000"),
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 3, "daily" });
@@ -186,6 +235,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 schema: "app",
                 table: "UsageQuotaPolicies",
                 keyColumn: "Id",
+                keyValue: new Guid("b1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 5);
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
                 keyValue: new Guid("b2000000-0000-0000-0000-000000000000"),
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 3, "daily" });
@@ -205,6 +262,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 keyValue: new Guid("b7000000-0000-0000-0000-000000000000"),
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 10, "daily" });
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
+                keyValue: new Guid("c1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 10);
 
             migrationBuilder.UpdateData(
                 schema: "app",
@@ -258,6 +323,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 schema: "app",
                 table: "UsageQuotaPolicies",
                 keyColumn: "Id",
+                keyValue: new Guid("e1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 1);
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
                 keyValue: new Guid("e2000000-0000-0000-0000-000000000000"),
                 column: "PeriodType",
                 value: "daily");
@@ -277,6 +350,14 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 keyValue: new Guid("e7000000-0000-0000-0000-000000000000"),
                 column: "PeriodType",
                 value: "daily");
+
+            migrationBuilder.UpdateData(
+                schema: "app",
+                table: "UsageQuotaPolicies",
+                keyColumn: "Id",
+                keyValue: new Guid("f1000000-0000-0000-0000-000000000000"),
+                column: "MaxValue",
+                value: 1);
 
             migrationBuilder.UpdateData(
                 schema: "app",

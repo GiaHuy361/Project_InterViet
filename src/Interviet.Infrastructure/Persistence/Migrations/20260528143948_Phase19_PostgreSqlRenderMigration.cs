@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace Interviet.Infrastructure.Persistence.MigrationsPostgres
+namespace Interviet.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class Phase19_PostgreSqlRenderMigration : Migration

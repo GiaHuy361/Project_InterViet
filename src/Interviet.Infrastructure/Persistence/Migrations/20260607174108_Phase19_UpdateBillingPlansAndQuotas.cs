@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -13,6 +13,38 @@ namespace Interviet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "Users",
+                type: "bytea",
+                nullable: true,
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldRowVersion: true);
+
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "UserQuotaCounters",
+                type: "bytea",
+                nullable: true,
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldRowVersion: true);
+
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "Subscriptions",
+                type: "bytea",
+                nullable: true,
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldRowVersion: true);
+
+
+
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "Plans",
@@ -464,6 +496,44 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 table: "Plans",
                 keyColumn: "Id",
                 keyValue: new Guid("66666666-6666-6666-6666-666666666666"));
+
+
+
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "Users",
+                type: "bytea",
+                rowVersion: true,
+                nullable: false,
+                defaultValue: new byte[0],
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldNullable: true);
+
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "UserQuotaCounters",
+                type: "bytea",
+                rowVersion: true,
+                nullable: false,
+                defaultValue: new byte[0],
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldNullable: true);
+
+            migrationBuilder.AlterColumn<byte[]>(
+                name: "RowVersion",
+                schema: "app",
+                table: "Subscriptions",
+                type: "bytea",
+                rowVersion: true,
+                nullable: false,
+                defaultValue: new byte[0],
+                oldClrType: typeof(byte[]),
+                oldType: "bytea",
+                oldNullable: true);
 
             migrationBuilder.UpdateData(
                 schema: "app",

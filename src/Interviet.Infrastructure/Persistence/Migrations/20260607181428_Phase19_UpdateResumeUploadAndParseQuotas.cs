@@ -11,7 +11,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Free
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -28,7 +27,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 5, "total" });
 
-            // Monthly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -45,7 +43,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 30, "subscription" });
 
-            // Quarterly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -62,7 +59,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 100, "subscription" });
 
-            // Yearly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -79,7 +75,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 column: "PeriodType",
                 value: "subscription");
 
-            // Combo
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -96,7 +91,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 column: "PeriodType",
                 value: "subscription");
 
-            // Weekly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -117,7 +111,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Free
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -134,7 +127,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 3, "daily" });
 
-            // Monthly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -151,7 +143,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 10, "daily" });
 
-            // Quarterly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -168,7 +159,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 columns: new[] { "MaxValue", "PeriodType" },
                 values: new object[] { 30, "daily" });
 
-            // Yearly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -185,7 +175,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 column: "PeriodType",
                 value: "daily");
 
-            // Combo
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",
@@ -202,7 +191,6 @@ namespace Interviet.Infrastructure.Persistence.Migrations
                 column: "PeriodType",
                 value: "daily");
 
-            // Weekly
             migrationBuilder.UpdateData(
                 schema: "app",
                 table: "UsageQuotaPolicies",

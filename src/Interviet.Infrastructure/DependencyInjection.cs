@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PayOS;
@@ -21,49 +20,21 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // ── EF Core + Dynamic Provider Switching ──────────────────────────
-        var dbProvider = configuration["Database:Provider"] ?? "SqlServer";
+        // ── EF Core + PostgreSQL Configuration ──────────────────────────
         var connString = configuration.GetConnectionString("DefaultConnection");
+        var parsedConnString = ConvertPostgresUrlToConnectionString(connString);
 
-        if (connString != null && (
-            connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
-            connString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-            connString.Contains("Host=", StringComparison.OrdinalIgnoreCase)))
+        services.AddDbContext<AppDbContext>(options =>
         {
-            dbProvider = "Postgres";
-        }
-
-        if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
-        {
-            var parsedConnString = ConvertPostgresUrlToConnectionString(connString);
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseNpgsql(
-                    parsedConnString,
-                    npgsql =>
-                    {
-                        npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
-                        npgsql.CommandTimeout(60);
-                        npgsql.EnableRetryOnFailure(maxRetryCount: 3);
-                    });
-                options.ReplaceService<IMigrationsAssembly, DbProviderMigrationsAssembly>();
-            });
-        }
-        else
-        {
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseSqlServer(
-                    connString,
-                    sql =>
-                    {
-                        sql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
-                        sql.CommandTimeout(60);
-                        sql.EnableRetryOnFailure(maxRetryCount: 3);
-                    });
-                options.ReplaceService<IMigrationsAssembly, DbProviderMigrationsAssembly>();
-            });
-        }
+            options.UseNpgsql(
+                parsedConnString,
+                npgsql =>
+                {
+                    npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "app");
+                    npgsql.CommandTimeout(60);
+                    npgsql.EnableRetryOnFailure(maxRetryCount: 3);
+                });
+        });
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 

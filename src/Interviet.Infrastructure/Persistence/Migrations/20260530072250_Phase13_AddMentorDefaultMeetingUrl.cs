@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Interviet.Infrastructure.Persistence.MigrationsPostgres
+namespace Interviet.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260530072250_Phase13_AddMentorDefaultMeetingUrl")]
