@@ -448,4 +448,121 @@ public sealed class SupportWorkspaceController : ApiControllerBase
 
         return Ok(new { id, previousStatus, currentStatus = contact.Status }, "Cập nhật trạng thái yêu cầu liên hệ thành công.");
     }
+
+    /// <summary>
+    /// Gets all user feedback, paginated and filtered.
+    /// Route: GET /api/v1/support/workspace/feedback
+    /// </summary>
+    [HttpGet("feedback")]
+    public async Task<IActionResult> GetUserFeedbacks(
+        [FromQuery] string? feedbackType,
+        [FromQuery] int? rating,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = _context.UserFeedbacks.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(feedbackType))
+        {
+            query = query.Where(f => f.FeedbackType == feedbackType);
+        }
+
+        if (rating.HasValue)
+        {
+            query = query.Where(f => f.Rating == rating.Value);
+        }
+
+        var total = await query.CountAsync();
+
+        var feedbacks = await query
+            .OrderByDescending(f => f.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var userIds = feedbacks.Where(f => f.UserId.HasValue).Select(f => f.UserId!.Value).Distinct().ToList();
+        var usersDict = await _context.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => new { u.Email, u.FullName });
+
+        var items = feedbacks.Select(f => {
+            string? email = null;
+            string? fullName = null;
+            if (f.UserId.HasValue && usersDict.TryGetValue(f.UserId.Value, out var user))
+            {
+                email = user.Email;
+                fullName = user.FullName;
+            }
+
+            List<string> tags = new();
+            if (!string.IsNullOrWhiteSpace(f.MetadataJson))
+            {
+                try
+                {
+                    tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(f.MetadataJson) ?? new List<string>();
+                }
+                catch {}
+            }
+
+            return new AdminUserFeedbackResponse(
+                Id: f.Id,
+                UserId: f.UserId,
+                UserEmail: email,
+                UserFullName: fullName,
+                FeedbackType: f.FeedbackType,
+                Rating: f.Rating,
+                Content: f.Content,
+                SelectedTags: tags,
+                CreatedAt: f.CreatedAt
+            );
+        }).ToList();
+
+        return Ok(new { total, page, pageSize, items });
+    }
+
+    /// <summary>
+    /// Gets summary statistics of all user feedbacks.
+    /// Route: GET /api/v1/support/workspace/feedback/summary
+    /// </summary>
+    [HttpGet("feedback/summary")]
+    public async Task<IActionResult> GetFeedbackSummary()
+    {
+        var allFeedbacks = await _context.UserFeedbacks
+            .Select(f => new { f.FeedbackType, f.Rating })
+            .ToListAsync();
+
+        var totalCount = allFeedbacks.Count;
+        var averageRating = totalCount > 0 
+            ? allFeedbacks.Average(f => f.Rating ?? 0) 
+            : 0.0;
+
+        var countByType = allFeedbacks
+            .GroupBy(f => f.FeedbackType)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var countByRating = allFeedbacks
+            .GroupBy(f => f.Rating ?? 0)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        for (int i = 1; i <= 5; i++)
+        {
+            if (!countByRating.ContainsKey(i))
+            {
+                countByRating[i] = 0;
+            }
+        }
+
+        var summary = new UserFeedbackSummaryStats(
+            TotalCount: totalCount,
+            AverageRating: Math.Round(averageRating, 2),
+            CountByType: countByType,
+            CountByRating: countByRating
+        );
+
+        return Ok(summary);
+    }
 }
