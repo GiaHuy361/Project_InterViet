@@ -66,8 +66,15 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
                 nonlocal is_active
                 try:
                     while is_active:
-                        data = await websocket.receive_text()
-                        await gemini_ws.send(data)
+                        message = await websocket.receive()
+                        if message.get("type") == "websocket.disconnect":
+                            is_active = False
+                            break
+                        
+                        if "text" in message and message["text"]:
+                            await gemini_ws.send(message["text"])
+                        elif "bytes" in message and message["bytes"]:
+                            await gemini_ws.send(message["bytes"])
                 except WebSocketDisconnect:
                     # Bắt trọn gói khi bấm nút ngắt kết nối ở HTML, tắt êm đẹp không ném lỗi bậy
                     logger.info(f"[WS_PROXY] Frontend chủ động ngắt kết nối qua WebSocketDisconnect.")
@@ -84,7 +91,10 @@ async def websocket_proxy(websocket: WebSocket, proxy_token: str):
                         msg = await gemini_ws.recv()
                         # Phòng thủ lớp sâu: Chỉ gửi nếu đầu Front vẫn đang giữ ống kết nối sống
                         if is_active and websocket.client_state == WebSocketState.CONNECTED:
-                            await websocket.send_text(msg)
+                            if isinstance(msg, bytes):
+                                await websocket.send_bytes(msg)
+                            else:
+                                await websocket.send_text(msg)
                 except Exception as e:
                     logger.error(f"Lỗi đẩy dữ liệu từ Gemini về Front: {e}")
                 finally:
