@@ -1,5 +1,14 @@
 # INTER-VIET Candidate Platform
 
+![Tên mô tả ảnh](.\img\dashboard.png)
+![Tên mô tả ảnh](.\img\cvmatching1.png)
+![Tên mô tả ảnh](.\img\cvmatching2.png)
+![Tên mô tả ảnh](.\img\cvmatching3.png)
+![Tên mô tả ảnh](.\img\interview1.png)
+![Tên mô tả ảnh](.\img\interview2.png)
+![Tên mô tả ảnh](.\img\report1.png)
+![Tên mô tả ảnh](.\img\report2.png)
+
 INTER-VIET là nền tảng hỗ trợ ứng viên quản lý hồ sơ, CV, matching với JD và luyện phỏng vấn bằng AI.
 
 Dự án được chia thành 2 phần chính:
